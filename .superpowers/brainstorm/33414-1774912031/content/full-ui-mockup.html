@@ -1,0 +1,137 @@
+<h2>Grant Researcher — Full UI Design</h2>
+<p class="subtitle">Two screens: CV upload landing + pipeline session view</p>
+
+<div class="section">
+  <div class="label">Screen 1 — Landing (Drop your CV)</div>
+  <div class="mockup">
+    <div class="mockup-header">grant-researcher / home</div>
+    <div class="mockup-body" style="background:#0f172a;padding:40px;text-align:center">
+      <div style="color:#f1f5f9;font-size:20px;font-weight:700;margin-bottom:8px">Grant Scout</div>
+      <div style="color:#64748b;font-size:13px;margin-bottom:32px">Find funding for your research</div>
+
+      <div style="border:2px dashed #334155;border-radius:12px;padding:40px 60px;margin:0 auto 24px;max-width:400px;cursor:pointer;transition:border-color 0.2s">
+        <div style="font-size:32px;margin-bottom:8px">📄</div>
+        <div style="color:#94a3b8;font-size:14px">Drop your CV here</div>
+        <div style="color:#475569;font-size:11px;margin-top:4px">.md, .pdf, or .txt</div>
+      </div>
+
+      <div style="margin:0 auto 16px;max-width:300px">
+        <input class="mock-input" placeholder="Your name (e.g. will-rea)" style="text-align:center;font-size:13px">
+      </div>
+
+      <button class="mock-button" style="background:#3b82f6;color:white;border:none;padding:10px 32px;border-radius:8px;font-size:14px;cursor:pointer">
+        Start →
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Screen 2 — Pipeline Session (active: Scan running)</div>
+  <div class="mockup">
+    <div class="mockup-header">grant-researcher / session / will-rea</div>
+    <div class="mockup-body" style="background:#0f172a;padding:20px">
+
+      <!-- Pipeline bar -->
+      <div style="display:flex;align-items:center;gap:0;margin-bottom:20px">
+        <div style="flex:1;background:#22c55e22;border:1px solid #22c55e55;border-radius:6px 0 0 6px;padding:10px;text-align:center">
+          <div style="color:#22c55e;font-size:10px;font-weight:700">✓ PROFILE</div>
+          <div style="color:#64748b;font-size:9px;margin-top:2px">Dr. Will Rea</div>
+        </div>
+        <div style="flex:1;background:#3b82f633;border:1px solid #3b82f6;padding:10px;text-align:center;position:relative">
+          <div style="color:#3b82f6;font-size:10px;font-weight:700">● SCAN</div>
+          <div style="color:#3b82f6;font-size:9px;margin-top:2px">Running…</div>
+          <div style="position:absolute;bottom:0;left:0;height:2px;background:#3b82f6;width:40%;border-radius:0 0 0 0;animation:none"></div>
+        </div>
+        <div style="flex:1;background:#1e293b;border:1px solid #1e293b;padding:10px;text-align:center">
+          <div style="color:#475569;font-size:10px;font-weight:700">○ MATCH</div>
+          <div style="color:#334155;font-size:9px;margin-top:2px">Waiting</div>
+        </div>
+        <div style="flex:1;background:#1e293b;border:1px solid #1e293b;border-radius:0 6px 6px 0;padding:10px;text-align:center">
+          <div style="color:#475569;font-size:10px;font-weight:700">○ PROPOSE</div>
+          <div style="color:#334155;font-size:9px;margin-top:2px">Waiting</div>
+        </div>
+      </div>
+
+      <!-- Live log -->
+      <div style="background:#020617;border:1px solid #1e293b;border-radius:8px;padding:14px;font-family:monospace;font-size:11px;height:140px;overflow-y:auto;margin-bottom:16px">
+        <div style="color:#22c55e;margin-bottom:3px">✓ Profile built: Dr. Will Rea — Art History, established</div>
+        <div style="color:#64748b;margin-bottom:3px">Starting scan for art history and African studies grants…</div>
+        <div style="color:#3b82f6;margin-bottom:3px">[WebSearch] "art history research grants UK 2026"</div>
+        <div style="color:#3b82f6;margin-bottom:3px">[WebSearch] "African studies funding opportunities UK"</div>
+        <div style="color:#3b82f6;margin-bottom:3px">[WebFetch] leverhulme.ac.uk/schemes-at-a-glance</div>
+        <div style="color:#94a3b8;margin-bottom:3px">Found: Leverhulme Research Fellowship — writing to funding-sources/</div>
+        <div style="color:#3b82f6;margin-bottom:3px">[WebFetch] thebritishacademy.ac.uk/funding/</div>
+        <div style="color:#475569">▌</div>
+      </div>
+
+      <!-- After match: match list (greyed = not yet) -->
+      <div style="background:#1e293b;border-radius:8px;padding:14px;opacity:0.4">
+        <div style="color:#475569;font-size:11px;margin-bottom:8px">Match results will appear here after scan completes</div>
+        <div style="background:#0f172a;border-radius:4px;height:30px;margin-bottom:4px"></div>
+        <div style="background:#0f172a;border-radius:4px;height:30px;margin-bottom:4px"></div>
+        <div style="background:#0f172a;border-radius:4px;height:30px"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Screen 2 — Pipeline Session (active: Match complete, ready for Propose)</div>
+  <div class="mockup">
+    <div class="mockup-header">grant-researcher / session / will-rea — match done</div>
+    <div class="mockup-body" style="background:#0f172a;padding:20px">
+
+      <!-- Pipeline bar - match done -->
+      <div style="display:flex;align-items:center;gap:0;margin-bottom:20px">
+        <div style="flex:1;background:#22c55e22;border:1px solid #22c55e55;border-radius:6px 0 0 6px;padding:10px;text-align:center">
+          <div style="color:#22c55e;font-size:10px;font-weight:700">✓ PROFILE</div>
+        </div>
+        <div style="flex:1;background:#22c55e22;border:1px solid #22c55e55;padding:10px;text-align:center">
+          <div style="color:#22c55e;font-size:10px;font-weight:700">✓ SCAN</div>
+        </div>
+        <div style="flex:1;background:#22c55e22;border:1px solid #22c55e55;padding:10px;text-align:center">
+          <div style="color:#22c55e;font-size:10px;font-weight:700">✓ MATCH</div>
+        </div>
+        <div style="flex:1;background:#1e293b;border:1px solid #3b82f655;border-radius:0 6px 6px 0;padding:10px;text-align:center">
+          <div style="color:#3b82f6;font-size:10px;font-weight:700">→ PROPOSE</div>
+          <div style="color:#3b82f6;font-size:9px;margin-top:2px">Pick a match below</div>
+        </div>
+      </div>
+
+      <!-- Match results list -->
+      <div style="font-size:10px;color:#64748b;margin-bottom:8px;font-weight:700">TIER 1 — STRONG MATCHES · click to propose</div>
+      <div style="background:#1e293b;border:1px solid #22c55e44;border-radius:6px;padding:10px;margin-bottom:6px;cursor:pointer">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="color:#e2e8f0;font-size:12px;font-weight:600">Leverhulme Research Fellowship</div>
+            <div style="color:#64748b;font-size:10px">Leverhulme Trust · £30,000–£100,000 · Rolling deadline</div>
+          </div>
+          <div style="background:#22c55e22;border:1px solid #22c55e44;border-radius:4px;padding:4px 8px;color:#22c55e;font-size:11px;font-weight:700">8.4</div>
+        </div>
+      </div>
+      <div style="background:#1e293b;border:1px solid #22c55e33;border-radius:6px;padding:10px;margin-bottom:16px;cursor:pointer">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="color:#e2e8f0;font-size:12px;font-weight:600">BA/Leverhulme Small Research Grant</div>
+            <div style="color:#64748b;font-size:10px">British Academy · up to £10,000 · Oct 2026</div>
+          </div>
+          <div style="background:#22c55e22;border:1px solid #22c55e44;border-radius:4px;padding:4px 8px;color:#22c55e;font-size:11px;font-weight:700">7.9</div>
+        </div>
+      </div>
+
+      <div style="font-size:10px;color:#64748b;margin-bottom:8px;font-weight:700">TIER 2 — WORTH EXPLORING</div>
+      <div style="background:#1e293b;border:1px solid #1e293b;border-radius:6px;padding:10px;cursor:pointer">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="color:#94a3b8;font-size:12px;font-weight:600">Getty Scholars Program</div>
+            <div style="color:#475569;font-size:10px">Getty Foundation · Residential · Nov 2026</div>
+          </div>
+          <div style="background:#1e293b;border:1px solid #334155;border-radius:4px;padding:4px 8px;color:#64748b;font-size:11px;font-weight:700">5.2</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

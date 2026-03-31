@@ -1,0 +1,419 @@
+{
+  "name": "Dr. Will Rea",
+  "title": "Senior Lecturer",
+  "career_stage": "established",
+  "institution": "University of Leeds",
+  "department": "School of Fine Art, Art History and Cultural Studies",
+  "country": "UK",
+  "research_themes": [
+    "Yoruba masquerade and performance",
+    "Nigerian modernism and contemporary African art",
+    "Anthropology of art and materiality",
+    "Postcolonial African art history",
+    "African heritage and museum display",
+    "Ekiti sculptural traditions",
+    "Popular culture in West Africa",
+    "Art and cultural institutions in Nigeria"
+  ],
+  "research_keywords": [
+    "Epa masquerade",
+    "Egungun masquerade",
+    "Yoruba art",
+    "Ekiti",
+    "Ikole Ekiti",
+    "Nigerian modernism",
+    "Bamigboye",
+    "masquerade politics",
+    "postcolonial theory",
+    "African art history",
+    "anthropology of art",
+    "materiality",
+    "museum studies",
+    "heritage",
+    "West Africa",
+    "decolonisation",
+    "display practice",
+    "African cultural heritage",
+    "portraiture",
+    "contemporary African art",
+    "Yoruba cultural heritage",
+    "popular culture Nigeria",
+    "sculpture studies"
+  ],
+  "geographic_focus": [
+    "Nigeria",
+    "West Africa",
+    "Yorubaland",
+    "Ekiti",
+    "Lagos",
+    "Ibadan"
+  ],
+  "disciplinary_fields": [
+    "art history",
+    "anthropology of art",
+    "cultural studies",
+    "museum studies",
+    "African studies",
+    "postcolonial studies",
+    "sculpture studies"
+  ],
+  "current_projects": [
+    {
+      "title": "The John Randle Museum of Yoruba Cultural Heritage",
+      "description": "Project curator and academic lead for a new museum in Lagos. Commissioned by Lagos State Government in partnership with Si.Sa and RAA design consultants."
+    },
+    {
+      "title": "Africa displaying / Displaying Africa",
+      "description": "Commissioned manuscript for Cambridge University Press Elements series. Due for submission November 2023 (now overdue — likely in revision or press)."
+    },
+    {
+      "title": "No Event, No History: Masquerade Performance and Politics in Nigeria",
+      "description": "Completed monographic manuscript currently in peer review. Due for submission to James Currey Publications."
+    }
+  ],
+  "publications": [
+    {
+      "title": "African Art",
+      "year": 1997,
+      "type": "book",
+      "journal_or_publisher": "Facts on File, New York",
+      "themes": ["African art", "survey", "introductory"]
+    },
+    {
+      "title": "When was Yoruba art in Nigerian Modernism",
+      "year": 2025,
+      "type": "chapter",
+      "journal_or_publisher": "Tate Gallery Publications",
+      "themes": ["Yoruba art", "Nigerian modernism", "Tate"]
+    },
+    {
+      "title": "Bamigboye, master of Epa: A historical context",
+      "year": 2022,
+      "type": "chapter",
+      "journal_or_publisher": "Yale University Press",
+      "themes": ["Bamigboye", "Epa masquerade", "Yoruba sculpture", "Ekiti"]
+    },
+    {
+      "title": "Street To Mbari: Jacob Lawrence and the influence of the 'International' on a local modernism",
+      "year": 2022,
+      "type": "journal_article",
+      "journal_or_publisher": "NKa Journal of Contemporary African Art",
+      "themes": ["Nigerian modernism", "Jacob Lawrence", "Mbari", "contemporary African art"]
+    },
+    {
+      "title": "The King's Horseman: Portraiture and politics in Yoruba Nigeria",
+      "year": 2022,
+      "type": "journal_article",
+      "journal_or_publisher": "The Art Bulletin",
+      "themes": ["Yoruba art", "portraiture", "politics", "Nigeria"]
+    },
+    {
+      "title": "From Ekiti to Ebute Metta",
+      "year": 2020,
+      "type": "chapter",
+      "journal_or_publisher": "Gelda Verlag",
+      "themes": ["Ekiti", "African modernity", "Christian art", "Nigerian art history"]
+    },
+    {
+      "title": "Materialising materiality – the space in-between",
+      "year": 2017,
+      "type": "chapter",
+      "journal_or_publisher": "Bloomsbury, London",
+      "themes": ["materiality", "methodology", "anthropology of art"]
+    },
+    {
+      "title": "On Living in Ikole",
+      "year": 2014,
+      "type": "chapter",
+      "journal_or_publisher": "Bookcraft, Ibadan",
+      "themes": ["Ikole Ekiti", "biography", "Nigerian cultural history"]
+    },
+    {
+      "title": "Our tradition is a very modern tradition: from cultural tradition to popular culture in South Western Nigeria",
+      "year": 2013,
+      "type": "chapter",
+      "journal_or_publisher": "Routledge, London",
+      "themes": ["popular culture", "tradition", "modernity", "South Western Nigeria"]
+    },
+    {
+      "title": "Shared sites and misleading affinities: sculpture as archaeology and archaeology as sculpture",
+      "year": 2011,
+      "type": "chapter",
+      "journal_or_publisher": "Ashgate, London",
+      "themes": ["sculpture", "archaeology", "materiality"]
+    },
+    {
+      "title": "Anthropology and Post-colonialism",
+      "year": 2010,
+      "type": "chapter",
+      "journal_or_publisher": "Wiley-Blackwell, Oxford",
+      "themes": ["anthropology", "postcolonial theory", "methodology"]
+    },
+    {
+      "title": "Finding your contemporary: Art and aesthetics in Nigeria now",
+      "year": 2008,
+      "type": "chapter",
+      "journal_or_publisher": "Tate Liverpool / Liverpool University Press",
+      "themes": ["contemporary Nigerian art", "aesthetics", "identity"]
+    },
+    {
+      "title": "Anthropology",
+      "year": 2004,
+      "type": "chapter",
+      "journal_or_publisher": "Oxford University Press",
+      "themes": ["anthropology", "critical theory", "cultural theory"]
+    },
+    {
+      "title": "Masks and Styles: Yoruba masquerade in a comparative perspective",
+      "year": 2001,
+      "type": "chapter",
+      "journal_or_publisher": "Horniman Museum Publications, London",
+      "themes": ["Yoruba masquerade", "comparative analysis", "mask studies"]
+    },
+    {
+      "title": "The Epa-type masquerades of Ekiti: A structural approach",
+      "year": 2019,
+      "type": "journal_article",
+      "journal_or_publisher": "African Arts",
+      "themes": ["Epa masquerade", "Ekiti", "structural analysis", "Yoruba art"]
+    },
+    {
+      "title": "Making history: The modernity of masquerade in Ikole Ekiti",
+      "year": 2008,
+      "type": "journal_article",
+      "journal_or_publisher": "African Arts",
+      "themes": ["masquerade", "modernity", "Ikole Ekiti", "performance"]
+    },
+    {
+      "title": "A prevalence of witches: witchcraft and popular culture in the making of a Yoruba town",
+      "year": 2008,
+      "type": "journal_article",
+      "journal_or_publisher": "Journal of Religion and Popular Culture",
+      "themes": ["witchcraft", "popular culture", "Yoruba", "religion"]
+    },
+    {
+      "title": "On Staging Performance: The masquerade festival of Ikole Ekiti",
+      "year": 2007,
+      "type": "journal_article",
+      "journal_or_publisher": "Journal of African Cultural Studies",
+      "themes": ["masquerade", "performance", "Ikole Ekiti", "festival"]
+    },
+    {
+      "title": "No condition is permanent: the Egigun masquerades of Ikole Ekiti",
+      "year": 2007,
+      "type": "journal_article",
+      "journal_or_publisher": "The Nigerian Field",
+      "themes": ["Egungun masquerade", "Ikole Ekiti", "Yoruba"]
+    },
+    {
+      "title": "Rationalising Culture: youth, elites and masquerade politics",
+      "year": 1998,
+      "type": "journal_article",
+      "journal_or_publisher": "Africa",
+      "themes": ["masquerade", "politics", "youth", "cultural change"]
+    },
+    {
+      "title": "The Sculptors of Ekiti: The context of creativity",
+      "year": 2026,
+      "type": "chapter",
+      "journal_or_publisher": "In J. Picton (Ed.), William Fagg and African Art (peer reviewed, submitted)",
+      "themes": ["Ekiti sculpture", "creativity", "Yoruba art", "William Fagg"]
+    },
+    {
+      "title": "Review: Adaheze Ihabom Igbo Women",
+      "year": 2020,
+      "type": "review",
+      "journal_or_publisher": "Source: Thinking through Photography",
+      "themes": ["Igbo", "photography", "women"]
+    },
+    {
+      "title": "Review: Legacies of Biafra",
+      "year": 2020,
+      "type": "review",
+      "journal_or_publisher": "African Arts",
+      "themes": ["Biafra", "Nigerian history", "African art"]
+    },
+    {
+      "title": "Review: Africa: State of mind",
+      "year": 2019,
+      "type": "review",
+      "journal_or_publisher": "Source: Thinking through Photography",
+      "themes": ["African contemporary art", "photography"]
+    },
+    {
+      "title": "Review: Fischer and Homberger African Masters: Art from the Ivory Coast",
+      "year": 2018,
+      "type": "review",
+      "journal_or_publisher": "CAA Reviews",
+      "themes": ["Ivory Coast", "African art", "sculpture"]
+    },
+    {
+      "title": "Review: Abiodun R. Yoruba art and Language",
+      "year": 2015,
+      "type": "review",
+      "journal_or_publisher": "Africa",
+      "themes": ["Yoruba art", "language", "aesthetics"]
+    },
+    {
+      "title": "Response to Kasfir",
+      "year": 2014,
+      "type": "other",
+      "journal_or_publisher": "African Arts",
+      "themes": ["African art studies", "scholarly debate"]
+    },
+    {
+      "title": "Epstein, Adam and Africa",
+      "year": 2010,
+      "type": "catalogue",
+      "journal_or_publisher": "Harewood House Trust, Leeds",
+      "themes": ["Jacob Epstein", "Africa", "modernism"]
+    },
+    {
+      "title": "Review: Kingdom of Ife: Sculptures from West Africa",
+      "year": 2010,
+      "type": "review",
+      "journal_or_publisher": "The Sculpture Journal",
+      "themes": ["Ife", "West African sculpture"]
+    },
+    {
+      "title": "African art in the Ronnie Duncan collection",
+      "year": 2008,
+      "type": "catalogue",
+      "journal_or_publisher": "The Stanley and Audrey Burton Gallery, Leeds",
+      "themes": ["African art", "collection", "Leeds"]
+    },
+    {
+      "title": "Ibadan 1960",
+      "year": 2007,
+      "type": "other",
+      "journal_or_publisher": "British Academy Review",
+      "themes": ["Ibadan", "Nigeria 1960", "cultural history"]
+    },
+    {
+      "title": "Wonderment",
+      "year": 2002,
+      "type": "other",
+      "journal_or_publisher": "The Sculpture Journal",
+      "themes": ["wonderment", "aesthetics", "sculpture"]
+    }
+  ],
+  "prior_grants": [
+    {
+      "funder": "Sainsbury Research Unit",
+      "scheme": "Fellowship Award",
+      "amount_gbp": 0,
+      "year": 2017,
+      "role": "fellow",
+      "project_title": "Sainsbury Research Unit Fellowship"
+    },
+    {
+      "funder": "AHRC",
+      "scheme": "BGPII WROCAH (Block Grant Partnership II — White Rose College of the Arts and Humanities)",
+      "amount_gbp": 19100000,
+      "year": 2013,
+      "role": "team_member",
+      "project_title": "WROCAH Doctoral Training Partnership (Universities of York, Leeds, and Sheffield)"
+    },
+    {
+      "funder": "Arts Council England",
+      "scheme": "Grant",
+      "amount_gbp": 50000,
+      "year": 2012,
+      "role": "PI",
+      "project_title": "Gibberd Gallery, Harlow"
+    },
+    {
+      "funder": "European Commission FP7",
+      "scheme": "EU Culture Programme Award",
+      "amount_gbp": 125000,
+      "year": 2010,
+      "role": "CoI",
+      "project_title": "The artist as researcher in Europe"
+    },
+    {
+      "funder": "Henry Moore Foundation",
+      "scheme": "Research Grant",
+      "amount_gbp": 105000,
+      "year": 2006,
+      "role": "PI",
+      "project_title": "Henry Moore Foundation Research Grant 2006–2009"
+    },
+    {
+      "funder": "British Academy",
+      "scheme": "Small Grant",
+      "amount_gbp": 7500,
+      "year": 2006,
+      "role": "PI",
+      "project_title": "Ibadan 1960"
+    },
+    {
+      "funder": "British Academy",
+      "scheme": "Conference Grant",
+      "amount_gbp": 400,
+      "year": 2008,
+      "role": "PI",
+      "project_title": "British Academy Conference Grant"
+    }
+  ],
+  "phd_supervision": {
+    "current": 4,
+    "completed": 1,
+    "topics": [
+      "Photography and the biennale in Senegal",
+      "Anthropocene landscapes in Mallorca",
+      "Women's cloth and making in Jamaica",
+      "Wonderment in Yoruba dress (joint with RCA)",
+      "Making a new Britain – monument and memorial in practice (completed)"
+    ]
+  },
+  "external_roles": [
+    "External Examiner, SOAS (2024–present)",
+    "External Academic Consultant, Curriculum Review, Art History, UCL (2020–2021)",
+    "Consultant, Africa Displays, Vatican Museum (2020)",
+    "External examiner, Department of art history, SOAS (2014–2019)",
+    "British Library Advisory Committee member, 'West Africa: word, symbol, song' exhibition (2014–2016)",
+    "Chair, Harlow Art Trust (2009–2013)",
+    "British Council, Creative industry in Nigeria – consultant (2011)",
+    "Editorial Committee, Oxford Dictionary of African Art (2010)",
+    "Trustee, Harlow Arts Trust (2007–2009)",
+    "Advisory Board member, Ferguson Centre, Open University (2005–2007)",
+    "Consultant, Ford Foundation Nigeria – evaluation of Nigerian National Museums and Galleries (2006)",
+    "Exhibition Consultant, World Museum Liverpool (2004)",
+    "Consultant, Henry Moore Institute – Display of masks from British Museum",
+    "Royal Academy of Art, Africa '95 educational workshops (1995–1996)"
+  ],
+  "exhibitions_curated": [
+    "Yoruba textiles – Cloth and tradition in West Africa, University of Leeds International Textile Archive (September 2012 – March 2013)",
+    "An East Anglian Vision: Nan Youngman Drawings, Old Fire Engine House, Ely (August 2012)",
+    "Truth and Beauty: an exhibition of African art in the context of slavery, Harewood House, Yorkshire (May–October 2007)",
+    "British art from the 1950s, Harlow Art Gallery (September 2007)",
+    "Ronnie Duncan: The early years, University Art Gallery, University of Leeds (October 2006)"
+  ],
+  "conference_papers": [
+    "The crown of the Elepe of Epe, Sainsbury Research Unit CFaaF seminar (January 2026)",
+    "Is Sculpture the most Anthropological of Art Forms?, Yorkshire Sculpture International, Leeds Art Gallery (July 2019)",
+    "Making Human / Manifest Presence, Henry Moore Institute, YSI (July 2019)",
+    "Nigeria's Nucleus: Modernism into the Future, Tate Modern (September 2018)",
+    "The Manifestation of Meaning: Yoruba Number Theory and Moving a Philosophy of African Art, ACASA 17th Triennial, Accra (August 2016)",
+    "Optimism and Hope: Epa masquerade in Ekiti, RAI Conference, London (June 2018)",
+    "Finding Your Contemporary: Surface, Sculpture and Shine in Nigeria, AAH 2006",
+    "Ogun and the new Ekiti state, SOAS Yoruba conference (November 1997)"
+  ],
+  "key_strengths": [
+    "Top-tier publication record in African art history — Art Bulletin, African Arts, NKa, Yale UP, Tate, Bloomsbury",
+    "Deep single-site expertise in Ekiti/Yoruba masquerade over three decades — unusual depth and longitudinal access",
+    "Proven track record with AHRC, British Academy, Henry Moore Foundation, Arts Council England, and EU FP7",
+    "High-profile live museum project (John Randle Museum, Lagos) demonstrating public engagement and international institutional reach",
+    "Strong PhD supervision pipeline across African, Caribbean, and European art topics (4 current students)",
+    "Extensive network of museum, institutional, and policy roles — British Library, Vatican, UCL, Ford Foundation, Oxford Dictionary of African Art",
+    "Two manuscripts at advanced stages (one in peer review at James Currey, one commissioned by Cambridge UP) — strong pipeline for next funding cycle"
+  ],
+  "potential_gaps": [
+    "No PI grant of significant scale held independently in over 15 years (last major PI grant was Henry Moore Foundation 2006–2009)",
+    "Published monograph output is thin — only one book (1997, 64pp); major monographs remain in preparation",
+    "No ERC, Horizon Europe, or Horizon UK experience listed",
+    "Career level is Senior Lecturer, not Professor — some fellowship schemes (e.g. Leverhulme Major Research Fellowship) favour professorial applicants",
+    "AHRC WROCAH involvement was as bid team member, not PI or CoI — limited direct AHRC project management track record",
+    "Limited visible international collaborative network outside UK–Nigeria axis"
+  ]
+}

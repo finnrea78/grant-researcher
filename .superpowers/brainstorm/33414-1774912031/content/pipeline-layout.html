@@ -1,0 +1,86 @@
+<h2>How should the pipeline feel?</h2>
+<p class="subtitle">Three different layouts for the CV → profile → scan → match → propose flow</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0f172a;border-radius:8px;padding:16px;font-family:monospace;font-size:12px;color:#94a3b8">
+        <div style="background:#1e293b;border-radius:6px;padding:12px;margin-bottom:10px;text-align:center;color:#e2e8f0;font-size:13px">
+          📄 Drop your CV here
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <div style="flex:1;background:#22c55e22;border:1px solid #22c55e44;border-radius:4px;padding:8px;text-align:center;color:#22c55e;font-size:11px">✓ Profile</div>
+          <div style="flex:1;background:#3b82f622;border:1px solid #3b82f644;border-radius:4px;padding:8px;text-align:center;color:#3b82f6;font-size:11px">● Scanning…</div>
+          <div style="flex:1;background:#1e293b;border-radius:4px;padding:8px;text-align:center;color:#475569;font-size:11px">○ Match</div>
+          <div style="flex:1;background:#1e293b;border-radius:4px;padding:8px;text-align:center;color:#475569;font-size:11px">○ Propose</div>
+        </div>
+        <div style="background:#1e293b;border-radius:4px;padding:10px;color:#94a3b8;font-size:11px;min-height:60px">
+          Scanning for art history grants…<br>
+          <span style="color:#3b82f6">[WebSearch] art history grants UK 2026</span><br>
+          <span style="color:#3b82f6">[WebFetch] leverhulme.ac.uk/schemes</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Linear Pipeline</h3>
+      <p>Stages shown in a row. Active stage highlighted. Progress flows left to right. Live log shows Claude's activity below.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0f172a;border-radius:8px;padding:16px;font-family:monospace;font-size:12px;color:#94a3b8">
+        <div style="display:flex;gap:8px;height:120px">
+          <div style="width:140px;background:#1e293b;border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px">
+            <div style="color:#e2e8f0;font-size:11px;font-weight:600">Dr. Will Rea</div>
+            <div style="background:#22c55e22;border-left:2px solid #22c55e;padding:4px 6px;border-radius:2px;color:#22c55e;font-size:10px">✓ Profile built</div>
+            <div style="background:#3b82f622;border-left:2px solid #3b82f6;padding:4px 6px;border-radius:2px;color:#3b82f6;font-size:10px">● Scanning...</div>
+            <div style="border-left:2px solid #334155;padding:4px 6px;border-radius:2px;color:#475569;font-size:10px">○ Match</div>
+            <div style="border-left:2px solid #334155;padding:4px 6px;border-radius:2px;color:#475569;font-size:10px">○ Propose</div>
+          </div>
+          <div style="flex:1;background:#1e293b;border-radius:6px;padding:10px">
+            <div style="color:#94a3b8;font-size:10px;margin-bottom:6px">Scan output</div>
+            <div style="color:#3b82f6;font-size:10px">[WebSearch] art history grants UK</div>
+            <div style="color:#3b82f6;font-size:10px">[WebFetch] leverhulme.ac.uk</div>
+            <div style="color:#94a3b8;font-size:10px;margin-top:6px">Found: Leverhulme, BA, Getty…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Sidebar + Log</h3>
+      <p>Stages listed in a left sidebar. Main area shows the live Claude output for the active stage. Clean separation between navigation and content.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0f172a;border-radius:8px;padding:16px;font-family:monospace;font-size:12px;color:#94a3b8">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div style="background:#22c55e11;border:1px solid #22c55e33;border-radius:6px;padding:10px">
+            <div style="color:#22c55e;font-size:10px;font-weight:600;margin-bottom:4px">① Profile ✓</div>
+            <div style="color:#64748b;font-size:9px">Dr. Will Rea<br>Established · Art History</div>
+          </div>
+          <div style="background:#3b82f611;border:1px solid #3b82f633;border-radius:6px;padding:10px">
+            <div style="color:#3b82f6;font-size:10px;font-weight:600;margin-bottom:4px">② Scan ●</div>
+            <div style="color:#3b82f6;font-size:9px">[WebSearch]<br>[WebFetch]…</div>
+          </div>
+          <div style="background:#1e293b;border-radius:6px;padding:10px;opacity:0.4">
+            <div style="color:#475569;font-size:10px;font-weight:600;margin-bottom:4px">③ Match</div>
+            <div style="color:#334155;font-size:9px">Waiting…</div>
+          </div>
+          <div style="background:#1e293b;border-radius:6px;padding:10px;opacity:0.4">
+            <div style="color:#475569;font-size:10px;font-weight:600;margin-bottom:4px">④ Propose</div>
+            <div style="color:#334155;font-size:9px">Waiting…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Stage Cards Grid</h3>
+      <p>Four cards in a 2×2 grid. Each card shows the stage status. Completed stages show their summary. Active stage pulses. Future stages greyed out.</p>
+    </div>
+  </div>
+
+</div>

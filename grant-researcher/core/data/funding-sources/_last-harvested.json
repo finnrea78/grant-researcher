@@ -1,0 +1,21 @@
+{
+  "nsf": { "harvested": "2026-03-31", "status": "failed", "reason": "page returned no scheme data (JavaScript-rendered)" },
+  "nih": { "harvested": "2026-03-31", "status": "failed", "reason": "page is JavaScript-rendered navigation hub" },
+  "spencer-foundation": { "harvested": "2026-03-31", "status": "success", "schemes": 2 },
+  "william-t-grant": { "harvested": "2026-03-31", "status": "success", "schemes": 6 },
+  "jacobs-foundation": { "harvested": "2026-03-31", "status": "success", "schemes": 2 },
+  "ssrc": { "harvested": "2026-03-31", "status": "success", "schemes": 11 },
+  "apa": { "harvested": "2026-03-31", "status": "failed", "reason": "page returned no scheme data (JavaScript-rendered)" },
+  "fulbright": { "harvested": "2026-03-31", "status": "success", "schemes": 7 },
+  "daad": { "harvested": "2026-03-31", "status": "partial", "reason": "navigation hub only; links to DAAD scholarship database" },
+  "humboldt": { "harvested": "2026-03-31", "status": "success", "schemes": 2 },
+  "dfg": { "harvested": "2026-03-31", "status": "partial", "reason": "navigation hub only; no individual schemes extractable" },
+  "apa-div7": { "harvested": "2026-03-31", "status": "success", "schemes": 11 },
+  "apf": { "harvested": "2026-03-31", "status": "partial", "reason": "dynamic Program Match Tool; not extractable from static HTML" },
+  "svri": { "harvested": "2026-03-31", "status": "success", "schemes": 1 },
+  "nichd": { "harvested": "2026-03-31", "status": "success", "schemes": 5 },
+  "gerber-foundation": { "harvested": "2026-03-31", "status": "success", "schemes": 3 },
+  "caplan-foundation": { "harvested": "2026-03-31", "status": "success", "schemes": 1 },
+  "fcd": { "harvested": "2026-03-31", "status": "success", "schemes": 2 },
+  "psichi": { "harvested": "2026-03-31", "status": "failed", "reason": "HTTP 403" }
+}

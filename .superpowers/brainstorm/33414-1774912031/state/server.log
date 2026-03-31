@@ -1,0 +1,6 @@
+{"type":"server-started","port":51987,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:51987","screen_dir":"/home/finn/Developer/grant-scout-v2/.superpowers/brainstorm/33414-1774912031/content","state_dir":"/home/finn/Developer/grant-scout-v2/.superpowers/brainstorm/33414-1774912031/state"}
+{"type":"screen-added","file":"/home/finn/Developer/grant-scout-v2/.superpowers/brainstorm/33414-1774912031/content/pipeline-layout.html"}
+{"source":"user-event","type":"click","text":"📄 Drop your CV here\n        \n        \n          ✓ Profile\n          ● Scanning…\n          ○ Match\n          ○ Propose\n        \n        \n          Scanning for art history grants…\n          [WebSearch] art history grants UK 2026\n          [WebFetch] leverhulme.ac.uk/schemes\n        \n      \n    \n    \n      A — Linear Pipeline\n      Stages shown in a row. Active stage highlighted. Progress flows left to right. Live log shows Claude's activity below.","choice":"a","id":null,"timestamp":1774912134709}
+{"type":"screen-added","file":"/home/finn/Developer/grant-scout-v2/.superpowers/brainstorm/33414-1774912031/content/full-ui-mockup.html"}
+{"type":"screen-added","file":"/home/finn/Developer/grant-scout-v2/.superpowers/brainstorm/33414-1774912031/content/waiting-1.html"}
+{"type":"server-stopped","reason":"idle timeout"}

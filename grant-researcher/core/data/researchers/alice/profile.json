@@ -1,0 +1,103 @@
+{
+  "name": "Alicia Pérez",
+  "title": "Bachelor of Arts Candidate (Psychology)",
+  "career_stage": "early_career",
+  "institution": "Smith College",
+  "department": "Psychology",
+  "country": "US",
+  "research_themes": [
+    "Gender and space use in childhood",
+    "Race and gender in education",
+    "Gender differences in discussion and debate",
+    "Violence intervention in urban schools"
+  ],
+  "research_keywords": [
+    "gender differences",
+    "children's space exploration",
+    "race and gender in teaching",
+    "psycholinguistics",
+    "child development",
+    "abnormal psychology",
+    "adult development",
+    "space perception",
+    "urban school violence",
+    "alternative exercise interventions",
+    "gender in discussion",
+    "undergraduate research",
+    "survey methods",
+    "qualitative interviews"
+  ],
+  "geographic_focus": [
+    "United States",
+    "Germany"
+  ],
+  "disciplinary_fields": [
+    "psychology",
+    "developmental psychology",
+    "gender studies",
+    "psycholinguistics",
+    "German studies"
+  ],
+  "current_projects": [
+    {
+      "title": "Honors Thesis: Gender implications in children's use of space and exploration in childhood",
+      "description": "Research on gender implications in children's use of space and exploration in childhood."
+    }
+  ],
+  "publications": [],
+  "prior_grants": [
+    {
+      "funder": "National Science Foundation",
+      "scheme": "NSF-AIRE: Award for the Integration of Research and Education",
+      "amount_gbp": 0,
+      "year": 2015,
+      "role": "team_member",
+      "project_title": ""
+    }
+  ],
+  "phd_supervision": {
+    "current": 0,
+    "completed": 0,
+    "topics": []
+  },
+  "external_roles": [
+    "Member, American Psychological Association",
+    "Member, Society for Research in Child Development",
+    "Mentor, AEMES Scholars Program, Smith College (2018-19)"
+  ],
+  "exhibitions_curated": [],
+  "conference_papers": [
+    {
+      "title": "Women and Debate: An Analysis of Gender Differences in Discussion",
+      "venue": "Smith College Student Research Conference",
+      "year": 2018
+    },
+    {
+      "title": "Exploring Attitudes on Race and Gender in the Teaching Profession",
+      "venue": "Smith in the World Conference",
+      "year": 2017
+    },
+    {
+      "title": "Impact of Alternative Exercise on Violence in Urban High Schools",
+      "venue": "Greater Boston Undergraduate Psychological Research Conference, Salem MA",
+      "year": 2017
+    }
+  ],
+  "key_strengths": [
+    "Active research engagement as an undergraduate with multiple conference presentations",
+    "NSF-AIRE award recipient demonstrating early competitive funding success",
+    "Phi Beta Kappa and Psi Chi honours indicating strong academic standing",
+    "Research experience across multiple institutions (Smith College, UMass Amherst)",
+    "Bilingual fluency (German and English) with study abroad experience in Hamburg",
+    "Professional membership in APA and SRCD showing disciplinary engagement",
+    "Quantitative skills: SPSS, SAS for statistical analysis"
+  ],
+  "potential_gaps": [
+    "No peer-reviewed publications yet",
+    "Undergraduate student — no PhD or postgraduate degree",
+    "No PI or CoI grant experience (NSF-AIRE was likely as a student participant)",
+    "Research experience limited to assistantships and a summer fellowship",
+    "No international research collaborations beyond study abroad",
+    "Very early in career — limited independent research track record"
+  ]
+}

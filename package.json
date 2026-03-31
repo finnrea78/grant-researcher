@@ -1,0 +1,5 @@
+{
+  "name": "grant-scout-v2",
+  "private": true,
+  "workspaces": ["core", "grant-researcher"]
+}
