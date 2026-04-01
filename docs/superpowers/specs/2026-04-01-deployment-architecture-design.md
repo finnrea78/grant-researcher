@@ -171,6 +171,7 @@ The researcher profile is the product's core differentiator. A custom agent loop
 - Google Scholar URL (preferred) — or agent searches by name + institution as fallback
 - Publications (uploaded or discovered via Scholar)
 - Future research directions (text input from onboarding)
+- Institutional repository / CRIS data (fetched automatically if the organisation has configured a connector — see Institutional Data Integration below)
 
 **Output — rich `profile.json`:**
 - Biographical summary
@@ -182,6 +183,38 @@ The researcher profile is the product's core differentiator. A custom agent loop
 - Collaboration network (from co-authors)
 - Stated future directions
 - Funding history (if detectable from CV)
+
+### Institutional Data Integration
+
+Universities hold the most authoritative record of a researcher's publications — often richer and more complete than Google Scholar. Connecting to institutional systems allows the intake agent to access this data automatically, without requiring the researcher to upload anything manually.
+
+**Supported system types:**
+
+| System type | Examples | Protocol |
+|---|---|---|
+| CRIS (Current Research Information Systems) | Pure (Elsevier), Symplectic Elements, CINECA IRIS | REST API (per-vendor) |
+| Institutional repositories | DSpace, EPrints, Figshare for Institutions | OAI-PMH (standard) |
+| ORCID | All institutions | ORCID Public API (OAuth optional) |
+
+**How it works:**
+
+1. **University admin configures once** — API base URL + API key stored in the `organisations` table in Supabase (`institutional_api_url`, `institutional_api_key`).
+2. **Researcher provides their staff/student ID** (or ORCID) during onboarding — stored on the `users` table.
+3. **Intake agent queries the institution's API** at run time — fetches publications, extracts titles, abstracts, co-authors, citation counts, and publication dates.
+4. **Agent merges with other sources** — cross-references institutional data with Google Scholar and uploaded CVs to build the most complete picture.
+
+**Auth and privacy:**
+- API credentials stored server-side, never exposed to the browser.
+- Researchers only see their own publication data (enforced by user ID in the query).
+- Institutions retain control — they issue the API key and can revoke it at any time.
+
+**What the agent gains:**
+- Full publication list including theses, reports, conference papers, datasets — often absent from Scholar.
+- Co-author network (useful for flagging collaborative grant opportunities).
+- Affiliation and department metadata.
+- Student publications (where the institution exposes them) — enabling Grant Scout to work for postgraduate researchers, not just senior faculty.
+
+**Rollout:** This is a Stage 3 feature. It requires university admin onboarding and per-institution API integration work.
 
 ### Tiered Matching (Recall-Optimised)
 
@@ -267,6 +300,13 @@ These are opt-in premium features, not part of every pipeline run. Billed at hig
 - Add admin dashboard pages (department/university views)
 - Add bulk pipeline operations for admins
 - Move to job queue for background processing if needed
+- **Institutional integrations:**
+  - Build OAI-PMH connector for DSpace / EPrints institutional repositories
+  - Build Pure (Elsevier) REST API connector
+  - Build ORCID Public API connector
+  - Admin onboarding flow to configure institutional API credentials per organisation
+  - Add `institutional_api_url` + `institutional_api_key` fields to `organisations` table
+  - Add `staff_id` / `orcid_id` fields to `users` table
 
 ### Stage 4 — Premium Features
 
@@ -295,6 +335,10 @@ These are opt-in premium features, not part of every pipeline run. Billed at hig
 | **New:** `grant-researcher/src/middleware.ts` | Auth middleware for all API routes |
 | **New:** `grant-researcher/src/lib/claude.ts` | Anthropic client + helper for pipeline calls |
 | **New:** `core/src/harvester/` | Grant harvester service (connectors + scrapers) |
+| **New:** `core/src/institutional/oai-pmh.ts` | OAI-PMH connector for DSpace / EPrints repositories |
+| **New:** `core/src/institutional/pure.ts` | Pure (Elsevier) CRIS REST API connector |
+| **New:** `core/src/institutional/orcid.ts` | ORCID Public API connector |
+| **New:** `core/src/institutional/index.ts` | Unified interface — resolves correct connector per organisation |
 
 ---
 

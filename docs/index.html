@@ -568,7 +568,7 @@
             <div class="flow-node accent">
               <div>
                 <div style="font-weight:700;">🤖 Intake — Agent loop <span class="badge badge-purple">Agent</span></div>
-                <div class="flow-note">Tools: Read, Write, Glob, WebFetch, WebSearch<br>Cross-references CV + Scholar + publications + goals<br>Outputs: rich profile.json (biography, themes, citations, trajectory)<br><span class="badge badge-blue">~$0.50–1.50</span></div>
+                <div class="flow-note">Tools: Read, Write, Glob, WebFetch, WebSearch<br>Sources: CV + Scholar + institutional repo / CRIS + ORCID + uploaded publications<br>Outputs: rich profile.json (biography, themes, citations, trajectory, co-authors)<br><span class="badge badge-blue">~$0.50–1.50</span></div>
               </div>
             </div>
           </div>
@@ -595,6 +595,37 @@
             <div class="flow-node green">Results in Supabase + proposals on volume</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Institutional integrations -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">🏫 Institutional System Integration</div>
+      <p style="font-size:13px; margin-bottom:16px;">Universities hold the most complete record of a researcher's publications. Connecting to institutional systems gives the intake agent richer data than Google Scholar alone — and covers students and early-career researchers whose public profiles are thin.</p>
+      <table>
+        <thead>
+          <tr><th>System type</th><th>Examples</th><th>Protocol</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>CRIS</td>
+            <td>Pure (Elsevier), Symplectic Elements, CINECA IRIS</td>
+            <td><code>REST API (per-vendor)</code></td>
+          </tr>
+          <tr>
+            <td>Institutional repositories</td>
+            <td>DSpace, EPrints, Figshare for Institutions</td>
+            <td><code>OAI-PMH (standard)</code></td>
+          </tr>
+          <tr>
+            <td>ORCID</td>
+            <td>All institutions</td>
+            <td><code>ORCID Public API</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:16px; font-size:13px; color:var(--muted);">
+        <strong style="color:var(--text);">How it works:</strong> University admin configures API credentials once per organisation → stored in Supabase <code>organisations</code> table. Researcher provides their staff/student ID or ORCID during onboarding. Intake agent queries the institution's API at run time and merges publication data with Google Scholar and uploaded files.
       </div>
     </div>
 
@@ -738,13 +769,17 @@
 
         <div class="stage stage-3">
           <div class="stage-label">Stage 3 — Scale</div>
-          <div class="stage-title">Harvester + admin tools</div>
+          <div class="stage-title">Harvester + admin tools + institutional integrations</div>
           <ul>
             <li>Build harvester service (API connectors + scrapers)</li>
             <li>Set up cron jobs on Railway for scheduled harvesting</li>
             <li>Add admin dashboard (department/university views)</li>
             <li>Bulk pipeline operations for admins</li>
             <li>Job queue for background processing (BullMQ/Redis)</li>
+            <li>OAI-PMH connector for DSpace / EPrints repositories</li>
+            <li>Pure (Elsevier) CRIS REST API connector</li>
+            <li>ORCID Public API connector</li>
+            <li>Admin onboarding to configure institutional API credentials per organisation</li>
           </ul>
         </div>
 
@@ -806,7 +841,7 @@
       <li><span class="check todo">○</span> Verify cost per run in Anthropic dashboard: target &lt;$3.15</li>
     </ul>
 
-    <h3>Stage 3 — Harvester</h3>
+    <h3>Stage 3 — Harvester + Institutional Integrations</h3>
     <ul class="checklist">
       <li><span class="check todo">○</span> Create <code>core/src/harvester/</code> directory</li>
       <li><span class="check todo">○</span> Build UKRI Gateway API connector</li>
@@ -816,6 +851,15 @@
       <li><span class="check todo">○</span> Set up Railway cron jobs for each source</li>
       <li><span class="check todo">○</span> Add admin dashboard pages (Next.js routes, Supabase queries)</li>
       <li><span class="check todo">○</span> Implement job queue for bulk operations (BullMQ)</li>
+      <li><span class="check todo">○</span> Add <code>institutional_api_url</code>, <code>institutional_api_key</code> fields to <code>organisations</code> table</li>
+      <li><span class="check todo">○</span> Add <code>staff_id</code>, <code>orcid_id</code> fields to <code>users</code> table</li>
+      <li><span class="check todo">○</span> Create <code>core/src/institutional/oai-pmh.ts</code> — OAI-PMH connector (DSpace, EPrints)</li>
+      <li><span class="check todo">○</span> Create <code>core/src/institutional/pure.ts</code> — Pure (Elsevier) REST API connector</li>
+      <li><span class="check todo">○</span> Create <code>core/src/institutional/orcid.ts</code> — ORCID Public API connector</li>
+      <li><span class="check todo">○</span> Create <code>core/src/institutional/index.ts</code> — unified interface, resolves connector per org</li>
+      <li><span class="check todo">○</span> Admin onboarding UI: configure institutional API credentials per organisation</li>
+      <li><span class="check todo">○</span> Researcher onboarding: collect staff/student ID or ORCID iD</li>
+      <li><span class="check todo">○</span> Intake agent updated to call institutional connector before building profile</li>
     </ul>
 
     <h3>Stage 4 — Premium features</h3>
