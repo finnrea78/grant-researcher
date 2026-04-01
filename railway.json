@@ -5,7 +5,7 @@
     "buildCommand": "npm run build"
   },
   "deploy": {
-    "startCommand": "npm run start -w grant-researcher",
+    "startCommand": "npm run start",
     "healthcheckPath": "/",
     "restartPolicyType": "ON_FAILURE"
   }

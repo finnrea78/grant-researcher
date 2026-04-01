@@ -7,11 +7,10 @@ dist/
 *.tsbuildinfo
 
 # Runtime-generated data — not committed
-core/data/researchers/
-core/data/outputs/
-core/data/funding-sources/*.md
-core/data/funding-sources/*.json
-grant-researcher/core/data/
+data/researchers/
+data/outputs/
+data/funding-sources/*.md
+data/funding-sources/*.json
 
 # Shell config files (sandbox artifacts)
 .bashrc
