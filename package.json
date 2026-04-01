@@ -1,5 +1,10 @@
 {
   "name": "grant-scout-v2",
   "private": true,
-  "workspaces": ["core", "grant-researcher"]
+  "workspaces": ["core", "grant-researcher"],
+  "scripts": {
+    "build": "npm run build -w core && npm run build -w grant-researcher",
+    "dev": "npm run build -w core && npm run dev -w grant-researcher",
+    "start": "npm run start -w grant-researcher"
+  }
 }

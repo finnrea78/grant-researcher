@@ -4,6 +4,7 @@ import { profileCommand } from "./commands/profile.js";
 import { scanCommand } from "./commands/scan.js";
 import { matchCommand } from "./commands/match.js";
 import { proposeCommand } from "./commands/propose.js";
+import { dashboardCommand } from "./commands/dashboard.js";
 const program = new Command();
 program
     .name("grant-scout")
@@ -48,6 +49,12 @@ program
         console.error("Usage: grant-scout propose [name] <funder> <scheme>");
         process.exit(1);
     }
+});
+program
+    .command("dashboard [days]")
+    .description("Show a dev progress dashboard (commits, file changes, streak)")
+    .action((days) => {
+    dashboardCommand(days ? parseInt(days, 10) : 7);
 });
 program.parseAsync(process.argv).catch((err) => {
     console.error(err.message);

@@ -1,4 +1,4 @@
-import { parseMatches } from "../parseMatches";
+import { parseMatches } from "@/lib/parseMatches";
 
 const SAMPLE_MATCHES = `
 # Grant Matches for Dr. Will Rea
