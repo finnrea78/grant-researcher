@@ -5,3 +5,10 @@ dist/
 .env.local
 .env*.local
 *.tsbuildinfo
+
+# Runtime-generated data — not committed
+core/data/researchers/
+core/data/outputs/
+core/data/funding-sources/*.md
+core/data/funding-sources/*.json
+grant-researcher/core/data/
