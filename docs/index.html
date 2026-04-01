@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grant Scout — Deployment Architecture</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --accent: #4f8ef7;
+      --accent2: #7c6af7;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --orange: #fb923c;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --radius: 10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .page-wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 48px 24px 96px;
+    }
+
+    /* ── Header ── */
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 32px;
+      margin-bottom: 48px;
+    }
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(79,142,247,.12);
+      border: 1px solid rgba(79,142,247,.25);
+      border-radius: 20px;
+      padding: 3px 10px;
+      margin-bottom: 16px;
+    }
+    h1 { font-size: 34px; font-weight: 700; letter-spacing: -.5px; margin-bottom: 10px; }
+    .header-meta { color: var(--muted); font-size: 13px; }
+    .header-meta span { margin-right: 20px; }
+
+    /* ── Sections ── */
+    .section { margin-bottom: 56px; }
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h2 .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    h3 { font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card p { color: var(--muted); font-size: 14px; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      border-radius: 4px;
+      padding: 2px 7px;
+    }
+    .badge-blue { background: rgba(79,142,247,.15); color: var(--accent); border: 1px solid rgba(79,142,247,.3); }
+    .badge-green { background: rgba(52,211,153,.12); color: var(--green); border: 1px solid rgba(52,211,153,.25); }
+    .badge-yellow { background: rgba(251,191,36,.12); color: var(--yellow); border: 1px solid rgba(251,191,36,.25); }
+    .badge-purple { background: rgba(124,106,247,.12); color: var(--accent2); border: 1px solid rgba(124,106,247,.25); }
+    .badge-orange { background: rgba(251,146,60,.12); color: var(--orange); border: 1px solid rgba(251,146,60,.25); }
+
+    /* ── Grid ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    @media (max-width: 640px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(46,51,80,.5);
+      vertical-align: top;
+      color: var(--text);
+    }
+    td code, th code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; }
+    tr:last-child td { border-bottom: none; }
+
+    /* ── Diagrams (SVG wrappers) ── */
+    .diagram-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+    }
+    .diagram-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── Flow nodes ── */
+    .flow { display: flex; flex-direction: column; gap: 0; }
+    .flow-row { display: flex; align-items: stretch; gap: 12px; margin-bottom: 4px; }
+    .flow-node {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .flow-node.accent { border-color: rgba(79,142,247,.4); background: rgba(79,142,247,.08); }
+    .flow-node.green { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.07); }
+    .flow-node.yellow { border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.07); }
+    .flow-node.purple { border-color: rgba(124,106,247,.35); background: rgba(124,106,247,.08); }
+    .flow-node.orange { border-color: rgba(251,146,60,.35); background: rgba(251,146,60,.07); }
+    .flow-arrow {
+      display: flex;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1;
+      margin: 2px 0;
+    }
+    .flow-note { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Cost table ── */
+    .cost-row-good td { color: var(--green); }
+    .cost-row-bad td { color: var(--red); }
+    .savings { color: var(--green); font-weight: 700; }
+
+    /* ── Tier cards ── */
+    .tier-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .tier-icon { font-size: 28px; margin-bottom: 8px; }
+    .tier-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .tier-desc { font-size: 13px; color: var(--muted); }
+
+    /* ── Checklist ── */
+    .checklist { list-style: none; }
+    .checklist li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(46,51,80,.4);
+      font-size: 14px;
+    }
+    .checklist li:last-child { border-bottom: none; }
+    .check { color: var(--green); font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .check.todo { color: var(--muted); }
+    .check.warn { color: var(--yellow); }
+
+    /* ── Stage timeline ── */
+    .timeline { position: relative; padding-left: 32px; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 10px;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: var(--border);
+    }
+    .stage {
+      position: relative;
+      margin-bottom: 28px;
+    }
+    .stage::before {
+      content: '';
+      position: absolute;
+      left: -26px;
+      top: 6px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid;
+      background: var(--bg);
+    }
+    .stage-1::before { border-color: var(--accent); background: var(--accent); }
+    .stage-2::before { border-color: var(--yellow); }
+    .stage-3::before { border-color: var(--green); }
+    .stage-4::before { border-color: var(--accent2); }
+    .stage-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .stage-1 .stage-label { color: var(--accent); }
+    .stage-2 .stage-label { color: var(--yellow); }
+    .stage-3 .stage-label { color: var(--green); }
+    .stage-4 .stage-label { color: var(--accent2); }
+    .stage-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .stage ul { list-style: none; }
+    .stage ul li {
+      font-size: 13px;
+      color: var(--muted);
+      padding: 3px 0;
+      display: flex;
+      gap: 8px;
+    }
+    .stage ul li::before { content: '→'; color: var(--border); flex-shrink: 0; }
+
+    /* ── Code block ── */
+    pre {
+      background: #0a0c14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      overflow-x: auto;
+      color: #a8b5cc;
+    }
+    pre .k { color: #7c6af7; }
+    pre .s { color: #34d399; }
+    pre .c { color: #4a5568; }
+
+    /* ── Arch diagram ── */
+    .arch-diagram {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 600px) { .arch-diagram { grid-template-columns: 1fr; } }
+    .arch-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .arch-box-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .arch-box ul { list-style: none; }
+    .arch-box ul li { font-size: 13px; padding: 3px 0; color: var(--text); display: flex; gap: 8px; align-items: flex-start; }
+    .arch-box ul li::before { content: '·'; color: var(--muted); flex-shrink: 0; }
+    .arch-connector {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+      color: var(--muted);
+      padding: 4px 0;
+    }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .footnote { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">Grant Scout · Architecture Spec</div>
+    <h1>Deployment Architecture</h1>
+    <div class="header-meta">
+      <span>Date: 2026-04-01</span>
+      <span>Status: <span class="badge badge-yellow">Draft</span></span>
+      <span>Author: Finn Rea + Claude</span>
+    </div>
+  </div>
+
+  <!-- Overview -->
+  <div class="section">
+    <h2><span class="num">0</span> Overview</h2>
+    <p style="color:var(--muted); max-width:680px; margin-bottom:20px;">
+      Grant Scout is a grant-matching pipeline for academic researchers. This document defines the deployment architecture, cost optimisation strategy, and staged rollout plan for moving from a local monorepo to a production SaaS product.
+    </p>
+
+    <div class="grid-3">
+      <div class="tier-card">
+        <div class="tier-icon">👤</div>
+        <div class="tier-title">Individual</div>
+        <div class="tier-desc">Single academic researcher. Own data, own pipeline runs.</div>
+      </div>
+      <div class="tier-card">
+        <div class="tier-icon">🏛️</div>
+        <div class="tier-title">Department</div>
+        <div class="tier-desc">Admin manages researchers in one department. Bulk operations.</div>
+      </div>
+      <div class="tier-card">
+        <div class="tier-icon">🎓</div>
+        <div class="tier-title">University</div>
+        <div class="tier-desc">Manages multiple departments. Reporting &amp; analytics.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Infrastructure -->
+  <div class="section">
+    <h2><span class="num">1</span> Infrastructure</h2>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-box-title" style="color:var(--accent);">🚂 Railway Server</div>
+        <ul>
+          <li>Next.js 14 App (frontend + API routes)</li>
+          <li>Agent SDK / Claude API calls</li>
+          <li>Harvester cron service</li>
+          <li>Persistent volume at <code>/data</code></li>
+          <li>Env: <code>ANTHROPIC_API_KEY</code></li>
+        </ul>
+      </div>
+      <div class="arch-box">
+        <div class="arch-box-title" style="color:var(--green);">🟢 Supabase</div>
+        <ul>
+          <li>Auth — email/password, JWTs</li>
+          <li>PostgreSQL database</li>
+          <li>Grants table (harvested data)</li>
+          <li>Users / organisations</li>
+          <li>Row-Level Security (RLS)</li>
+        </ul>
+      </div>
+      <div class="arch-connector">↕ API calls</div>
+      <div class="arch-box">
+        <div class="arch-box-title" style="color:var(--yellow);">📁 Volume <code>/data</code></div>
+        <ul>
+          <li>CVs and additional researcher docs</li>
+          <li>Generated profile.json files</li>
+          <li>Proposal .md outputs</li>
+          <li>Per-tenant isolated paths</li>
+        </ul>
+      </div>
+      <div class="arch-box">
+        <div class="arch-box-title" style="color:var(--accent2);">🤖 Anthropic API</div>
+        <ul>
+          <li>Profile building (structured output)</li>
+          <li>Grant matching (tiered)</li>
+          <li>Proposal drafting (streaming)</li>
+          <li>Costs absorbed by us</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>Filesystem isolation — volume path per tenant</h3>
+      <pre>/data/{org_id}/{user_id}/{session_id}/
+  ├── researchers/{name}/
+  │   ├── raw/
+  │   │   ├── cv.md
+  │   │   ├── publications/
+  │   │   ├── future-directions.md
+  │   │   └── additional/
+  │   ├── profile.json
+  │   └── publications.md
+  └── outputs/{name}/
+      └── proposals/</pre>
+    </div>
+  </div>
+
+  <!-- Data Model -->
+  <div class="section">
+    <h2><span class="num">2</span> Database Model</h2>
+    <div class="diagram-wrap">
+      <div class="diagram-label">Supabase PostgreSQL Tables</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Table</th>
+            <th>Key fields</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>organisations</strong></td>
+            <td><code>id, name, tier, parent_org_id</code></td>
+            <td>University / department hierarchy</td>
+          </tr>
+          <tr>
+            <td><strong>users</strong></td>
+            <td><code>id, org_id, role, email</code></td>
+            <td>Supabase Auth users + org membership</td>
+          </tr>
+          <tr>
+            <td><strong>researcher_sessions</strong></td>
+            <td><code>id, user_id, org_id, researcher_name</code></td>
+            <td>Each researcher's pipeline context</td>
+          </tr>
+          <tr>
+            <td><strong>pipeline_runs</strong></td>
+            <td><code>session_id, stage, status, error</code></td>
+            <td>Per-stage run tracking (upload → propose)</td>
+          </tr>
+          <tr>
+            <td><strong>grants</strong></td>
+            <td><code>source, funder, scheme, deadline, eligibility</code></td>
+            <td>Harvested grant database (shared across all users)</td>
+          </tr>
+          <tr>
+            <td><strong>match_results</strong></td>
+            <td><code>session_id, grant_id, score, reasoning</code></td>
+            <td>Scored matches per researcher per run</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Row-Level Security (RLS)</div>
+      <p>Data isolation enforced at the database level — no application logic required.</p>
+      <table style="margin-top:12px;">
+        <thead><tr><th>Role</th><th>Can see</th></tr></thead>
+        <tbody>
+          <tr><td>Researcher</td><td>Rows where <code>user_id = auth.uid()</code></td></tr>
+          <tr><td>Department admin</td><td>Rows where <code>org_id = their org</code></td></tr>
+          <tr><td>University admin</td><td>Rows where <code>org_id = their org OR parent_org_id = their org</code></td></tr>
+          <tr><td>Any authenticated user</td><td>All rows in <code>grants</code> table (shared data)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pipeline Architecture -->
+  <div class="section">
+    <h2><span class="num">3</span> Pipeline Architecture</h2>
+    <p style="color:var(--muted); margin-bottom:20px; font-size:14px;">
+      Two separate systems replace the current monolithic Agent SDK pipeline.
+    </p>
+
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-title"><span class="badge badge-yellow">System A</span> Harvester — background, scheduled</div>
+        <p>Runs on a cron schedule. No Agent SDK. Pure Node.js code.</p>
+        <div class="flow" style="margin-top:16px;">
+          <div class="flow-row">
+            <div class="flow-node green">⏱ Cron trigger (daily / weekly per source)</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-row" style="gap:8px;">
+            <div class="flow-node" style="flex:1;">
+              <div>
+                <div style="font-weight:700; margin-bottom:4px;">Layer 1 — API connectors</div>
+                <div class="flow-note">UKRI, NSF, EU Horizon APIs<br>fetch() → parse JSON → upsert<br><span class="badge badge-green">Cost: free</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-row">
+            <div class="flow-node">
+              <div>
+                <div style="font-weight:700; margin-bottom:4px;">Layer 2 — Web scrapers</div>
+                <div class="flow-note">Cheerio for known HTML structures<br>fetch() → parse → upsert<br><span class="badge badge-green">Cost: free</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-row">
+            <div class="flow-node purple">
+              <div>
+                <div style="font-weight:700; margin-bottom:4px;">Layer 3 — AI enrichment (rare)</div>
+                <div class="flow-note">Messy pages only. Single messages.create()<br>Structured output schema<br><span class="badge badge-purple">Cost: ~$0.01–0.03/page</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-row">
+            <div class="flow-node green">Supabase grants table (shared, all users)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="badge badge-blue">System B</span> User pipeline — on-demand</div>
+        <p>Triggered when a user uploads their CV. Code does I/O. Claude does thinking.</p>
+        <div class="flow" style="margin-top:16px;">
+          <div class="flow-row">
+            <div class="flow-node accent">📄 CV + publications + goals uploaded</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-row">
+            <div class="flow-node accent">
+              <div>
+                <div style="font-weight:700;">Profile step</div>
+                <div class="flow-note">Code reads docs → 1× messages.create() → Code writes profile.json<br><span class="badge badge-blue">~$0.05–0.10</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-row">
+            <div class="flow-node yellow">
+              <div>
+                <div style="font-weight:700;">Match step</div>
+                <div class="flow-note">Tiered matching — see diagram below<br><span class="badge badge-yellow">~$0.03–0.10</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-row">
+            <div class="flow-node purple">
+              <div>
+                <div style="font-weight:700;">Propose step</div>
+                <div class="flow-note">Code reads profile + grant → 1× stream() → Code writes proposal.md<br><span class="badge badge-purple">~$0.05–0.15</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-row">
+            <div class="flow-node green">Results in Supabase + proposals on volume</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tiered matching -->
+    <div class="card">
+      <div class="card-title">⚡ Tiered Matching — Recall-Optimised</div>
+      <p style="font-size:13px; margin-bottom:16px;">Missing a relevant grant is worse than surfacing irrelevant ones. Three tiers ensure nothing is missed.</p>
+      <div class="flow">
+        <div class="flow-row" style="gap:12px;">
+          <div class="flow-node green" style="flex:0 0 40px; justify-content:center; font-weight:800;">T1</div>
+          <div class="flow-node green">
+            <div>
+              <div style="font-weight:700;">Code-based pre-filter <span class="badge badge-green">Free</span></div>
+              <div class="flow-note">Filter by discipline keywords, country eligibility, career stage, deadline not passed.<br>Intentionally permissive — 500+ grants → ~50–100 candidates</div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row" style="gap:12px;">
+          <div class="flow-node yellow" style="flex:0 0 40px; justify-content:center; font-weight:800;">T2</div>
+          <div class="flow-node yellow">
+            <div>
+              <div style="font-weight:700;">AI scoring — per-grant <span class="badge badge-yellow">~$0.02–0.08</span></div>
+              <div class="flow-note">Batches of 5–10 grants per API call. Each grant gets individual attention.<br>Structured output: score 0–100 + reasoning per grant.</div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row" style="gap:12px;">
+          <div class="flow-node accent" style="flex:0 0 40px; justify-content:center; font-weight:800;">T3</div>
+          <div class="flow-node accent">
+            <div>
+              <div style="font-weight:700;">AI synthesis — one call <span class="badge badge-blue">~$0.01–0.03</span></div>
+              <div class="flow-note">Send all scored results → Claude returns ranked list with strategic recommendations.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cost -->
+  <div class="section">
+    <h2><span class="num">4</span> Cost Per Pipeline Run</h2>
+    <div class="diagram-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Step</th>
+            <th>Agent SDK (current)</th>
+            <th>Raw API (target)</th>
+            <th>Savings</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Profile</strong></td>
+            <td style="color:var(--red);">~$1–3</td>
+            <td style="color:var(--green);">~$0.05–0.10</td>
+            <td class="savings">95%</td>
+          </tr>
+          <tr>
+            <td><strong>Scan / Harvest</strong></td>
+            <td style="color:var(--red);">~$2–8</td>
+            <td style="color:var(--green);">~$0 (code harvester)</td>
+            <td class="savings">100%</td>
+          </tr>
+          <tr>
+            <td><strong>Match</strong></td>
+            <td style="color:var(--red);">~$1–3</td>
+            <td style="color:var(--green);">~$0.03–0.10</td>
+            <td class="savings">97%</td>
+          </tr>
+          <tr>
+            <td><strong>Propose</strong></td>
+            <td style="color:var(--red);">~$1–3</td>
+            <td style="color:var(--green);">~$0.05–0.15</td>
+            <td class="savings">95%</td>
+          </tr>
+          <tr style="background:var(--surface2);">
+            <td><strong>Total</strong></td>
+            <td style="color:var(--red); font-weight:700;">~$5–17</td>
+            <td style="color:var(--green); font-weight:700;">~$0.13–0.35</td>
+            <td class="savings">~97%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="footnote">Agent SDK kept for premium features (grant discovery, deep proposals) on higher tiers where the cost is justified.</p>
+  </div>
+
+  <!-- API Routes -->
+  <div class="section">
+    <h2><span class="num">5</span> API Routes</h2>
+    <div class="diagram-wrap">
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Route</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="badge badge-blue">POST</span></td><td><code>/api/session</code></td><td>Upload CV + additional docs. Create session in Supabase.</td></tr>
+          <tr><td><span class="badge badge-blue">POST</span></td><td><code>/api/session/[name]/profile</code></td><td>Claude API: read all raw docs → build profile.json (streaming)</td></tr>
+          <tr><td><span class="badge badge-blue">POST</span></td><td><code>/api/session/[name]/match</code></td><td>Claude API: tiered matching against Supabase grants table (streaming)</td></tr>
+          <tr><td><span class="badge badge-green">GET</span></td><td><code>/api/session/[name]/matches</code></td><td>Read match_results from Supabase</td></tr>
+          <tr><td><span class="badge badge-blue">POST</span></td><td><code>/api/session/[name]/propose</code></td><td>Claude API: draft proposal for selected grant (streaming)</td></tr>
+          <tr><td><span class="badge badge-green">GET</span></td><td><code>/api/session/[name]/proposal</code></td><td>Read proposals from volume</td></tr>
+          <tr><td><span class="badge badge-green">GET</span></td><td><code>/api/session/[name]/status</code></td><td>Read pipeline_runs from Supabase</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="footnote">All routes check Supabase Auth JWT before processing. Pipeline status tracked in pipeline_runs table.</p>
+  </div>
+
+  <!-- Staged rollout -->
+  <div class="section">
+    <h2><span class="num">6</span> Staged Rollout</h2>
+    <div class="card">
+      <div class="timeline">
+
+        <div class="stage stage-1">
+          <div class="stage-label">Stage 1 — Now</div>
+          <div class="stage-title">Demo deployment</div>
+          <ul>
+            <li><strong>1a:</strong> Deploy current code to Railway. Set ANTHROPIC_API_KEY. Mount volume. Working URL, no auth.</li>
+            <li><strong>1b:</strong> Create Supabase project. Add auth + basic tables. Add auth middleware to routes.</li>
+            <li>Result: live URL, users can sign up, upload CV, run full pipeline.</li>
+          </ul>
+        </div>
+
+        <div class="stage stage-2">
+          <div class="stage-label">Stage 2 — Cost Reduction</div>
+          <div class="stage-title">Replace Agent SDK with raw Claude API</div>
+          <ul>
+            <li>Profile step first (simplest — single input, structured output)</li>
+            <li>Match step → tiered matching, read grants from Supabase</li>
+            <li>Propose step → single streaming API call</li>
+            <li>Remove @anthropic-ai/claude-agent-sdk dependency</li>
+            <li>Add grants + match_results tables to Supabase</li>
+          </ul>
+        </div>
+
+        <div class="stage stage-3">
+          <div class="stage-label">Stage 3 — Scale</div>
+          <div class="stage-title">Harvester + admin tools</div>
+          <ul>
+            <li>Build harvester service (API connectors + scrapers)</li>
+            <li>Set up cron jobs on Railway for scheduled harvesting</li>
+            <li>Add admin dashboard (department/university views)</li>
+            <li>Bulk pipeline operations for admins</li>
+            <li>Job queue for background processing (BullMQ/Redis)</li>
+          </ul>
+        </div>
+
+        <div class="stage stage-4">
+          <div class="stage-label">Stage 4 — Premium</div>
+          <div class="stage-title">Agent features + enterprise auth</div>
+          <ul>
+            <li>Agent-powered grant discovery (higher tiers)</li>
+            <li>Deep proposal assistance with cross-document reasoning</li>
+            <li>Reporting and analytics for university admins</li>
+            <li>SSO (SAML/OIDC) for university-wide tier</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- End-to-end checklist -->
+  <div class="section">
+    <h2><span class="num">7</span> End-to-End Implementation Checklist</h2>
+
+    <h3 style="margin-top:0;">Stage 1a — Railway deploy</h3>
+    <ul class="checklist">
+      <li><span class="check todo">○</span> Create Railway project from monorepo root</li>
+      <li><span class="check todo">○</span> Set build command: <code>npm run build -w core && npm run build -w grant-researcher</code></li>
+      <li><span class="check todo">○</span> Set start command: <code>npm run start -w grant-researcher</code></li>
+      <li><span class="check todo">○</span> Add <code>ANTHROPIC_API_KEY</code> env var</li>
+      <li><span class="check todo">○</span> Mount persistent volume at <code>/data</code></li>
+      <li><span class="check todo">○</span> Update <code>core/data</code> path resolution to use <code>/data</code></li>
+      <li><span class="check todo">○</span> Verify full pipeline runs end-to-end on Railway URL</li>
+    </ul>
+
+    <h3>Stage 1b — Supabase auth</h3>
+    <ul class="checklist">
+      <li><span class="check todo">○</span> Create Supabase project</li>
+      <li><span class="check todo">○</span> Create <code>organisations</code>, <code>users</code>, <code>researcher_sessions</code>, <code>pipeline_runs</code> tables</li>
+      <li><span class="check todo">○</span> Add RLS policies per table</li>
+      <li><span class="check todo">○</span> Add <code>@supabase/supabase-js</code> to grant-researcher package</li>
+      <li><span class="check todo">○</span> Create <code>src/lib/supabase.ts</code> client</li>
+      <li><span class="check todo">○</span> Add <code>src/middleware.ts</code> — check JWT on all <code>/api/session/*</code> routes</li>
+      <li><span class="check todo">○</span> Add sign-up / sign-in pages</li>
+      <li><span class="check todo">○</span> Add <code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code> to Railway</li>
+      <li><span class="check todo">○</span> Update <code>/api/session</code> route to create Supabase session record</li>
+      <li><span class="check todo">○</span> Verify: second user cannot see first user's data</li>
+    </ul>
+
+    <h3>Stage 2 — Raw Claude API</h3>
+    <ul class="checklist">
+      <li><span class="check todo">○</span> Add <code>@anthropic-ai/sdk</code> dependency</li>
+      <li><span class="check todo">○</span> Create <code>src/lib/claude.ts</code> — Anthropic client + streaming helper</li>
+      <li><span class="check todo">○</span> Refactor profile route: Node.js reads docs → <code>messages.create()</code> with structured output → Node.js writes profile.json</li>
+      <li><span class="check todo">○</span> Add <code>grants</code> + <code>match_results</code> tables to Supabase</li>
+      <li><span class="check todo">○</span> Refactor match route: read profile + grants from Supabase → tiered matching → write match_results</li>
+      <li><span class="check todo">○</span> Refactor propose route: Node.js reads profile + grant → <code>messages.stream()</code> → SSE to browser</li>
+      <li><span class="check todo">○</span> Delete scan route (replaced by harvester)</li>
+      <li><span class="check todo">○</span> Remove <code>@anthropic-ai/claude-agent-sdk</code> dependency</li>
+      <li><span class="check todo">○</span> Verify cost per run in Anthropic dashboard: target &lt;$0.35</li>
+    </ul>
+
+    <h3>Stage 3 — Harvester</h3>
+    <ul class="checklist">
+      <li><span class="check todo">○</span> Create <code>core/src/harvester/</code> directory</li>
+      <li><span class="check todo">○</span> Build UKRI Gateway API connector</li>
+      <li><span class="check todo">○</span> Build NSF API connector</li>
+      <li><span class="check todo">○</span> Build generic Cheerio web scraper for known funder pages</li>
+      <li><span class="check todo">○</span> Build AI enrichment pipeline for messy pages (single API calls)</li>
+      <li><span class="check todo">○</span> Set up Railway cron jobs for each source</li>
+      <li><span class="check todo">○</span> Add admin dashboard pages (Next.js routes, Supabase queries)</li>
+      <li><span class="check todo">○</span> Implement job queue for bulk operations (BullMQ)</li>
+    </ul>
+
+    <h3>Stage 4 — Premium features</h3>
+    <ul class="checklist">
+      <li><span class="check todo">○</span> Agent-powered grant discovery feature (gated to higher tiers)</li>
+      <li><span class="check todo">○</span> Deep proposal assistance with multi-document context</li>
+      <li><span class="check todo">○</span> University admin reporting + export</li>
+      <li><span class="check todo">○</span> SAML/OIDC SSO integration</li>
+    </ul>
+  </div>
+
+  <!-- Files -->
+  <div class="section">
+    <h2><span class="num">8</span> Key Files to Create / Modify</h2>
+    <div class="diagram-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><code>grant-researcher/src/lib/supabase.ts</code></td><td><span class="badge badge-green">Create</span> Supabase client init</td></tr>
+          <tr><td><code>grant-researcher/src/middleware.ts</code></td><td><span class="badge badge-green">Create</span> Auth middleware for API routes</td></tr>
+          <tr><td><code>grant-researcher/src/lib/claude.ts</code></td><td><span class="badge badge-green">Create</span> Anthropic client + pipeline helpers</td></tr>
+          <tr><td><code>core/src/harvester/</code></td><td><span class="badge badge-green">Create</span> Harvester service (connectors + scrapers)</td></tr>
+          <tr><td><code>grant-researcher/src/app/api/session/route.ts</code></td><td><span class="badge badge-yellow">Modify</span> Add Supabase auth check + session record</td></tr>
+          <tr><td><code>grant-researcher/src/app/api/session/[name]/profile/route.ts</code></td><td><span class="badge badge-yellow">Modify</span> Replace Agent SDK → Claude API</td></tr>
+          <tr><td><code>grant-researcher/src/app/api/session/[name]/match/route.ts</code></td><td><span class="badge badge-yellow">Modify</span> Replace Agent SDK → tiered matching</td></tr>
+          <tr><td><code>grant-researcher/src/app/api/session/[name]/propose/route.ts</code></td><td><span class="badge badge-yellow">Modify</span> Replace Agent SDK → streaming API call</td></tr>
+          <tr><td><code>grant-researcher/src/app/api/session/[name]/matches/route.ts</code></td><td><span class="badge badge-yellow">Modify</span> Read from Supabase instead of filesystem</td></tr>
+          <tr><td><code>grant-researcher/src/app/api/session/[name]/status/route.ts</code></td><td><span class="badge badge-yellow">Modify</span> Read from Supabase instead of filesystem</td></tr>
+          <tr><td><code>grant-researcher/src/app/api/session/[name]/scan/route.ts</code></td><td><span class="badge badge-red">Delete</span> Replaced by harvester cron</td></tr>
+          <tr><td><code>grant-researcher/package.json</code></td><td><span class="badge badge-yellow">Modify</span> Add <code>@anthropic-ai/sdk</code>, <code>@supabase/supabase-js</code></td></tr>
+          <tr><td><code>grant-researcher/next.config.mjs</code></td><td><span class="badge badge-yellow">Modify</span> Add <code>output: "standalone"</code> for Railway</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <hr>
+  <p style="color:var(--muted); font-size:12px;">
+    Grant Scout · Deployment Architecture Design · 2026-04-01 ·
+    <a href="superpowers/specs/2026-04-01-deployment-architecture-design.md">View markdown spec</a>
+  </p>
+
+</div>
+</body>
+</html>
