@@ -12,3 +12,11 @@ core/data/outputs/
 core/data/funding-sources/*.md
 core/data/funding-sources/*.json
 grant-researcher/core/data/
+
+# Shell config files (sandbox artifacts)
+.bashrc
+.bash_profile
+.profile
+.zshrc
+.zprofile
+.ripgreprc
