@@ -149,16 +149,39 @@ For pages too messy to parse with code. Single `messages.create()` call with str
 
 ### System B — User Pipeline (on-demand)
 
-Triggered when a user runs the pipeline. All steps use the raw Claude API (`@anthropic-ai/sdk`), not the Agent SDK.
+Triggered when a user runs the pipeline. Uses the raw Claude API (`@anthropic-ai/sdk`) — not the Agent SDK. Steps vary: intake uses a custom agent loop, match is tiered (code then agent), propose is a single streaming call.
 
 | Step | Method | Input | Output |
 |---|---|---|---|
 | **Upload** | Node.js code | Multipart form | Files on volume |
-| **Profile** | `messages.create()` | CV + publications + goals (read by Node.js) | profile.json (written by Node.js) |
-| **Match** | Tiered (see below) | profile.json + grants from Supabase | match_results in Supabase |
-| **Propose** | `messages.create()` / `.stream()` | profile.json + grant details | Proposal .md on volume |
+| **Intake** | Agent loop (`Read`, `Write`, `Glob`, `WebFetch`, `WebSearch`) | CV + publications + goals + Google Scholar URL | Rich profile.json (written by agent) |
+| **Match** | Tiered — code pre-filter then agent deep analysis | profile.json + grants from Supabase | match_results in Supabase |
+| **Propose** | `messages.stream()` | profile.json + grant details | Proposal .md on volume |
 
-**Pattern:** Code does all I/O (reading files, querying database, writing results). Claude does the thinking (interpreting CVs, scoring matches, drafting proposals). One API call per step instead of 20-50 agent turns.
+**Pattern:** Intake and match use agents where reasoning depth and multi-source exploration add genuine value. Propose uses a single streaming call — all inputs are known, no exploration needed. The Agent SDK is removed; custom agent loops use the raw API.
+
+### Intake Agent
+
+The researcher profile is the product's core differentiator. A custom agent loop builds a richer understanding than any single API call could.
+
+**Allowed tools:** `Read`, `Write`, `Glob`, `WebFetch`, `WebSearch`
+
+**Inputs:**
+- CV (`.md`, `.pdf`, `.txt`) uploaded by user
+- Google Scholar URL (preferred) — or agent searches by name + institution as fallback
+- Publications (uploaded or discovered via Scholar)
+- Future research directions (text input from onboarding)
+
+**Output — rich `profile.json`:**
+- Biographical summary
+- Disciplinary fields + sub-fields
+- Research themes (past + projected future)
+- Publication list with citation metrics
+- Geographic focus
+- Career stage indicators
+- Collaboration network (from co-authors)
+- Stated future directions
+- Funding history (if detectable from CV)
 
 ### Tiered Matching (Recall-Optimised)
 
@@ -167,21 +190,21 @@ Matching uses three tiers to ensure no grants are missed:
 **Tier 1 — Code-based pre-filter (free, fast):**
 Filter grants by discipline keywords, eligibility country, career stage, deadline not passed. Intentionally permissive — reduces 500+ grants to ~50-100 candidates.
 
-**Tier 2 — AI scoring (cheap, thorough):**
-Send profile + each candidate grant to Claude API. Small batches of 5-10 grants per call. Each grant gets individual attention with a relevance score and reasoning. Uses structured output for consistent scoring.
+**Tier 2 — Agent deep analysis (~10-20 grants):**
+An agent receives the rich profile + top 50 candidate grants. It reasons across the full profile — publications, trajectory, future goals, collaboration network — scoring each grant with detailed reasoning. An agent is used here (not a batch API call) because the analysis needs to build a comparative picture across many grants and refer back to nuanced profile details. Output: scored `match_results` in Supabase.
 
 **Tier 3 — AI synthesis (one call):**
 Send all scored results to Claude. Returns a ranked list with strategic recommendations.
 
 ### Cost Comparison
 
-| Step | Agent SDK (current) | Raw API (target) |
-|---|---|---|
-| Profile | ~$1-3 | ~$0.05-0.10 |
-| Scan | ~$2-8 | ~$0 (code harvester) |
-| Match | ~$1-3 | ~$0.03-0.10 |
-| Propose | ~$1-3 | ~$0.05-0.15 |
-| **Total per run** | **~$5-17** | **~$0.13-0.35** |
+| Step | Agent SDK (current) | Revised target | Method |
+|---|---|---|---|
+| Intake | ~$1-3 | ~$0.50-1.50 | Custom agent loop (10-20 turns) |
+| Scan / Harvest | ~$2-8 | ~$0 | Code cron — no AI |
+| Match | ~$1-3 | ~$0.50-1.50 | Code pre-filter + agent deep analysis |
+| Propose | ~$1-3 | ~$0.05-0.15 | Single streaming API call |
+| **Total per run** | **~$5-17** | **~$1.05-3.15** | Cost goes where the value is |
 
 ---
 
@@ -230,10 +253,10 @@ These are opt-in premium features, not part of every pipeline run. Billed at hig
 
 ### Stage 2 — Cost Reduction
 
-- Replace Agent SDK calls with raw Claude API, one step at a time:
-  1. Profile (simplest — single input, structured output)
-  2. Match (move to tiered matching, read grants from Supabase)
-  3. Propose (single API call with streaming)
+- Replace Agent SDK with raw Claude API, one step at a time:
+  1. **Intake** — build custom agent loop with `Read`, `Write`, `Glob`, `WebFetch`, `WebSearch`. Stays agentic — just removes the SDK wrapper.
+  2. **Match** — move to tiered matching: code pre-filter → custom agent deep analysis on top 10-20 candidates
+  3. **Propose** — single streaming `messages.stream()` call
 - Remove `@anthropic-ai/claude-agent-sdk` dependency
 - Add `grants` and `match_results` tables to Supabase
 
@@ -259,9 +282,9 @@ These are opt-in premium features, not part of every pipeline run. Billed at hig
 | File | Change |
 |---|---|
 | `grant-researcher/src/app/api/session/route.ts` | Add Supabase auth check, create session record |
-| `grant-researcher/src/app/api/session/[name]/profile/route.ts` | Replace Agent SDK with Claude API call |
+| `grant-researcher/src/app/api/session/[name]/profile/route.ts` | Replace Agent SDK with custom agent loop (multi-source intake) |
 | `grant-researcher/src/app/api/session/[name]/scan/route.ts` | Delete (replaced by harvester) |
-| `grant-researcher/src/app/api/session/[name]/match/route.ts` | Replace Agent SDK with tiered matching |
+| `grant-researcher/src/app/api/session/[name]/match/route.ts` | Replace Agent SDK with tiered matching: code pre-filter → custom agent deep analysis |
 | `grant-researcher/src/app/api/session/[name]/propose/route.ts` | Replace Agent SDK with Claude API call |
 | `grant-researcher/src/app/api/session/[name]/matches/route.ts` | Read from Supabase instead of filesystem |
 | `grant-researcher/src/app/api/session/[name]/status/route.ts` | Read from Supabase instead of filesystem |
