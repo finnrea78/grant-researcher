@@ -2,6 +2,21 @@
 
 AI-powered grant discovery for researchers. Upload a CV, run the pipeline, get ranked funding matches and a tailored proposal outline — all in the browser.
 
+
+Key selling points: 
+
+- Agent driven research in to the researcher
+- Built for admins
+- Match agaist thousands of datasets of grants
+- Key proposals write
+- specific for UK academics 
+- Agentic first research and proposal writing (more expensive but much deeper understand)
+- To be linked directly into university systems to see grants and researchers published papers pulling in infomation
+- ensure that these systems can be liable to hallucinate all details are given as suggestions. 
+
+
+- todo: security and protects agaist prompt ingestions. 
+
 ---
 
 ## How it works
