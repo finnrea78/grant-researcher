@@ -14,6 +14,8 @@ Key selling points:
 - To be linked directly into university systems to see grants and researchers published papers pulling in infomation
 - ensure that these systems can be liable to hallucinate all details are given as suggestions. 
 
+- use gateway to research to enhance proposal and matching logic - they have over 173,000 papers on how todo this.
+
 
 - todo: security and protects agaist prompt ingestions. 
 
@@ -134,7 +136,13 @@ Researcher data lives in `core/data/researchers/<name>/`. Place a CV at `core/da
 
 ## Adding grant sources
 
-Add a new markdown file to `core/data/funding-sources/` following the template at `_template.md`. Run `grant-scout scan --force` to harvest it.
+Add a new markdown file to `data/funding-sources/` following the template at `_template.md`. Run the scan stage to harvest it.
+
+### Awarded grants vs open opportunities
+
+The UKRI Gateway to Research (GtR) API holds 173,000+ past funded projects — useful for understanding funder priorities and for enriching match reasoning ("this researcher's profile resembles past AHRC award winners"). But it records what was already funded, not what is currently open to apply for. Open calls live only on individual funder websites.
+
+The scan stage uses `data/funding-sources/_urls.md` as its seed list. This should contain the funding listing pages for each funder you want to track. See [`docs/superpowers/specs/2026-04-02-grant-databases-research.md`](docs/superpowers/specs/2026-04-02-grant-databases-research.md) for a full catalogue of UK grant databases, APIs, and recommended seed URLs.
 
 ---
 
