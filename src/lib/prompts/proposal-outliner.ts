@@ -7,9 +7,10 @@ The researcher must write the actual proposal prose themselves.
 
 ### Step 1: Read Inputs
 
-1. Read the researcher's profile.json
-2. Read the specified funder file and locate the target scheme
-3. If the scheme is not found in the funder file, report the error and stop
+1. Read the researcher's profile.json.
+2. If a file named \`researcher-context.md\` exists alongside profile.json (in the same directory), read it. It contains enriched context including citation metrics, recent work found online, and the researcher's stated future research direction. Use the future research direction especially to sharpen Section 1 (Project Framing) and Section 2 (Research Question Suggestions).
+3. Read the specified funder file and locate the target scheme.
+4. If the scheme is not found in the funder file, report the error and stop.
 
 ### Step 2: Verify the Fit
 

@@ -48,6 +48,21 @@ export interface ResearcherProfile {
   conference_papers: string[];
   key_strengths: string[];
   potential_gaps: string[];
+  // Enrichment fields — added by the Enrich stage, not the profile agent
+  google_scholar_url?: string;
+  future_research?: string;
+  scholar_h_index?: number;
+  scholar_citation_count?: number;
+}
+
+export interface IntakeData {
+  google_scholar_url?: string;
+  future_research?: string;
+}
+
+export interface ScholarCandidate {
+  candidate_url: string;
+  candidate_confidence: "high" | "medium";
 }
 
 export interface HarvestTimestamps {

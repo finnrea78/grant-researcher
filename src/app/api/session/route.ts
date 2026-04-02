@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { slugify } from "@/lib/slugify";
+import type { IntakeData } from "@/lib/types";
 
 export async function POST(req: Request): Promise<Response> {
   const formData = await req.formData();
@@ -18,6 +19,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const dataDir = resolve(process.cwd(), "data");
   const rawDir = resolve(dataDir, `researchers/${name}/raw`);
+  const researcherDir = resolve(dataDir, `researchers/${name}`);
 
   mkdirSync(rawDir, { recursive: true });
 
@@ -30,6 +32,12 @@ export async function POST(req: Request): Promise<Response> {
   const cvPath = resolve(rawDir, `cv.${ext}`);
   const bytes = await file.arrayBuffer();
   writeFileSync(cvPath, Buffer.from(bytes));
+
+  // Write optional intake data (Google Scholar URL, future research direction)
+  const scholarUrl = (formData.get("google_scholar_url") as string | null)?.trim() || undefined;
+  const futureResearch = (formData.get("future_research") as string | null)?.trim() || undefined;
+  const intake: IntakeData = { google_scholar_url: scholarUrl, future_research: futureResearch };
+  writeFileSync(resolve(researcherDir, "intake.json"), JSON.stringify(intake, null, 2));
 
   return Response.json({ name, cvPath: `researchers/${name}/raw/cv.${ext}` });
 }

@@ -2,14 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CVDropZone } from "@/components/CVDropZone";
+import { IntakeForm } from "@/components/IntakeForm";
 
 export default function HomePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(file: File, name: string) {
+  async function handleSubmit(file: File, name: string, scholarUrl: string, futureResearch: string) {
     setLoading(true);
     setError(null);
 
@@ -17,6 +17,8 @@ export default function HomePage() {
       const formData = new FormData();
       formData.append("cv", file);
       formData.append("name", name);
+      if (scholarUrl) formData.append("google_scholar_url", scholarUrl);
+      if (futureResearch) formData.append("future_research", futureResearch);
 
       const res = await fetch("/api/session", { method: "POST", body: formData });
       const data = await res.json();
@@ -35,11 +37,11 @@ export default function HomePage() {
   }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen px-4">
+    <main className="flex flex-col items-center justify-center min-h-screen px-4 py-12">
       <h1 className="text-2xl font-bold text-slate-100 mb-2">Grant Scout</h1>
       <p className="text-slate-500 text-sm mb-10">Find funding for your research</p>
 
-      <CVDropZone onSubmit={handleSubmit} loading={loading} />
+      <IntakeForm onSubmit={handleSubmit} loading={loading} />
 
       {error && (
         <p className="mt-4 text-red-400 text-sm">{error}</p>

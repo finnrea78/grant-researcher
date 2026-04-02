@@ -2,6 +2,7 @@ export type StageStatus = "idle" | "running" | "complete" | "error";
 
 export interface StageState {
   profile: StageStatus;
+  enrich: StageStatus;
   scan: StageStatus;
   match: StageStatus;
   propose: StageStatus;
@@ -14,12 +15,13 @@ interface PipelineBarProps {
 
 const STAGE_LABELS: Record<keyof StageState, string> = {
   profile: "Profile",
+  enrich: "Enrich",
   scan: "Scan",
   match: "Match",
   propose: "Propose",
 };
 
-const STAGE_ORDER: Array<keyof StageState> = ["profile", "scan", "match", "propose"];
+const STAGE_ORDER: Array<keyof StageState> = ["profile", "enrich", "scan", "match", "propose"];
 
 function isReady(stage: keyof StageState, stages: StageState): boolean {
   const idx = STAGE_ORDER.indexOf(stage);

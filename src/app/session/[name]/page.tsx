@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { PipelineBar, type StageState, type StageStatus } from "@/components/PipelineBar";
 import { StageLog } from "@/components/StageLog";
 import { MatchList } from "@/components/MatchList";
 import { ProposalViewer } from "@/components/ProposalViewer";
 import type { SSEEvent } from "@/lib/sse";
 import type { Match } from "@/lib/parseMatches";
+import type { ScholarCandidate } from "@/lib/types";
 
 interface LogEntry { event: SSEEvent; id: number; }
 interface Proposal { filename: string; content: string; }
@@ -16,17 +17,20 @@ interface PageState {
   log: LogEntry[];
   matches: Match[];
   proposals: Proposal[];
+  scholarCandidate: ScholarCandidate | null;
   logCounter: number;
 }
 
 type Action =
-  | { type: "INIT"; profile: boolean; scan: boolean; match: boolean; proposals: Proposal[]; matches: Match[] }
+  | { type: "INIT"; profile: boolean; enrich: boolean; scan: boolean; match: boolean; proposals: Proposal[]; matches: Match[]; scholarCandidate: ScholarCandidate | null }
   | { type: "START"; stage: keyof StageState }
   | { type: "COMPLETE"; stage: keyof StageState }
   | { type: "ERROR"; stage: keyof StageState }
   | { type: "LOG"; event: SSEEvent }
   | { type: "SET_MATCHES"; matches: Match[] }
-  | { type: "SET_PROPOSALS"; proposals: Proposal[] };
+  | { type: "SET_PROPOSALS"; proposals: Proposal[] }
+  | { type: "CLEAR_SCHOLAR_CANDIDATE" }
+  | { type: "SET_SCHOLAR_CANDIDATE"; candidate: ScholarCandidate };
 
 function reducer(state: PageState, action: Action): PageState {
   switch (action.type) {
@@ -35,12 +39,14 @@ function reducer(state: PageState, action: Action): PageState {
         ...state,
         stages: {
           profile: action.profile ? "complete" : "idle",
+          enrich: action.enrich ? "complete" : "idle",
           scan: action.scan ? "complete" : "idle",
           match: action.match ? "complete" : "idle",
           propose: action.proposals.length > 0 ? "complete" : "idle",
         },
         matches: action.matches,
         proposals: action.proposals,
+        scholarCandidate: action.scholarCandidate,
       };
     case "START":
       return { ...state, stages: { ...state.stages, [action.stage]: "running" as StageStatus } };
@@ -58,22 +64,28 @@ function reducer(state: PageState, action: Action): PageState {
       return { ...state, matches: action.matches };
     case "SET_PROPOSALS":
       return { ...state, proposals: action.proposals };
+    case "CLEAR_SCHOLAR_CANDIDATE":
+      return { ...state, scholarCandidate: null };
+    case "SET_SCHOLAR_CANDIDATE":
+      return { ...state, scholarCandidate: action.candidate };
     default:
       return state;
   }
 }
 
 const INITIAL_STATE: PageState = {
-  stages: { profile: "idle", scan: "idle", match: "idle", propose: "idle" },
+  stages: { profile: "idle", enrich: "idle", scan: "idle", match: "idle", propose: "idle" },
   log: [],
   matches: [],
   proposals: [],
+  scholarCandidate: null,
   logCounter: 0,
 };
 
 export default function SessionPage({ params }: { params: { name: string } }) {
   const { name } = params;
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [scholarInput, setScholarInput] = useState("");
   const runningRef = useRef(false);
 
   // Load initial state on mount
@@ -149,6 +161,14 @@ export default function SessionPage({ params }: { params: { name: string } }) {
         const { proposals } = await proposalRes.json();
         dispatch({ type: "SET_PROPOSALS", proposals });
       }
+      // After enrich completes, re-check status for a scholar candidate
+      if (stage === "enrich") {
+        const statusRes = await fetch(`/api/session/${name}/status`);
+        const status = await statusRes.json();
+        if (status.scholarCandidate) {
+          dispatch({ type: "SET_SCHOLAR_CANDIDATE", candidate: status.scholarCandidate });
+        }
+      }
     } catch (err) {
       dispatch({ type: "LOG", event: { type: "error", message: String(err) } });
       dispatch({ type: "ERROR", stage });
@@ -160,6 +180,7 @@ export default function SessionPage({ params }: { params: { name: string } }) {
   function handleRun(stage: keyof StageState) {
     const urls: Record<keyof StageState, string> = {
       profile: `/api/session/${name}/profile`,
+      enrich: `/api/session/${name}/enrich`,
       scan: `/api/session/${name}/scan`,
       match: `/api/session/${name}/match`,
       propose: `/api/session/${name}/propose`,
@@ -171,6 +192,34 @@ export default function SessionPage({ params }: { params: { name: string } }) {
     runStage("propose", `/api/session/${name}/propose`, { funder, scheme });
   }
 
+  async function handleScholarConfirm() {
+    const url = scholarInput.trim() || state.scholarCandidate?.candidate_url;
+    if (!url) return;
+    await fetch(`/api/session/${name}/enrich`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm: true, scholar_url: url }),
+    });
+    dispatch({ type: "CLEAR_SCHOLAR_CANDIDATE" });
+    // Re-run enrich with the confirmed URL
+    runStage("enrich", `/api/session/${name}/enrich`);
+  }
+
+  async function handleScholarSkip() {
+    await fetch(`/api/session/${name}/enrich`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm: false }),
+    });
+    dispatch({ type: "CLEAR_SCHOLAR_CANDIDATE" });
+    dispatch({ type: "COMPLETE", stage: "enrich" });
+  }
+
+  const scholarBannerCandidate =
+    state.stages.enrich !== "complete" && state.stages.enrich !== "running"
+      ? state.scholarCandidate
+      : null;
+
   return (
     <main className="max-w-3xl mx-auto px-4 py-10">
       <div className="mb-6">
@@ -179,6 +228,58 @@ export default function SessionPage({ params }: { params: { name: string } }) {
       </div>
 
       <PipelineBar stages={state.stages} onRun={handleRun} />
+
+      {scholarBannerCandidate && (
+        <div className="mt-4 border border-blue-700 bg-blue-950 rounded-lg px-4 py-4">
+          <p className="text-blue-300 text-sm font-semibold mb-1">
+            Google Scholar profile found
+            {scholarBannerCandidate.candidate_confidence === "medium" && (
+              <span className="ml-2 text-yellow-400 font-normal">(medium confidence)</span>
+            )}
+          </p>
+          <a
+            href={scholarBannerCandidate.candidate_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 underline text-sm break-all"
+          >
+            {scholarBannerCandidate.candidate_url}
+          </a>
+          <p className="text-slate-400 text-xs mt-2 mb-3">Is this your Google Scholar profile?</p>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <button
+                onClick={handleScholarConfirm}
+                className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-1.5 rounded-lg transition-colors"
+              >
+                Yes, confirm
+              </button>
+              <button
+                onClick={handleScholarSkip}
+                className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm px-4 py-1.5 rounded-lg transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+            <div className="flex gap-2 items-center mt-1">
+              <input
+                type="url"
+                placeholder="Or paste the correct URL…"
+                value={scholarInput}
+                onChange={(e) => setScholarInput(e.target.value)}
+                className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-slate-200 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-400"
+              />
+              <button
+                onClick={handleScholarConfirm}
+                disabled={!scholarInput.trim()}
+                className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm px-4 py-1.5 rounded-lg transition-colors"
+              >
+                Use this
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4">
         <StageLog entries={state.log} />
