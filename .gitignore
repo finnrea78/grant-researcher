@@ -12,10 +12,24 @@ data/outputs/
 data/funding-sources/*.md
 data/funding-sources/*.json
 
-# Shell config files (sandbox artifacts)
+# Shell config and IDE files (sandbox artifacts)
 .bashrc
 .bash_profile
 .profile
 .zshrc
 .zprofile
+.zprofile
 .ripgreprc
+.gitconfig
+.gitmodules
+.idea
+.mcp.json
+.vscode
+
+# Scratch and generated files
+design-explorer.html
+research-docs/
+
+# Claude Code local config
+.claude/
+.superpowers/
