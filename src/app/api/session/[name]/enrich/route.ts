@@ -64,7 +64,7 @@ export async function PATCH(
     const intake: IntakeData = existsSync(intakePath)
       ? JSON.parse(readFileSync(intakePath, "utf-8"))
       : {};
-    intake.google_scholar_url = body.scholar_url;
+    intake.identifiers = { ...intake.identifiers, google_scholar_url: body.scholar_url };
     writeFileSync(intakePath, JSON.stringify(intake, null, 2));
 
     // Remove the pending marker so the agent won't re-write it

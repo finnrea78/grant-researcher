@@ -36,7 +36,10 @@ export async function POST(req: Request): Promise<Response> {
   // Write optional intake data (Google Scholar URL, future research direction)
   const scholarUrl = (formData.get("google_scholar_url") as string | null)?.trim() || undefined;
   const futureResearch = (formData.get("future_research") as string | null)?.trim() || undefined;
-  const intake: IntakeData = { google_scholar_url: scholarUrl, future_research: futureResearch };
+  const intake: IntakeData = {
+    identifiers: scholarUrl ? { google_scholar_url: scholarUrl } : undefined,
+    future_research: futureResearch,
+  };
   writeFileSync(resolve(researcherDir, "intake.json"), JSON.stringify(intake, null, 2));
 
   return Response.json({ name, cvPath: `researchers/${name}/raw/cv.${ext}` });

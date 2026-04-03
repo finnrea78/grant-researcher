@@ -53,11 +53,81 @@ export interface ResearcherProfile {
   future_research?: string;
   scholar_h_index?: number;
   scholar_citation_count?: number;
+  // New intake-derived fields
+  orcid?: string;
+  funding_goals?: FundingGoals;
+  collaboration?: CollaborationProfile;
+  eligibility?: EligibilityConstraints;
+  research_trajectory?: string;
+}
+
+export interface ResearcherIdentifiers {
+  orcid?: string;
+  google_scholar_url?: string;
+  researcher_id?: string;
+  scopus_author_id?: string;
+  institutional_profile_url?: string;
+}
+
+export interface EligibilityConstraints {
+  employment_type?: 'permanent' | 'fixed_term' | 'independent' | 'postdoc' | 'phd_student';
+  phd_year?: number;
+  nationality?: string[];
+  institution_country?: string;
+  institution_type?: 'university' | 'research_institute' | 'hospital' | 'ngo' | 'industry';
+}
+
+export interface FundingGoals {
+  intended_use?: (
+    | 'phd_students'
+    | 'postdocs'
+    | 'equipment'
+    | 'travel'
+    | 'research_time'
+    | 'collaboration'
+    | 'public_engagement'
+  )[];
+  budget_range?: { min?: number; max?: number; currency?: string };
+  preferred_duration_months?: number;
+  open_to_consortium?: boolean;
+}
+
+export interface CollaborationProfile {
+  open_to_collaboration?: boolean;
+  collaboration_types?: ('industry' | 'academic' | 'international' | 'public_sector' | 'ngo')[];
+  preferred_roles?: ('PI' | 'Co-I' | 'partner')[];
 }
 
 export interface IntakeData {
-  google_scholar_url?: string;
+  // Core identity
+  name?: string;
+  identifiers?: ResearcherIdentifiers;
+
+  // Career
+  institution?: string;
+  department?: string;
+  institution_country?: string;
+  career_stage?: 'phd_student' | 'postdoc' | 'early_career' | 'mid_career' | 'senior';
+
+  // Research
+  research_themes?: string[];
+  research_keywords?: string[];
+  disciplinary_fields?: string[];
+  geographic_focus?: string[];
   future_research?: string;
+  research_trajectory?: string;
+
+  // Funding
+  funding_goals?: FundingGoals;
+
+  // Collaboration
+  collaboration?: CollaborationProfile;
+
+  // Eligibility (factual only)
+  eligibility?: EligibilityConstraints;
+
+  // Optional CV text (extracted from uploaded file)
+  cv_text?: string;
 }
 
 export interface ScholarCandidate {
