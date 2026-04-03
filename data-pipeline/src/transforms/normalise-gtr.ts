@@ -1,8 +1,7 @@
-import type { GtrProjectOverview, NormalisedScheme, Classification } from "../types.js";
+import type { GtrProject, GtrClassificationItem, NormalisedScheme, Classification } from "../types.js";
 import { slugify } from "./slugify.js";
-import { parseAmount } from "./parse-amounts.js";
 
-/** Map UKRI council names to slugs. */
+/** Map UKRI council display names to slugs. */
 const COUNCIL_SLUGS: Record<string, string> = {
   AHRC: "ahrc",
   BBSRC: "bbsrc",
@@ -13,100 +12,69 @@ const COUNCIL_SLUGS: Record<string, string> = {
   STFC: "stfc",
   "Innovate UK": "innovate-uk",
   "Research England": "research-england",
+  UKRI: "ukri",
 };
 
-function mapStatus(gtrStatus: string): string {
+function mapStatus(gtrStatus?: string): string {
+  if (!gtrStatus) return "closed_award";
   if (/active/i.test(gtrStatus)) return "active_award";
   return "closed_award";
 }
 
-function extractGrantRef(project: GtrProjectOverview["projectComposition"]["project"]): string | null {
-  const ids = project.identifiers;
+function extractGrantRef(project: GtrProject): string | null {
+  const ids = project.identifiers?.identifier;
   if (!ids) return null;
-  // Handle both array and single identifier shapes from GtR
-  const idList = Array.isArray(ids) ? ids : ids.identifier ? [ids.identifier].flat() : [];
-  for (const id of idList) {
-    const entry = "value" in id ? id : (id as { identifier: { value: string; type: string } }).identifier;
-    if (entry && entry.type === "RCUK") return entry.value;
-  }
-  return null;
+  const idList = Array.isArray(ids) ? ids : [ids];
+  const rcuk = idList.find((id) => id.type === "RCUK");
+  return rcuk?.value ?? null;
 }
 
 function extractClassifications(
-  data: GtrProjectOverview["projectComposition"]["project"],
-  type: string,
-  field: "researchSubjects" | "researchTopics" | "healthCategories" | "rcukProgrammes"
+  items: GtrClassificationItem | GtrClassificationItem[] | undefined,
+  type: string
 ): Classification[] {
-  const container = data[field];
-  if (!container || !container.classification) return [];
-  const items = Array.isArray(container.classification) ? container.classification : [container.classification];
-  return items
+  if (!items) return [];
+  const list = Array.isArray(items) ? items : [items];
+  return list
     .filter((c) => c.text)
-    .map((c) => ({
-      type,
-      name: c.text,
-      percentage: c.percentage ?? null,
-    }));
+    .map((c) => ({ type, name: c.text!, percentage: c.percentage ?? null }));
 }
 
-function extractPI(personRoles: GtrProjectOverview["projectComposition"]["personRoles"]): string | null {
-  if (!personRoles?.personRole) return null;
-  const roles = Array.isArray(personRoles.personRole)
-    ? personRoles.personRole
-    : [personRoles.personRole];
-  for (const pr of roles) {
-    const roleList = pr.roles?.role
-      ? Array.isArray(pr.roles.role) ? pr.roles.role : [pr.roles.role]
-      : [];
-    const isPI = roleList.some((r) => r.name === "PRINCIPAL_INVESTIGATOR");
-    if (isPI && pr.firstName && pr.surname) {
-      return `${pr.firstName} ${pr.surname}`;
-    }
-  }
-  return null;
-}
-
-export function normaliseGtrProject(overview: GtrProjectOverview): NormalisedScheme {
-  const proj = overview.projectComposition.project;
-  const funderName = proj.fund.funder.name;
+export function normaliseGtrProject(project: GtrProject): NormalisedScheme {
+  const funderName = project.leadFunder ?? "ukri";
   const funderSlug = COUNCIL_SLUGS[funderName] ?? slugify(funderName);
-  const amount = parseAmount(proj.fund.valuePounds, "GBP");
 
   const classifications: Classification[] = [
-    ...extractClassifications(proj, "research_subject", "researchSubjects"),
-    ...extractClassifications(proj, "research_topic", "researchTopics"),
-    ...extractClassifications(proj, "health_category", "healthCategories"),
-    ...extractClassifications(proj, "rcuk_programme", "rcukProgrammes"),
+    ...extractClassifications(project.researchSubjects?.researchSubject, "research_subject"),
+    ...extractClassifications(project.researchTopics?.researchTopic, "research_topic"),
+    ...extractClassifications(project.healthCategories?.healthCategory, "health_category"),
   ];
 
   return {
     funder_slug: funderSlug,
-    name: proj.title,
-    slug: slugify(proj.title),
-    status: mapStatus(proj.status),
-    deadline_raw: proj.fund.end ?? null,
-    deadline_date: proj.fund.end ?? null,
-    amount_raw: proj.fund.valuePounds ? `£${proj.fund.valuePounds.toLocaleString()}` : null,
-    amount_min: amount.min,
-    amount_max: amount.max,
-    amount_currency: amount.currency,
+    name: project.title,
+    slug: slugify(project.title),
+    status: mapStatus(project.status),
+    deadline_raw: null,
+    deadline_date: null,
+    amount_raw: null,
+    amount_min: null,
+    amount_max: null,
+    amount_currency: "GBP",
     duration: null,
-    career_stage: proj.grantCategory ?? null,
+    career_stage: project.grantCategory ?? null,
     institutional_eligibility: null,
     thematic_priorities: null,
     application_process: null,
-    url: null,
-    grant_reference: extractGrantRef(proj),
+    url: `https://gtr.ukri.org/projects?ref=${extractGrantRef(project) ?? project.id}`,
+    grant_reference: extractGrantRef(project),
     source: "gtr",
     source_metadata: {
-      abstract: proj.abstractText ?? null,
-      technical_summary: proj.technicalSummary ?? null,
-      impact_text: proj.potentialImpactText ?? null,
-      grant_category: proj.grantCategory,
-      fund_start: proj.fund.start ?? null,
-      fund_type: proj.fund.type ?? null,
-      pi_name: extractPI(overview.projectComposition.personRoles),
-      lead_organisation: overview.projectComposition.leadResearchOrganisation?.name ?? null,
+      gtr_id: project.id,
+      abstract: project.abstractText ?? null,
+      technical_summary: project.technicalSummary ?? null,
+      impact_text: project.potentialImpactText ?? null,
+      grant_category: project.grantCategory ?? null,
     },
     classifications,
   };

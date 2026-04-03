@@ -1,6 +1,6 @@
-import type { GtrProjectOverview } from "../types.js";
+import type { GtrApiResponse, GtrProject } from "../types.js";
 
-const BASE_URL = "https://gtr.ukri.org/search/project";
+const BASE_URL = "https://gtr.ukri.org/gtr/api/projects";
 const DELAY_MS = 500;
 
 function sleep(ms: number): Promise<void> {
@@ -14,20 +14,21 @@ export interface GtrFetchOptions {
 }
 
 /**
- * Fetch projects from the GtR Search API.
- * Paginates through results, yielding batches of project overviews.
+ * Fetch projects from the GtR REST API (/gtr/api/projects).
+ * Paginates through results, yielding batches of projects.
+ * Filters by council name via the q= search parameter.
  */
 export async function* fetchGtrProjects(
   opts: GtrFetchOptions
-): AsyncGenerator<GtrProjectOverview[]> {
-  const fetchSize = 100;
+): AsyncGenerator<GtrProject[]> {
+  const pageSize = 100;
   let page = 1;
   let fetched = 0;
   const limit = opts.limit ?? Infinity;
   const term = opts.term ?? opts.council ?? "";
 
   while (fetched < limit) {
-    const url = `${BASE_URL}?term=${encodeURIComponent(term)}&page=${page}&fetchSize=${fetchSize}`;
+    const url = `${BASE_URL}?q=${encodeURIComponent(term)}&page=${page}&size=${pageSize}`;
     console.log(`  Fetching GtR page ${page}: ${url}`);
 
     const response = await fetch(url, {
@@ -35,22 +36,29 @@ export async function* fetchGtrProjects(
     });
 
     if (!response.ok) {
-      if (response.status === 404) break; // No more results
       throw new Error(`GtR API error: ${response.status} ${response.statusText}`);
     }
 
-    const json = await response.json();
-    const results = json?.searchResult?.results?.projectOverview;
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("json")) {
+      throw new Error(
+        `GtR API returned ${contentType} — JSON not supported. Raw snippet: ${(await response.text()).slice(0, 200)}`
+      );
+    }
 
-    if (!results || results.length === 0) break;
+    const json = (await response.json()) as GtrApiResponse;
+    const raw = json.project;
+    const projects: GtrProject[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
 
-    const batch = results.slice(0, limit - fetched);
+    if (projects.length === 0) break;
+
+    const batch = projects.slice(0, limit - fetched);
     yield batch;
 
     fetched += batch.length;
+    if (page >= json.totalPages) break;
     page++;
 
-    // Respect rate etiquette
     await sleep(DELAY_MS);
   }
 

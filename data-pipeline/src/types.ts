@@ -45,51 +45,39 @@ export interface RunCounters {
   skipped: number;
 }
 
-/** Raw GtR search API response shape (subset of fields we use). */
-export interface GtrSearchResponse {
-  searchResult: {
-    results: {
-      projectOverview?: GtrProjectOverview[];
-    };
-  };
+/** Paginated response from GET /gtr/api/projects (JSON via Accept: application/json). */
+export interface GtrApiResponse {
+  page: number;
+  size: number;
+  totalPages: number;
+  totalSize: number;
+  project: GtrProject | GtrProject[]; // single item comes back as object, not array
 }
 
-export interface GtrProjectOverview {
-  projectComposition: {
-    project: {
-      title: string;
-      status: string;
-      grantCategory: string;
-      abstractText?: string;
-      technicalSummary?: string;
-      potentialImpactText?: string;
-      fund: {
-        funder: { name: string };
-        valuePounds: number;
-        start?: string;
-        end?: string;
-        type?: string;
-      };
-      researchSubjects?: GtrClassification;
-      researchTopics?: GtrClassification;
-      healthCategories?: GtrClassification;
-      rcukProgrammes?: GtrClassification;
-      identifiers?: { identifier: { value: string; type: string }[] };
-    };
-    leadResearchOrganisation?: { name: string };
-    personRoles?: {
-      personRole: {
-        firstName?: string;
-        surname?: string;
-        roles?: { role: { name: string }[] };
-      }[];
-    };
+/** A project record from the GtR REST API list endpoint. */
+export interface GtrProject {
+  id: string;
+  title: string;
+  status?: string;
+  grantCategory?: string;
+  leadFunder?: string;
+  abstractText?: string;
+  technicalSummary?: string;
+  potentialImpactText?: string;
+  identifiers?: {
+    identifier: GtrIdentifier | GtrIdentifier[];
   };
+  researchSubjects?: { researchSubject?: GtrClassificationItem | GtrClassificationItem[] };
+  researchTopics?: { researchTopic?: GtrClassificationItem | GtrClassificationItem[] };
+  healthCategories?: { healthCategory?: GtrClassificationItem | GtrClassificationItem[] };
 }
 
-export interface GtrClassification {
-  classification?: {
-    text: string;
-    percentage?: number;
-  }[];
+export interface GtrIdentifier {
+  value: string;
+  type: string;
+}
+
+export interface GtrClassificationItem {
+  text?: string;
+  percentage?: number;
 }

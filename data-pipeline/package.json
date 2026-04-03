@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "ingest": "tsx src/cli.ts",
+    "ingest": "node --env-file=.env --import=tsx src/cli.ts",
     "test": "jest"
   },
   "dependencies": {

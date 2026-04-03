@@ -60,7 +60,10 @@ export async function upsertSchemes(
     }
 
     if (result.error) {
-      console.error(`Failed to upsert scheme "${scheme.name}": ${result.error.message}`);
+      // 23505 = unique_violation — expected duplicate within batch, skip silently
+      if (result.error.code !== "23505") {
+        console.error(`Failed to upsert scheme "${scheme.name}": ${result.error.message}`);
+      }
       counters.skipped++;
       continue;
     }
