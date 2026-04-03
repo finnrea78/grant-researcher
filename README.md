@@ -142,7 +142,7 @@ Add a new markdown file to `data/funding-sources/` following the template at `_t
 
 The UKRI Gateway to Research (GtR) API holds 173,000+ past funded projects — useful for understanding funder priorities and for enriching match reasoning ("this researcher's profile resembles past AHRC award winners"). But it records what was already funded, not what is currently open to apply for. Open calls live only on individual funder websites.
 
-The scan stage uses `data/funding-sources/_urls.md` as its seed list. This should contain the funding listing pages for each funder you want to track. See [`docs/superpowers/specs/2026-04-02-grant-databases-research.md`](docs/superpowers/specs/2026-04-02-grant-databases-research.md) for a full catalogue of UK grant databases, APIs, and recommended seed URLs.
+The scan stage uses `data/funding-sources/_urls.md` as its seed list. This should contain the funding listing pages for each funder you want to track. See [`research-docs/grant-databases.md`](research-docs/grant-databases.md) for a full catalogue of UK grant databases, APIs, and recommended seed URLs.
 
 ---
 

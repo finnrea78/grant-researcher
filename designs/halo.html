@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grant Scout — Halo</title>
+<style>
+  :root {
+    --bg:        #f9fafb;
+    --surface:   #ffffff;
+    --surface2:  #f3f4f6;
+    --border:    #e5e7eb;
+    --border2:   #d1d5db;
+    --text:      #111827;
+    --text2:     #374151;
+    --text3:     #9ca3af;
+    --blue:      #2563eb;
+    --blue-bg:   #eff6ff;
+    --blue-dim:  #1d4ed8;
+    --green:     #16a34a;
+    --green-bg:  #f0fdf4;
+    --shadow:    rgba(17, 24, 39, 0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 32px 24px 8px;
+  }
+
+  .theme-name {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: var(--text3);
+  }
+
+  .section-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .screens {
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+    padding: 32px 24px 48px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .screen-wrap { display: flex; flex-direction: column; gap: 8px; }
+
+  .screen {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px var(--shadow);
+  }
+
+  .screen-chrome {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chrome-dots { display: flex; gap: 5px; }
+  .chrome-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border2); }
+
+  .chrome-url {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: monospace;
+  }
+
+  .screen-body { padding: 52px 36px; }
+
+  /* ── LANDING ── */
+  .landing {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 28px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  .brand-block { }
+
+  .brand-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--blue);
+    margin-bottom: 8px;
+  }
+
+  .brand {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -1.5px;
+    line-height: 1.05;
+  }
+
+  .tagline {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.5;
+    max-width: 340px;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .drop-zone {
+    width: 100%;
+    border: 1.5px dashed var(--border2);
+    border-radius: 8px;
+    padding: 28px 20px;
+    background: var(--surface2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .drop-zone:hover { border-color: var(--blue); background: var(--blue-bg); }
+
+  .drop-icon { font-size: 24px; flex-shrink: 0; }
+
+  .drop-text { }
+  .drop-label { font-size: 13px; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+  .drop-hint { font-size: 11px; color: var(--text3); letter-spacing: 0.05em; font-family: monospace; }
+
+  .field-row {
+    width: 100%;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .field-group-inner { flex: 1; }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+
+  .mock-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1.5px solid var(--border2);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+  }
+
+  .start-btn {
+    background: var(--blue);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+  }
+
+  .start-btn:hover { background: var(--blue-dim); }
+
+  /* ── PIPELINE ── */
+  .pipeline-screen { display: flex; flex-direction: column; gap: 24px; }
+
+  .pipeline-bar {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .stage {
+    flex: 1;
+    padding: 10px 8px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: center;
+  }
+
+  .stage:last-child { border-right: none; }
+
+  .stage.complete { background: var(--green-bg); color: var(--green); }
+
+  .stage.running {
+    background: var(--blue-bg);
+    color: var(--blue);
+    position: relative;
+  }
+
+  .stage.running::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--blue);
+    animation: progress 2s ease-in-out infinite;
+    transform-origin: left;
+  }
+
+  @keyframes progress {
+    0% { transform: scaleX(0.1); }
+    50% { transform: scaleX(0.7); }
+    100% { transform: scaleX(0.1); }
+  }
+
+  .stage.idle { background: var(--surface2); color: var(--text3); }
+  .stage-icon { font-size: 12px; }
+
+  .log-panel {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    height: 130px;
+    overflow: hidden;
+    color: #4b5563;
+  }
+
+  .log-green  { color: #4ade80; }
+  .log-blue   { color: #60a5fa; }
+  .log-muted  { color: #374151; }
+  .log-cursor {
+    display: inline-block;
+    width: 6px; height: 11px;
+    background: #374151;
+    animation: blink 1s step-end infinite;
+    vertical-align: text-bottom;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .matches { display: flex; flex-direction: column; gap: 8px; }
+
+  .match-tier {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+
+  .match-card {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    background: var(--surface);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .match-card.strong { border-left: 3px solid var(--green); background: var(--green-bg); }
+
+  .match-info { flex: 1; }
+  .match-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .match-detail { font-size: 11px; color: var(--text2); }
+
+  .match-score {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--green);
+    background: var(--green-bg);
+    border: 1px solid #bbf7d0;
+    border-radius: 4px;
+    padding: 2px 7px;
+    white-space: nowrap;
+    font-family: monospace;
+  }
+
+  .match-score.neutral { color: var(--text3); background: var(--surface2); border-color: var(--border2); }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="theme-name">Theme 05 — Halo</div>
+</div>
+
+<div class="screens">
+
+  <div class="screen-wrap">
+    <div class="section-label">Screen 1 — Landing</div>
+    <div class="screen">
+      <div class="screen-chrome">
+        <div class="chrome-dots"><div class="chrome-dot"></div><div class="chrome-dot"></div><div class="chrome-dot"></div></div>
+        <div class="chrome-url">grant-scout.ac.uk</div>
+      </div>
+      <div class="screen-body">
+        <div class="landing">
+          <div class="brand-block">
+            <div class="brand-eyebrow">Grant Scout</div>
+            <div class="brand">Find your funding.</div>
+          </div>
+
+          <div class="tagline">Upload your CV and we'll match you with grants, fellowships, and funding schemes in minutes.</div>
+
+          <div class="divider"></div>
+
+          <div class="drop-zone">
+            <div class="drop-icon">📄</div>
+            <div class="drop-text">
+              <div class="drop-label">Drop your CV here</div>
+              <div class="drop-hint">.md · .pdf · .txt</div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group-inner">
+              <div class="field-label">Your name</div>
+              <input class="mock-input" placeholder="e.g. will-rea" readonly>
+            </div>
+            <button class="start-btn">Start →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-wrap">
+    <div class="section-label">Screen 2 — Pipeline (Scan running)</div>
+    <div class="screen">
+      <div class="screen-chrome">
+        <div class="chrome-dots"><div class="chrome-dot"></div><div class="chrome-dot"></div><div class="chrome-dot"></div></div>
+        <div class="chrome-url">grant-scout.ac.uk/session/will-rea</div>
+      </div>
+      <div class="screen-body">
+        <div class="pipeline-screen">
+
+          <div class="pipeline-bar">
+            <div class="stage complete"><div class="stage-icon">✓</div>PROFILE</div>
+            <div class="stage complete"><div class="stage-icon">✓</div>ENRICH</div>
+            <div class="stage running"><div class="stage-icon">◉</div>SCAN</div>
+            <div class="stage idle"><div class="stage-icon">○</div>MATCH</div>
+            <div class="stage idle"><div class="stage-icon">○</div>PROPOSE</div>
+          </div>
+
+          <div class="log-panel">
+            <span class="log-green">✓ Profile built — art history, medieval Europe, UK-based</span><br>
+            <span class="log-green">✓ Researcher enriched — 12 publications found</span><br>
+            <span class="log-muted">  Scanning for funding opportunities…</span><br>
+            <span class="log-blue">[WebSearch] art history grants UK 2026</span><br>
+            <span class="log-blue">[WebFetch]  leverhulme.ac.uk/schemes</span><br>
+            <span class="log-blue">[WebFetch]  ahrc.ukri.org/funding</span><br>
+            <span class="log-muted">  Found 3 schemes, continuing…<span class="log-cursor"></span></span>
+          </div>
+
+          <div class="matches" style="opacity:0.45">
+            <div class="match-tier">Tier 1 — Strong Matches</div>
+            <div class="match-card strong">
+              <div class="match-info">
+                <div class="match-name">Leverhulme Research Fellowship</div>
+                <div class="match-detail">£45,000 · Leverhulme Trust · Deadline: March 2026</div>
+              </div>
+              <div class="match-score">8.4</div>
+            </div>
+            <div class="match-card strong">
+              <div class="match-info">
+                <div class="match-name">AHRC Standard Research Grant</div>
+                <div class="match-detail">Up to £1.2M · UKRI · Rolling deadline</div>
+              </div>
+              <div class="match-score">7.9</div>
+            </div>
+            <div class="match-tier" style="margin-top:8px">Tier 2 — Worth Exploring</div>
+            <div class="match-card">
+              <div class="match-info">
+                <div class="match-name">British Academy Small Grants</div>
+                <div class="match-detail">Up to £10,000 · British Academy · Quarterly</div>
+              </div>
+              <div class="match-score neutral">5.2</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

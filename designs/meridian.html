@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grant Scout — Meridian</title>
+<style>
+  :root {
+    --bg:        #f0f2f5;
+    --surface:   #ffffff;
+    --surface2:  #f8f9fb;
+    --border:    #dde1e9;
+    --border2:   #c8cdd9;
+    --text:      #0f1f44;
+    --text2:     #4a5568;
+    --text3:     #8898aa;
+    --navy:      #1a3a8c;
+    --navy-bg:   #eef2fb;
+    --burgundy:  #7c1c38;
+    --burg-bg:   #faedf1;
+    --green:     #145e3a;
+    --green-bg:  #e6f5ed;
+    --shadow:    rgba(15, 31, 68, 0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 32px 24px 8px;
+  }
+
+  .theme-name {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text3);
+    margin-bottom: 4px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .screens {
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+    padding: 32px 24px 48px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .screen-wrap { display: flex; flex-direction: column; gap: 8px; }
+
+  .screen {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px var(--shadow), 0 4px 16px rgba(15,31,68,0.04);
+  }
+
+  .screen-chrome {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chrome-dots { display: flex; gap: 5px; }
+  .chrome-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border2); }
+
+  .chrome-url {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: monospace;
+  }
+
+  .screen-body { padding: 40px 36px; }
+
+  /* ── LANDING ── */
+  .landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 24px;
+  }
+
+  .brand-lockup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .brand-bar {
+    width: 4px;
+    height: 32px;
+    background: linear-gradient(to bottom, var(--navy) 50%, var(--burgundy) 50%);
+    border-radius: 2px;
+    margin: 0 auto 8px;
+  }
+
+  .brand {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+
+  .tagline {
+    font-size: 13px;
+    color: var(--text2);
+    max-width: 300px;
+    line-height: 1.5;
+  }
+
+  .drop-zone {
+    width: 100%;
+    max-width: 380px;
+    border: 2px dashed var(--border2);
+    border-radius: 8px;
+    padding: 32px 24px;
+    background: var(--navy-bg);
+    cursor: pointer;
+  }
+
+  .drop-zone:hover { border-color: var(--navy); }
+
+  .drop-icon { font-size: 26px; margin-bottom: 8px; }
+
+  .drop-label {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .drop-hint { font-size: 11px; color: var(--text3); letter-spacing: 0.05em; }
+
+  .field-group {
+    width: 100%;
+    max-width: 380px;
+    text-align: left;
+  }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    margin-bottom: 4px;
+  }
+
+  .mock-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+  }
+
+  .start-btn {
+    width: 100%;
+    max-width: 380px;
+    background: var(--navy);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 11px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .start-btn:hover { background: #142e6e; }
+
+  /* ── PIPELINE ── */
+  .pipeline-screen { display: flex; flex-direction: column; gap: 20px; }
+
+  .pipeline-bar {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .stage {
+    flex: 1;
+    padding: 10px 8px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: center;
+  }
+
+  .stage:last-child { border-right: none; }
+
+  .stage.complete { background: var(--green-bg); color: var(--green); }
+
+  .stage.running {
+    background: var(--navy-bg);
+    color: var(--navy);
+    position: relative;
+  }
+
+  .stage.running::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--navy);
+    animation: progress 2s ease-in-out infinite;
+    transform-origin: left;
+  }
+
+  @keyframes progress {
+    0% { transform: scaleX(0.1); }
+    50% { transform: scaleX(0.7); }
+    100% { transform: scaleX(0.1); }
+  }
+
+  .stage.idle { background: var(--surface2); color: var(--text3); }
+  .stage-icon { font-size: 12px; }
+
+  .log-panel {
+    background: #0f1f44;
+    border: 1px solid #1e3470;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    height: 130px;
+    overflow: hidden;
+    color: #8898cc;
+  }
+
+  .log-green  { color: #5ecf8e; }
+  .log-blue   { color: #7ab4f5; }
+  .log-muted  { color: #4a5e8a; }
+  .log-cursor {
+    display: inline-block;
+    width: 6px; height: 11px;
+    background: #4a5e8a;
+    animation: blink 1s step-end infinite;
+    vertical-align: text-bottom;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .matches { display: flex; flex-direction: column; gap: 10px; }
+
+  .match-tier {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text3);
+    margin-bottom: 6px;
+    padding-left: 2px;
+  }
+
+  .match-card {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    background: var(--surface);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .match-card.strong { border-left: 3px solid var(--green); background: var(--green-bg); }
+
+  .match-info { flex: 1; }
+  .match-name { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .match-detail { font-size: 11px; color: var(--text2); }
+
+  .match-score {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--green);
+    background: var(--green-bg);
+    border: 1px solid #a8d9bc;
+    border-radius: 4px;
+    padding: 2px 7px;
+    white-space: nowrap;
+    font-family: monospace;
+  }
+
+  .match-score.neutral { color: var(--text3); background: var(--surface2); border-color: var(--border); }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="theme-name">Theme 02 — Meridian</div>
+</div>
+
+<div class="screens">
+
+  <div class="screen-wrap">
+    <div class="section-label">Screen 1 — Landing</div>
+    <div class="screen">
+      <div class="screen-chrome">
+        <div class="chrome-dots"><div class="chrome-dot"></div><div class="chrome-dot"></div><div class="chrome-dot"></div></div>
+        <div class="chrome-url">grant-scout.ac.uk</div>
+      </div>
+      <div class="screen-body">
+        <div class="landing">
+          <div class="brand-lockup">
+            <div class="brand-bar"></div>
+            <div class="brand">Grant Scout</div>
+          </div>
+          <div class="tagline">Discover funding opportunities matched to your research profile</div>
+
+          <div class="drop-zone">
+            <div class="drop-icon">📄</div>
+            <div class="drop-label">Drop your CV here</div>
+            <div class="drop-hint">.md · .pdf · .txt</div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Your name</div>
+            <input class="mock-input" placeholder="e.g. will-rea" readonly>
+          </div>
+
+          <button class="start-btn">
+            <span>Start Search</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-wrap">
+    <div class="section-label">Screen 2 — Pipeline (Scan running)</div>
+    <div class="screen">
+      <div class="screen-chrome">
+        <div class="chrome-dots"><div class="chrome-dot"></div><div class="chrome-dot"></div><div class="chrome-dot"></div></div>
+        <div class="chrome-url">grant-scout.ac.uk/session/will-rea</div>
+      </div>
+      <div class="screen-body">
+        <div class="pipeline-screen">
+
+          <div class="pipeline-bar">
+            <div class="stage complete"><div class="stage-icon">✓</div>PROFILE</div>
+            <div class="stage complete"><div class="stage-icon">✓</div>ENRICH</div>
+            <div class="stage running"><div class="stage-icon">◉</div>SCAN</div>
+            <div class="stage idle"><div class="stage-icon">○</div>MATCH</div>
+            <div class="stage idle"><div class="stage-icon">○</div>PROPOSE</div>
+          </div>
+
+          <div class="log-panel">
+            <span class="log-green">✓ Profile built — art history, medieval Europe, UK-based</span><br>
+            <span class="log-green">✓ Researcher enriched — 12 publications found</span><br>
+            <span class="log-muted">  Scanning for funding opportunities…</span><br>
+            <span class="log-blue">[WebSearch] art history grants UK 2026</span><br>
+            <span class="log-blue">[WebFetch]  leverhulme.ac.uk/schemes</span><br>
+            <span class="log-blue">[WebFetch]  ahrc.ukri.org/funding</span><br>
+            <span class="log-muted">  Found 3 schemes, continuing…<span class="log-cursor"></span></span>
+          </div>
+
+          <div class="matches" style="opacity:0.45">
+            <div class="match-tier">Tier 1 — Strong Matches</div>
+            <div class="match-card strong">
+              <div class="match-info">
+                <div class="match-name">Leverhulme Research Fellowship</div>
+                <div class="match-detail">£45,000 · Leverhulme Trust · Deadline: March 2026</div>
+              </div>
+              <div class="match-score">8.4</div>
+            </div>
+            <div class="match-card strong">
+              <div class="match-info">
+                <div class="match-name">AHRC Standard Research Grant</div>
+                <div class="match-detail">Up to £1.2M · UKRI · Rolling deadline</div>
+              </div>
+              <div class="match-score">7.9</div>
+            </div>
+            <div class="match-tier" style="margin-top:8px">Tier 2 — Worth Exploring</div>
+            <div class="match-card">
+              <div class="match-info">
+                <div class="match-name">British Academy Small Grants</div>
+                <div class="match-detail">Up to £10,000 · British Academy · Quarterly</div>
+              </div>
+              <div class="match-score neutral">5.2</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
