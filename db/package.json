@@ -7,7 +7,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "_exports_note": ".ts exports are intentional: data-pipeline runs via node --import=tsx (handles .ts natively); Next.js uses webpack which resolves .ts workspace imports natively. Run 'npm run build' to produce compiled .js output if needed for plain-node consumption.",
   "scripts": {
+    "build": "tsc",
     "db:push": "supabase db push",
     "db:status": "supabase migration list",
     "db:diff": "supabase db diff"
