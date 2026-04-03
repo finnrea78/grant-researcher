@@ -115,19 +115,19 @@ The core pipeline can also be run directly from the command line:
 
 ```bash
 # Build a researcher profile from their CV
-grant-scout profile <name>
+grant-researcher profile <name>
 
 # Harvest / refresh the funding database
-grant-scout scan
-grant-scout scan --check    # only re-fetch sources older than 7 days
-grant-scout scan --force    # re-harvest everything
+grant-researcher scan
+grant-researcher scan --check    # only re-fetch sources older than 7 days
+grant-researcher scan --force    # re-harvest everything
 
 # Score all grants against a researcher profile
-grant-scout match <name>
+grant-researcher match <name>
 
 # Draft a proposal alignment document
-grant-scout propose <funder> <scheme>
-grant-scout propose <name> <funder> <scheme>
+grant-researcher propose <funder> <scheme>
+grant-researcher propose <name> <funder> <scheme>
 ```
 
 Researcher data lives in `core/data/researchers/<name>/`. Place a CV at `core/data/researchers/<name>/raw/cv.md` (or `.pdf` / `.docx`) before running `profile`.

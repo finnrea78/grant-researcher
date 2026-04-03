@@ -1,11 +1,11 @@
-# Grant Scout V2
+# Grant Researcher
 
 ## Monorepo structure
 - `core/` — TypeScript CLI using `@anthropic-ai/claude-agent-sdk`
 - `grant-researcher/` — Next.js 14 frontend (App Router)
 
 ## Running the dev server
-Always start from `grant-scout-v2/` (monorepo root): `npm run dev -w grant-researcher`
+Always start from the project root (`grant-researcher/`): `npm run dev`
 API routes use `resolve(process.cwd(), "core/data")` — cwd must be monorepo root
 
 ## Next.js 14 params syntax
@@ -20,7 +20,7 @@ Assistant message content lives at `message.message.content` (nested BetaMessage
 See `core/src/stream.ts` for the canonical streaming pattern
 
 ## core package exports
-Prompts are importable as `grant-scout/prompts/profile-builder` etc. (requires built dist/)
+Prompts are importable as `grant-researcher/prompts/profile-builder` etc. (requires built dist/)
 Rebuild after prompt changes: `cd core && npm run build`
 
 ## Hard constraints (match command)
