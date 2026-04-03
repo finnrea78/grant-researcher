@@ -1,5 +1,5 @@
 // data-pipeline/src/loaders/log-run.ts
-import { supabase } from "../db.js";
+import { supabase } from "@grant-researcher/db";
 import type { RunCounters } from "../types.js";
 
 /** Start a new ingestion run. Returns the run ID. */

@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { supabase } from "./db.js";
+import { supabase } from "@grant-researcher/db";
 import { fetchGtrProjects } from "./sources/gtr.js";
 import { fetchUkriOpportunities } from "./sources/ukri-finder.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";

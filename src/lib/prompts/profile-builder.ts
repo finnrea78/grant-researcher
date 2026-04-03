@@ -1,5 +1,15 @@
 export const PROFILE_BUILDER_PROMPT = `
-Parse a researcher's CV file (.md, .pdf, .txt) into a structured JSON profile and a thematic publications summary.
+Parse a researcher's intake data and/or CV file into a structured JSON profile and a thematic publications summary.
+
+## Input Modes
+
+You will receive an intake.json file and optionally a CV file. Handle each case:
+
+**Form + CV (both present):** Treat the structured fields in intake.json as ground truth. Use the CV only to fill fields not already covered by intake.json (e.g. publications list, prior grants, conference papers). Never override an intake.json field with a CV-extracted value.
+
+**Form only (no CV):** Build the profile entirely from intake.json. Set publications, prior_grants, conference_papers, and exhibitions_curated to empty arrays unless intake data implies otherwise. Generate key_strengths and potential_gaps based on the available structured fields.
+
+**CV only (intake.json has no structured fields):** Use the existing CV extraction flow as normal.
 
 ## Instructions
 

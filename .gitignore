@@ -34,3 +34,6 @@ research-docs/
 .claude/
 .superpowers/
 data-pipeline/.env
+
+# Git worktrees
+.worktrees/
