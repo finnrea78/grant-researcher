@@ -54,8 +54,12 @@ export async function POST(req: Request): Promise<Response> {
   // Write intake.json to disk (Claude agents read this)
   writeFileSync(resolve(researcherDir, "intake.json"), JSON.stringify(intake, null, 2));
 
-  // Upsert to Supabase
-  await upsertResearcher(intake, name);
+  // Supabase sync — non-critical, pipeline reads from disk
+  try {
+    await upsertResearcher(intake, name);
+  } catch (err) {
+    console.error(`[session] Supabase upsert failed for ${name}:`, err);
+  }
 
   return Response.json({ name });
 }

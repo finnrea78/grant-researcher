@@ -18,7 +18,7 @@ export async function POST(
 
 Read intake data from: ${dataDir}/researchers/${name}/intake.json
 
-The CV file may or may not exist. Check for it at: ${dataDir}/researchers/${name}/raw/cv.md
+The CV file may or may not exist. Check for it at: ${dataDir}/researchers/${name}/raw/cv.* (any extension — .md, .pdf, or .txt)
 If it exists, use it to supplement the intake data. If it does not exist, build the profile from intake.json alone.
 
 Write outputs to:
