@@ -1,5 +1,3 @@
-# A string used to distinguish different Supabase projects on the same host. Defaults to the
-# working directory name when running `supabase init`.
 project_id = "grant-researcher"
 
 [api]
@@ -18,13 +16,8 @@ major_version = 15
 enabled = true
 port = 54323
 
-[ingest]
-enabled = true
-port = 54324
-
 [storage]
 enabled = true
-port = 54325
 
 [auth]
 enabled = true
