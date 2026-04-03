@@ -2,6 +2,7 @@
   "name": "grant-researcher",
   "version": "0.1.0",
   "private": true,
+  "workspaces": ["data-pipeline"],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
