@@ -3,7 +3,7 @@ import type {
   CollaborationProfile,
   EligibilityConstraints,
   ResearcherProfile,
-} from "../../src/lib/types.js";
+} from "../../src/lib/types";
 
 /** Shape of a funder row for upsert. */
 export interface FunderRow {
