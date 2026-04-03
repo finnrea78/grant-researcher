@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { slugify } from "@/lib/slugify";
-import { upsertResearcher } from "@/lib/researcher-store";
+import { upsertResearcher, updateOrcidData } from "@/lib/researcher-store";
 import type { IntakeData } from "@/lib/types";
 
 export async function POST(req: Request): Promise<Response> {
@@ -41,14 +41,25 @@ export async function POST(req: Request): Promise<Response> {
   mkdirSync(rawDir, { recursive: true });
 
   // Write CV file if provided
+  let bytes: ArrayBuffer | null = null;
+  let cvExt = "md";
   if (file && file.size > 0) {
     const originalName = file.name;
-    const ext = originalName.includes(".")
+    cvExt = originalName.includes(".")
       ? originalName.split(".").pop() ?? "md"
       : "md";
-    const cvPath = resolve(rawDir, `cv.${ext}`);
-    const bytes = await file.arrayBuffer();
+    const cvPath = resolve(rawDir, `cv.${cvExt}`);
+    bytes = await file.arrayBuffer();
     writeFileSync(cvPath, Buffer.from(bytes));
+  }
+
+  // Extract CV text for Supabase storage
+  if (file && file.size > 0 && bytes !== null) {
+    if (cvExt === "md" || cvExt === "txt") {
+      intake = { ...intake, cv_text: Buffer.from(bytes).toString("utf-8") };
+    } else if (cvExt === "pdf") {
+      intake = { ...intake, cv_text: "[PDF uploaded — text extraction not yet supported]" };
+    }
   }
 
   // Write intake.json to disk (Claude agents read this)
@@ -59,6 +70,26 @@ export async function POST(req: Request): Promise<Response> {
     await upsertResearcher(intake, name);
   } catch (err) {
     console.error(`[session] Supabase upsert failed for ${name}:`, err);
+  }
+
+  // Server-side ORCID fetch if identifier provided
+  if (intake.identifiers?.orcid) {
+    try {
+      const orcidRes = await fetch(
+        `https://pub.orcid.org/v3.0/${intake.identifiers.orcid}/record`,
+        { headers: { Accept: "application/json" } }
+      );
+      if (orcidRes.ok) {
+        const orcidData = await orcidRes.json() as Record<string, unknown>;
+        // Store raw ORCID data in Supabase
+        await updateOrcidData(name, orcidData);
+        // Merge into intake.json for the profile-builder agent to use
+        const intakeWithOrcid = { ...intake, orcid_raw: orcidData };
+        writeFileSync(resolve(researcherDir, "intake.json"), JSON.stringify(intakeWithOrcid, null, 2));
+      }
+    } catch (err) {
+      console.error(`[session] ORCID fetch failed:`, err);
+    }
   }
 
   return Response.json({ name });
