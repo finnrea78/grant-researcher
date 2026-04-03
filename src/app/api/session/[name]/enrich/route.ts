@@ -2,8 +2,9 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { RESEARCHER_ENRICHER_PROMPT } from "@/lib/prompts/researcher-enricher";
+import { updateResearcherProfile } from "@/lib/researcher-store";
 import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
-import type { IntakeData } from "@/lib/types";
+import type { IntakeData, ResearcherProfile } from "@/lib/types";
 
 export async function POST(
   _req: Request,
@@ -38,6 +39,17 @@ Write outputs to:
           }),
           controller
         );
+
+        // Sync enriched profile to Supabase (best-effort, non-blocking)
+        const profilePath = resolve(researcherDir, "profile.json");
+        if (existsSync(profilePath)) {
+          try {
+            const profile = JSON.parse(readFileSync(profilePath, "utf-8")) as ResearcherProfile;
+            await updateResearcherProfile(name, profile);
+          } catch (syncErr) {
+            console.error(`[enrich] Supabase sync failed for ${name}:`, syncErr);
+          }
+        }
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
         controller.close();

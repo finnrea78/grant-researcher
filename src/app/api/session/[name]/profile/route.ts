@@ -5,9 +5,9 @@ import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
 
 export async function POST(
   _req: Request,
-  { params }: { params: Promise<{ name: string }> }
+  { params }: { params: { name: string } }
 ): Promise<Response> {
-  const { name } = await params;
+  const { name } = params;
   const dataDir = resolve(process.cwd(), "data");
 
   const stream = new ReadableStream<string>({
@@ -16,7 +16,10 @@ export async function POST(
         query({
           prompt: `Build a researcher profile for "${name}".
 
-Read the CV at: ${dataDir}/researchers/${name}/raw/cv.md
+Read intake data from: ${dataDir}/researchers/${name}/intake.json
+
+The CV file may or may not exist. Check for it at: ${dataDir}/researchers/${name}/raw/cv.md
+If it exists, use it to supplement the intake data. If it does not exist, build the profile from intake.json alone.
 
 Write outputs to:
 - ${dataDir}/researchers/${name}/profile.json
