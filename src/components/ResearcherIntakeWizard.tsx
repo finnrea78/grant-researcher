@@ -76,6 +76,7 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastFetchedOrcid = useRef<string | null>(null);
 
   // Local textarea strings for comma-separated fields
   const [researchThemesText, setResearchThemesText] = useState("");
@@ -94,6 +95,8 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
 
   async function fetchOrcid(orcid: string) {
     if (!ORCID_RE.test(orcid)) return;
+    if (lastFetchedOrcid.current === orcid) return;
+    lastFetchedOrcid.current = orcid;
     setOrcidLoading(true);
     try {
       const res = await fetch(`/api/orcid?id=${encodeURIComponent(orcid)}`);
@@ -133,6 +136,8 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
     }));
     if (ORCID_RE.test(value)) {
       fetchOrcid(value);
+    } else {
+      lastFetchedOrcid.current = null;
     }
   }
 
