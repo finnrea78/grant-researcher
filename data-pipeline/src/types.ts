@@ -28,16 +28,6 @@ export interface Classification {
   percentage: number | null;
 }
 
-/** Shape of a funder row for upsert. */
-export interface FunderRow {
-  slug: string;
-  name: string;
-  website: string | null;
-  type: string | null;
-  disciplines: string[];
-  source_metadata: Record<string, unknown>;
-}
-
 /** Counters tracked during an ingestion run. */
 export interface RunCounters {
   created: number;

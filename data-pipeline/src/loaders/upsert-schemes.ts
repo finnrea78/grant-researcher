@@ -1,5 +1,5 @@
 // data-pipeline/src/loaders/upsert-schemes.ts
-import { supabase } from "../db.js";
+import { supabase } from "@grant-researcher/db";
 import type { NormalisedScheme, RunCounters } from "../types.js";
 import { upsertFunder } from "./upsert-funder.js";
 

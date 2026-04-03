@@ -1,6 +1,6 @@
 // data-pipeline/src/loaders/upsert-funder.ts
-import { supabase } from "../db.js";
-import type { FunderRow } from "../types.js";
+import { supabase } from "@grant-researcher/db";
+import type { FunderRow } from "@grant-researcher/db";
 
 /**
  * Upsert a funder by slug. Returns the funder's UUID.

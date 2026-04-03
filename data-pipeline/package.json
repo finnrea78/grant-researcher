@@ -7,6 +7,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@grant-researcher/db": "*",
     "@supabase/supabase-js": "^2.49.0",
     "cheerio": "^1.0.0",
     "commander": "^13.0.0"

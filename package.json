@@ -2,14 +2,16 @@
   "name": "grant-researcher",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["data-pipeline"],
+  "workspaces": ["data-pipeline", "db"],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "db:push": "npm run db:push -w db"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.87",
+    "@supabase/supabase-js": "^2.49.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-slot": "^1.2.4",
