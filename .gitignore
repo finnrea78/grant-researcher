@@ -33,3 +33,4 @@ research-docs/
 # Claude Code local config
 .claude/
 .superpowers/
+data-pipeline/.env
