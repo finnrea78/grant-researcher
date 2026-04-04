@@ -27,6 +27,10 @@ export async function upsertOpportunities(
       amount_max: opp.amount_max,
       amount_currency: opp.amount_currency,
       url: opp.url,
+      funding_type: opp.funding_type,
+      description: opp.description,
+      eligibility: opp.eligibility,
+      scope: opp.scope,
       source: opp.source,
       source_metadata: opp.source_metadata,
     };

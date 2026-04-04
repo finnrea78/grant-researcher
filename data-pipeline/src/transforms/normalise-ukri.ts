@@ -38,6 +38,10 @@ export function normaliseUkriOpportunity(
     amount_max: amount.max,
     amount_currency: amount.currency,
     url: opp.url,
+    funding_type: opp.fundingType,
+    description: opp.description,
+    eligibility: opp.eligibility,
+    scope: opp.scope,
     source: "ukri_funding_finder",
     source_metadata: {
       council_raw: opp.council,

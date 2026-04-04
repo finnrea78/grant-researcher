@@ -11,6 +11,10 @@ export interface NormalisedOpportunity {
   amount_max: number | null;
   amount_currency: string;
   url: string | null;
+  funding_type: string | null;
+  description: string | null;
+  eligibility: string | null;
+  scope: string | null;
   source: "ukri_funding_finder" | "web_scrape";
   source_metadata: Record<string, unknown>;
 }
