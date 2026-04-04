@@ -1,23 +1,37 @@
-/** Shape written to the schemes table. All source connectors produce this. */
-export interface NormalisedScheme {
+/** Shape written to the opportunities table (open funding calls — UKRI Finder). */
+export interface NormalisedOpportunity {
   funder_slug: string;
   name: string;
   slug: string;
   status: string | null;
   deadline_raw: string | null;
-  deadline_date: string | null; // ISO date string or null
+  deadline_date: string | null;
   amount_raw: string | null;
   amount_min: number | null;
   amount_max: number | null;
   amount_currency: string;
-  duration: string | null;
-  career_stage: string | null;
-  institutional_eligibility: string | null;
-  thematic_priorities: string | null;
-  application_process: string | null;
   url: string | null;
+  source: "ukri_funding_finder" | "web_scrape";
+  source_metadata: Record<string, unknown>;
+}
+
+/** Shape written to the awarded_grants table (historical funded projects — GtR). */
+export interface NormalisedGrant {
+  funder_slug: string;
+  name: string;
+  slug: string;
   grant_reference: string | null;
-  source: "gtr" | "ukri_funding_finder" | "web_scrape";
+  status: string | null;
+  abstract: string | null;
+  technical_summary: string | null;
+  impact_text: string | null;
+  grant_category: string | null;
+  fund_start: string | null;   // ISO date string
+  fund_end: string | null;     // ISO date string
+  amount: number | null;       // in GBP pounds (GtR valuePounds)
+  amount_currency: string;
+  url: string | null;
+  source: "gtr";
   source_metadata: Record<string, unknown>;
   classifications: Classification[];
 }
@@ -54,6 +68,16 @@ export interface GtrProject {
   abstractText?: string;
   technicalSummary?: string;
   potentialImpactText?: string;
+  valuePounds?: number;
+  /**
+   * Fund start/end dates. These may be present in some API responses.
+   * The field is optional — values may be null in practice.
+   * A follow-up enrichment step can populate these from project detail endpoints.
+   */
+  fund?: {
+    start?: string;
+    end?: string;
+  };
   identifiers?: {
     identifier: GtrIdentifier | GtrIdentifier[];
   };

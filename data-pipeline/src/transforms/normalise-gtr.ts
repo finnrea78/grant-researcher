@@ -1,4 +1,4 @@
-import type { GtrProject, GtrClassificationItem, NormalisedScheme, Classification } from "../types.js";
+import type { GtrProject, GtrClassificationItem, NormalisedGrant, Classification } from "../types.js";
 import { slugify } from "./slugify.js";
 
 /** Map UKRI council display names to slugs. */
@@ -40,9 +40,10 @@ function extractClassifications(
     .map((c) => ({ type, name: c.text!, percentage: c.percentage ?? null }));
 }
 
-export function normaliseGtrProject(project: GtrProject): NormalisedScheme {
+export function normaliseGtrProject(project: GtrProject): NormalisedGrant {
   const funderName = project.leadFunder ?? "ukri";
   const funderSlug = COUNCIL_SLUGS[funderName] ?? slugify(funderName);
+  const grantRef = extractGrantRef(project);
 
   const classifications: Classification[] = [
     ...extractClassifications(project.researchSubjects?.researchSubject, "research_subject"),
@@ -54,28 +55,19 @@ export function normaliseGtrProject(project: GtrProject): NormalisedScheme {
     funder_slug: funderSlug,
     name: project.title,
     slug: slugify(project.title),
+    grant_reference: grantRef,
     status: mapStatus(project.status),
-    deadline_raw: null,
-    deadline_date: null,
-    amount_raw: null,
-    amount_min: null,
-    amount_max: null,
+    abstract: project.abstractText ?? null,
+    technical_summary: project.technicalSummary ?? null,
+    impact_text: project.potentialImpactText ?? null,
+    grant_category: project.grantCategory ?? null,
+    fund_start: project.fund?.start?.slice(0, 10) ?? null,
+    fund_end: project.fund?.end?.slice(0, 10) ?? null,
+    amount: project.valuePounds ?? null,
     amount_currency: "GBP",
-    duration: null,
-    career_stage: project.grantCategory ?? null,
-    institutional_eligibility: null,
-    thematic_priorities: null,
-    application_process: null,
-    url: `https://gtr.ukri.org/projects?ref=${extractGrantRef(project) ?? project.id}`,
-    grant_reference: extractGrantRef(project),
+    url: `https://gtr.ukri.org/projects?ref=${grantRef ?? project.id}`,
     source: "gtr",
-    source_metadata: {
-      gtr_id: project.id,
-      abstract: project.abstractText ?? null,
-      technical_summary: project.technicalSummary ?? null,
-      impact_text: project.potentialImpactText ?? null,
-      grant_category: project.grantCategory ?? null,
-    },
+    source_metadata: { gtr_id: project.id },
     classifications,
   };
 }
