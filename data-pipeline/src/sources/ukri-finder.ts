@@ -40,7 +40,7 @@ function parsePageOpportunities($: cheerio.CheerioAPI, pageUrl: string): RawUkri
       );
 
       const dateMatch = textContent.match(
-        /(?:clos(?:es|ing)|deadline)[:\s]*(\d{1,2}\s+\w+\s+\d{4})/i
+        /(?:clos(?:es|ing)\s+date|deadline)[:\s]*(\d{1,2}\s+\w+\s+\d{4})/i
       );
 
       const amountMatch = textContent.match(
@@ -103,10 +103,10 @@ function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string |
 }
 
 /** Fetch and parse the detail page for a single opportunity. */
-async function fetchOpportunityDetails(url: string): Promise<Pick<RawUkriOpportunity, "fundingType" | "description" | "eligibility" | "scope">> {
+async function fetchOpportunityDetails(url: string): Promise<Pick<RawUkriOpportunity, "fundingType" | "description" | "eligibility" | "scope" | "closingDate">> {
   const response = await fetch(url);
   if (!response.ok) {
-    return { fundingType: null, description: null, eligibility: null, scope: null };
+    return { fundingType: null, description: null, eligibility: null, scope: null, closingDate: null };
   }
 
   const html = await response.text();
@@ -129,7 +129,12 @@ async function fetchOpportunityDetails(url: string): Promise<Pick<RawUkriOpportu
   const eligibility = extractSection($, /who can apply|eligibility/i);
   const scope = extractSection($, /what we.{0,10}looking for|scope|what you.{0,10}do/i);
 
-  return { fundingType, description, eligibility, scope };
+  // Closing date: "Closing date: 14 July 2026 4:00pm UK time"
+  let closingDate: string | null = null;
+  const dateMatch = bodyText.match(/clos(?:es|ing)\s+date[:\s]*(\d{1,2}\s+\w+\s+\d{4})/i);
+  if (dateMatch) closingDate = dateMatch[1];
+
+  return { fundingType, description, eligibility, scope, closingDate };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -188,6 +193,7 @@ export async function fetchUkriOpportunities(
     opp.description = details.description;
     opp.eligibility = details.eligibility;
     opp.scope = details.scope;
+    if (!opp.closingDate && details.closingDate) opp.closingDate = details.closingDate;
 
     if ((i + 1) % 10 === 0) console.log(`  Detail pages: ${i + 1}/${opportunities.length}`);
     if (i < opportunities.length - 1) await sleep(DETAIL_DELAY_MS);
