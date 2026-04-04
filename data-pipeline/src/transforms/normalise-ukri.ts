@@ -1,4 +1,4 @@
-import type { NormalisedScheme } from "../types.js";
+import type { NormalisedOpportunity } from "../types.js";
 import type { RawUkriOpportunity } from "../sources/ukri-finder.js";
 import { slugify } from "./slugify.js";
 import { parseAmount } from "./parse-amounts.js";
@@ -18,7 +18,7 @@ const COUNCIL_SLUGS: Record<string, string> = {
 
 export function normaliseUkriOpportunity(
   opp: RawUkriOpportunity
-): NormalisedScheme {
+): NormalisedOpportunity {
   const funderSlug = opp.council
     ? COUNCIL_SLUGS[opp.council] ?? slugify(opp.council)
     : "ukri";
@@ -37,17 +37,14 @@ export function normaliseUkriOpportunity(
     amount_min: amount.min,
     amount_max: amount.max,
     amount_currency: amount.currency,
-    duration: null,
-    career_stage: null,
-    institutional_eligibility: null,
-    thematic_priorities: null,
-    application_process: null,
     url: opp.url,
-    grant_reference: null,
+    funding_type: opp.fundingType,
+    description: opp.description,
+    eligibility: opp.eligibility,
+    scope: opp.scope,
     source: "ukri_funding_finder",
     source_metadata: {
       council_raw: opp.council,
     },
-    classifications: [],
   };
 }
