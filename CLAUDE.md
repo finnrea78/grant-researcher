@@ -1,32 +1,42 @@
 # Grant Researcher
 
-## Monorepo structure
-- `src/` — Next.js 14 frontend (App Router), business logic in `src/lib/`
-- `data-pipeline/` — CLI for ingesting grant data from GtR API and UKRI Funding Finder
-- `db/` — Supabase client and type definitions
+## Project structure
+Root is a Next.js 14 app with two npm workspaces:
+- `src/` — Next.js App Router (pages, API routes, components, lib)
+- `data-pipeline/` — CLI for ingesting grants from UKRI into Supabase
+- `db/` — Supabase schema, client, types (`@grant-researcher/db`)
+- `data/` — local filesystem storage (researchers, funding-sources, outputs)
 
-## Running the dev server
-Always start from the project root: `npm run dev`
-API routes use `resolve(process.cwd(), "core/data")` — cwd must be monorepo root
+## Key paths
+- `src/lib/prompts/` — 5 agent prompt templates (profile-builder, researcher-enricher, grant-scanner, matcher, proposal-outliner)
+- `src/app/api/session/[name]/` — agent API routes (profile, enrich, scan, match, propose, status, matches)
+- `src/lib/types.ts` — core interfaces (ResearcherProfile, IntakeData, etc.)
+- `src/lib/sse.ts` — SDKMessage → SSEEvent streaming helper
+- `src/lib/researcher-store.ts` — Supabase CRUD for researcher profiles
+- `src/components/` — React UI (IntakeWizard, PipelineBar, StageLog, MatchList, ProposalViewer)
+
+## Running
+`npm run dev` from project root. API routes use `resolve(process.cwd(), "data")` — cwd must be monorepo root.
 
 ## Running tests
 - `npm test` — run root app tests (Jest, covers `src/`)
 - `npm test -w data-pipeline` — run data-pipeline tests
 - `npm run test:all` — run all tests across workspaces
 
-## Next.js 14 params syntax
-In Next.js 14, `params` is a plain object — NOT a Promise. Use `{ params }: { params: { name: string } }` and access directly as `params.name`. The `use(params)` and `await params` patterns are Next.js 15 only.
+## Stack
+Next.js 14, @anthropic-ai/claude-agent-sdk, Supabase, Tailwind/shadcn, TypeScript. Deployed on Railway.
 
-## Next.js config
-Use `next.config.mjs` (not `.ts`) — Next.js 14 does not support TypeScript config files
-Use JSDoc types: `/** @type {import('next').NextConfig} */`
+## Next.js 14 constraints
+- `params` is a plain object, NOT a Promise. Use `{ params }: { params: { name: string } }`. The `use(params)` and `await params` patterns are Next.js 15 only.
+- Config must be `next.config.mjs` (not `.ts`). Use JSDoc types: `/** @type {import('next').NextConfig} */`
 
-## Claude Agent SDK — SDKMessage shape
-Assistant message content lives at `message.message.content` (nested BetaMessage), not `message.content`
-See `src/lib/sse.ts` for the canonical streaming pattern
+## Claude Agent SDK
+Assistant message content lives at `message.message.content` (nested BetaMessage), not `message.content`. See `src/lib/sse.ts` for the streaming pattern.
 
-## core package exports
-Prompts live in `src/lib/prompts/`. No build step needed — imported directly.
+## Hard constraints
+- `match` route must never include `WebFetch` or `WebSearch` in `allowedTools`
 
-## Hard constraints (match command)
-`match` route must never include `WebFetch` or `WebSearch` in `allowedTools` — enforced in TypeScript
+## Deeper context
+- `.claude/CONTEXT.md` — product vision, target user, current milestone
+- `.claude/DECISIONS.md` — why we chose this stack and architecture
+- `.claude/docs/domain.md` — grant landscape domain knowledge

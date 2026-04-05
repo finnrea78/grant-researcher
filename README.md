@@ -18,16 +18,17 @@ Key features:
 
 ## How it works
 
-Grant Researcher runs a four-stage pipeline driven by Claude:
+Grant Researcher runs a five-stage pipeline driven by Claude:
 
 ```
-CV upload → Profile → Scan → Match → Propose
+CV upload → Profile → Enrich → Scan → Match → Propose
 ```
 
 1. **Profile** — Claude reads the CV and extracts a structured researcher profile (themes, track record, career stage, gaps)
-2. **Scan** — harvests funding source data from known URLs and stores it locally as markdown
-3. **Match** — scores every funding scheme against the researcher profile across five dimensions, producing a tiered ranked list
-4. **Propose** — drafts a strategic alignment document for a selected grant
+2. **Enrich** — web research to fill gaps (Google Scholar, institutional pages, ORCID)
+3. **Scan** — harvests funding source data from known URLs and stores it locally as markdown
+4. **Match** — scores every funding scheme against the researcher profile across five dimensions, producing a tiered ranked list
+5. **Propose** — drafts a strategic alignment document for a selected grant
 
 Each stage streams its output live to the browser via Server-Sent Events (SSE).
 
@@ -40,10 +41,10 @@ Matches are scored using a weighted rubric:
 | Dimension | Weight | Description |
 |---|---|---|
 | Eligibility | Gate | Binary — ineligible schemes score 0 regardless |
-| Thematic alignment | 3× | How well the researcher's themes match funder priorities |
-| Track record fit | 2× | Publication record and prior grants vs scheme expectations |
-| Strategic fit | 1× | How much this grant would advance the researcher's career |
-| Practical factors | 1× | Deadline proximity, application complexity, success rate |
+| Thematic alignment | 3x | How well the researcher's themes match funder priorities |
+| Track record fit | 2x | Publication record and prior grants vs scheme expectations |
+| Strategic fit | 1x | How much this grant would advance the researcher's career |
+| Practical factors | 1x | Deadline proximity, application complexity, success rate |
 
 **Overall score** = `(thematic×3 + track_record×2 + strategic×1 + practical×1) / 7`
 
@@ -51,38 +52,47 @@ Results are grouped into three tiers: **Strong Matches (7+)**, **Worth Exploring
 
 ---
 
-## Monorepo structure
+## Project structure
 
 ```
-grant-researcher/          # monorepo root — also the Next.js app
-├── src/
-│   └── app/
-│       ├── page.tsx               # CV upload home page
-│       ├── session/[name]/        # Live pipeline session page
-│       └── api/
-│           ├── session/[name]/    # SSE API routes (profile, scan, match, propose)
-│           └── orcid/             # ORCID profile fetch
-├── components/                    # CVDropZone, PipelineBar, MatchList, ProposalViewer, etc.
-├── data/
-│   ├── funding-sources/           # Harvested grant data (markdown per funder)
-│   ├── researchers/               # Researcher profiles and CVs
-│   └── outputs/                   # Match results and proposals
+grant-researcher/
+├── src/                             # Next.js 14 App Router
+│   ├── app/
+│   │   ├── page.tsx                 # CV upload home page
+│   │   ├── session/[name]/          # Session pipeline page
+│   │   └── api/
+│   │       ├── orcid/               # ORCID API integration
+│   │       └── session/[name]/      # Agent API routes (profile, enrich, scan, match, propose)
+│   ├── components/                  # IntakeWizard, PipelineBar, StageLog, MatchList, ProposalViewer
+│   └── lib/
+│       ├── prompts/                 # Claude prompt templates (5 agents)
+│       ├── types.ts                 # Core interfaces
+│       ├── sse.ts                   # SSE streaming helper
+│       └── researcher-store.ts      # Supabase sync
 │
-├── data-pipeline/                 # Standalone ingestion CLI (npm workspace)
+├── data-pipeline/                   # Grant ingestion CLI (UKRI GtR + Finder)
 │   └── src/
-│       ├── cli.ts                 # Commands: gtr, ukri-finder
-│       ├── sources/               # API fetch logic (GtR, UKRI Funding Finder)
-│       ├── transforms/            # Normalise raw API data to shared schema
-│       └── loaders/               # Upsert funders/schemes to Supabase
+│       ├── cli.ts                   # Commander-based entry point
+│       ├── sources/                 # Fetchers (gtr.ts, ukri-finder.ts)
+│       ├── transforms/              # Normalisation and parsing
+│       └── loaders/                 # Supabase upserts
 │
-├── db/                            # Shared database package (npm workspace)
+├── db/                              # Supabase schema & client (@grant-researcher/db)
 │   └── src/
-│       ├── client.ts              # Supabase client
-│       ├── types.ts               # Database types
-│       └── index.ts               # Exports
 │
-├── docs/                          # Design specs and plans
-└── research-docs/                 # Grant databases, API references
+├── data/                            # Local filesystem storage
+│   ├── funding-sources/             # Harvested grant data (markdown per funder)
+│   ├── researchers/                 # Researcher profiles and CVs
+│   └── outputs/                     # Match results and proposals
+│
+├── .claude/                         # Claude Code project context
+│   ├── CONTEXT.md                   # Product vision and current state
+│   ├── DECISIONS.md                 # Technical decisions and rationale
+│   └── docs/
+│       └── domain.md                # Grant landscape domain knowledge
+│
+├── CLAUDE.md                        # Quick-ref for Claude Code sessions
+└── package.json                     # Workspace root (npm workspaces)
 ```
 
 ---
@@ -102,7 +112,7 @@ cp .env.example .env.local
 # Push database schema
 npm run db:push
 
-# Start the Next.js dev server (must run from monorepo root — API routes use cwd)
+# Start the dev server (run from project root)
 npm run dev
 ```
 
@@ -158,31 +168,6 @@ npm run db:diff -w db
 
 ---
 
-## CLI usage (file-based pipeline)
-
-The core pipeline can also be run directly against local files (no database required):
-
-```bash
-# Build a researcher profile from their CV
-grant-researcher profile <name>
-
-# Harvest / refresh the funding database
-grant-researcher scan
-grant-researcher scan --check    # only re-fetch sources older than 7 days
-grant-researcher scan --force    # re-harvest everything
-
-# Score all grants against a researcher profile
-grant-researcher match <name>
-
-# Draft a proposal alignment document
-grant-researcher propose <funder> <scheme>
-grant-researcher propose <name> <funder> <scheme>
-```
-
-Researcher data lives in `data/researchers/<name>/`. Place a CV at `data/researchers/<name>/raw/cv.md` (or `.pdf` / `.docx`) before running `profile`.
-
----
-
 ## Adding grant sources
 
 Add a new markdown file to `data/funding-sources/` following the template at `_template.md`. Run the scan stage to harvest it.
@@ -191,7 +176,7 @@ Add a new markdown file to `data/funding-sources/` following the template at `_t
 
 The UKRI Gateway to Research (GtR) API holds 173,000+ past funded projects — useful for understanding funder priorities and for enriching match reasoning ("this researcher's profile resembles past AHRC award winners"). But it records what was already funded, not what is currently open to apply for. Open calls live only on individual funder websites.
 
-The scan stage uses `data/funding-sources/_urls.md` as its seed list. This should contain the funding listing pages for each funder you want to track. See [`research-docs/grant-databases.md`](research-docs/grant-databases.md) for a full catalogue of UK grant databases, APIs, and recommended seed URLs.
+The scan stage uses `data/funding-sources/_urls.md` as its seed list. This should contain the funding listing pages for each funder you want to track.
 
 ---
 
@@ -239,11 +224,18 @@ The scan stage uses `data/funding-sources/_urls.md` as its seed list. This shoul
 ## Tech stack
 
 - **AI** — Anthropic Claude via `@anthropic-ai/claude-agent-sdk`
-- **Frontend** — Next.js 14, Tailwind CSS, React
-- **Streaming** — Server-Sent Events (SSE) for live pipeline output
+- **Frontend** — Next.js 14, Tailwind CSS, shadcn/ui, React
 - **Database** — Supabase (Postgres)
-- **CLI** — TypeScript + Commander
+- **Streaming** — Server-Sent Events (SSE) for live pipeline output
+- **Data pipeline** — TypeScript CLI with Commander, Cheerio
 - **Monorepo** — npm workspaces
+- **Deployment** — Railway
+
+---
+
+## Security
+
+User-supplied CV content is inserted into Claude prompts. See [issue #16](https://github.com/finnrea78/grant-researcher/issues/16) for the ongoing prompt injection audit. Do not deploy to a public endpoint before that work is complete.
 
 ---
 
