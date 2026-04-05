@@ -2,20 +2,17 @@
 
 AI-powered grant discovery for researchers. Upload a CV, run the pipeline, get ranked funding matches and a tailored proposal outline — all in the browser.
 
-Key selling points:
+Key features:
 
-- Agent-driven research into the researcher
-- Built for admins
-- Match against thousands of datasets of grants
-- Key proposals write
-- Specific for UK academics
-- Agentic-first research and proposal writing (more expensive but much deeper understanding)
-- To be linked directly into university systems to see grants and researchers' published papers, pulling in information
-- Ensure that these systems can be liable to hallucinate — all details are given as suggestions
-
-- Use Gateway to Research to enhance proposal and matching logic — they have over 173,000 papers on how to do this.
-
-- TODO: security and protection against prompt injection
+- Agent-driven research into the researcher's profile
+- Built for university admins
+- Match against thousands of grant datasets
+- Key proposal writing support
+- Specific to UK academics
+- Agentic-first research and proposal writing (deeper understanding, higher cost)
+- Gateway to Research integration — 173,000+ funded papers used to enrich match reasoning
+- Designed to connect directly into university systems (published papers, existing grants)
+- All AI outputs are clearly labelled as suggestions — system is designed to be non-liable for hallucinations
 
 ---
 
@@ -102,20 +99,97 @@ grant-researcher/
 
 ## Getting started
 
-**Prerequisites:** Node.js 18+, an Anthropic API key.
+**Prerequisites:** Node.js 18+, an Anthropic API key, a Supabase project.
 
 ```bash
-# Install all workspace dependencies
+# Install all workspace dependencies from monorepo root
 npm install
 
-# Set your API key
-echo "ANTHROPIC_API_KEY=sk-..." > .env.local
+# Copy and fill in environment variables
+cp .env.example .env.local
+# Add: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-# Start the dev server (run from project root)
+# Push database schema
+npm run db:push
+
+# Start the Next.js dev server (must run from monorepo root — API routes use cwd)
 npm run dev
 ```
 
 Open `http://localhost:3000`, upload a CV, and run the pipeline.
+
+---
+
+## Running each part
+
+### Next.js frontend + API
+
+```bash
+# Dev server (from monorepo root)
+npm run dev
+
+# Production build
+npm run build
+npm run start
+```
+
+The API routes live under `src/app/api/` and handle all pipeline stages via SSE.
+
+### Data ingestion pipeline
+
+The `data-pipeline` workspace ingests grant data into Supabase from external APIs.
+
+```bash
+# Ingest awarded grants from UKRI Gateway to Research
+npm run ingest -w data-pipeline -- gtr --council ahrc
+npm run ingest -w data-pipeline -- gtr --council epsrc
+npm run ingest -w data-pipeline -- gtr --all          # all UKRI councils
+npm run ingest -w data-pipeline -- gtr --all --limit 500
+
+# Ingest open opportunities from UKRI Funding Finder
+npm run ingest -w data-pipeline -- ukri-finder
+
+# Run ingestion tests
+npm test -w data-pipeline
+```
+
+### Database (Supabase / Drizzle)
+
+```bash
+# Push schema migrations
+npm run db:push
+
+# Check migration status
+npm run db:status -w db
+
+# Generate a diff from current schema
+npm run db:diff -w db
+```
+
+---
+
+## CLI usage (file-based pipeline)
+
+The core pipeline can also be run directly against local files (no database required):
+
+```bash
+# Build a researcher profile from their CV
+grant-researcher profile <name>
+
+# Harvest / refresh the funding database
+grant-researcher scan
+grant-researcher scan --check    # only re-fetch sources older than 7 days
+grant-researcher scan --force    # re-harvest everything
+
+# Score all grants against a researcher profile
+grant-researcher match <name>
+
+# Draft a proposal alignment document
+grant-researcher propose <funder> <scheme>
+grant-researcher propose <name> <funder> <scheme>
+```
+
+Researcher data lives in `data/researchers/<name>/`. Place a CV at `data/researchers/<name>/raw/cv.md` (or `.pdf` / `.docx`) before running `profile`.
 
 ---
 
@@ -131,6 +205,47 @@ The scan stage uses `data/funding-sources/_urls.md` as its seed list. This shoul
 
 ---
 
+## Roadmap
+
+### Cost optimisation
+- [ ] Cache researcher profiles so re-runs of match/propose don't re-call Claude for profile
+- [ ] Implement tiered matching: cheap embedding/keyword pre-filter before full Claude scoring
+- [ ] Batch Claude calls where possible (e.g. score multiple schemes per prompt)
+- [ ] Track and log token usage per pipeline stage for visibility
+- [ ] Add a "lite mode" flag that skips deep analysis for quick exploratory runs
+
+### Match against database opportunities
+- [ ] Connect the match stage to Supabase — query live opportunities table instead of local markdown files
+- [ ] Support filtering by funder, discipline, deadline window, and career stage
+- [ ] Surface deadline proximity in scoring (urgent opportunities ranked higher)
+- [ ] Add pagination / lazy loading for large result sets
+
+### Build the opportunities database
+- [ ] Ingest open calls from UKRI Funding Finder API (in progress — `data-pipeline ukri-finder`)
+- [ ] Set up scheduled ingestion (cron / Railway) to keep opportunities fresh
+- [ ] Add additional funders: Wellcome, Leverhulme, British Academy, Royal Society
+- [ ] Scrape funder "open calls" pages for non-API sources
+- [ ] Normalise and deduplicate across sources into a unified `opportunities` table
+- [ ] Track historical open/close dates to build deadline pattern data
+
+### Historical award intelligence
+- [ ] Use GtR awarded grant data to identify which researchers won which grants and why
+- [ ] Build a "funder fingerprint" per scheme: disciplines, career stages, institution types funded historically
+- [ ] Surface award history in match output: "EPSRC funded 12 similar profiles in the last 3 years"
+- [ ] Score proposals against historical success patterns to maximise likelihood of success
+- [ ] Flag schemes where the researcher's profile closely resembles previous winners
+
+### Security
+- [ ] **Prompt injection** — sanitise and validate all user-supplied content (CV text, free-text fields) before insertion into Claude prompts ([issue #16](https://github.com/finnrea78/grant-researcher/issues/16))
+- [ ] **Input validation** — enforce file type/size limits on CV upload; reject unexpected MIME types
+- [ ] **Output validation** — treat all Claude-generated content as untrusted before rendering; sanitise HTML/markdown output
+- [ ] **Rate limiting** — per-session and per-IP limits on pipeline API routes to prevent abuse and runaway API costs
+- [ ] **Auth** — protect admin routes; ensure Supabase RLS policies are in place before public deployment
+- [ ] **Secrets** — audit that no API keys are logged or exposed in SSE streams or error responses
+- [ ] **Dependency audit** — run `npm audit` as part of CI; pin critical dependencies
+
+---
+
 ## Tech stack
 
 - **AI** — Anthropic Claude via `@anthropic-ai/claude-agent-sdk`
@@ -139,12 +254,7 @@ The scan stage uses `data/funding-sources/_urls.md` as its seed list. This shoul
 - **Streaming** — Server-Sent Events (SSE) for live pipeline output
 - **Data pipeline** — TypeScript CLI with Commander, Cheerio
 - **Deployment** — Railway
-
----
-
-## Security
-
-User-supplied CV content is inserted into Claude prompts. See [issue #16](https://github.com/finnrea78/grant-researcher/issues/16) for the ongoing prompt injection audit. Do not deploy to a public endpoint before that work is complete.
+- **Monorepo** — npm workspaces
 
 ---
 
