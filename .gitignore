@@ -12,6 +12,9 @@ data/outputs/
 data/funding-sources/*.md
 data/funding-sources/*.json
 
+# Obsidian vault config
+.obsidian/
+
 # Shell config and IDE files (sandbox artifacts)
 .bashrc
 .bash_profile
