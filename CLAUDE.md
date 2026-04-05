@@ -18,6 +18,11 @@ Root is a Next.js 14 app with two npm workspaces:
 ## Running
 `npm run dev` from project root. API routes use `resolve(process.cwd(), "data")` — cwd must be monorepo root.
 
+## Running tests
+- `npm test` — run root app tests (Jest, covers `src/`)
+- `npm test -w data-pipeline` — run data-pipeline tests
+- `npm run test:all` — run all tests across workspaces
+
 ## Stack
 Next.js 14, @anthropic-ai/claude-agent-sdk, Supabase, Tailwind/shadcn, TypeScript. Deployed on Railway.
 

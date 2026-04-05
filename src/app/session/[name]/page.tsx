@@ -1,86 +1,14 @@
 "use client";
 
 import { useEffect, useReducer, useRef, useState } from "react";
-import { PipelineBar, type StageState, type StageStatus } from "@/components/PipelineBar";
+import { PipelineBar } from "@/components/PipelineBar";
+import type { StageState } from "@/lib/pipelineStages";
 import { StageLog } from "@/components/StageLog";
 import { MatchList } from "@/components/MatchList";
 import { ProposalViewer } from "@/components/ProposalViewer";
 import type { SSEEvent } from "@/lib/sse";
 import type { Match } from "@/lib/parseMatches";
-import type { ScholarCandidate } from "@/lib/types";
-
-interface LogEntry { event: SSEEvent; id: number; }
-interface Proposal { filename: string; content: string; }
-
-interface PageState {
-  stages: StageState;
-  log: LogEntry[];
-  matches: Match[];
-  proposals: Proposal[];
-  scholarCandidate: ScholarCandidate | null;
-  logCounter: number;
-}
-
-type Action =
-  | { type: "INIT"; profile: boolean; enrich: boolean; scan: boolean; match: boolean; proposals: Proposal[]; matches: Match[]; scholarCandidate: ScholarCandidate | null }
-  | { type: "START"; stage: keyof StageState }
-  | { type: "COMPLETE"; stage: keyof StageState }
-  | { type: "ERROR"; stage: keyof StageState }
-  | { type: "LOG"; event: SSEEvent }
-  | { type: "SET_MATCHES"; matches: Match[] }
-  | { type: "SET_PROPOSALS"; proposals: Proposal[] }
-  | { type: "CLEAR_SCHOLAR_CANDIDATE" }
-  | { type: "SET_SCHOLAR_CANDIDATE"; candidate: ScholarCandidate };
-
-function reducer(state: PageState, action: Action): PageState {
-  switch (action.type) {
-    case "INIT":
-      return {
-        ...state,
-        stages: {
-          profile: action.profile ? "complete" : "idle",
-          enrich: action.enrich ? "complete" : "idle",
-          scan: action.scan ? "complete" : "idle",
-          match: action.match ? "complete" : "idle",
-          propose: action.proposals.length > 0 ? "complete" : "idle",
-        },
-        matches: action.matches,
-        proposals: action.proposals,
-        scholarCandidate: action.scholarCandidate,
-      };
-    case "START":
-      return { ...state, stages: { ...state.stages, [action.stage]: "running" as StageStatus } };
-    case "COMPLETE":
-      return { ...state, stages: { ...state.stages, [action.stage]: "complete" as StageStatus } };
-    case "ERROR":
-      return { ...state, stages: { ...state.stages, [action.stage]: "error" as StageStatus } };
-    case "LOG":
-      return {
-        ...state,
-        log: [...state.log, { event: action.event, id: state.logCounter }],
-        logCounter: state.logCounter + 1,
-      };
-    case "SET_MATCHES":
-      return { ...state, matches: action.matches };
-    case "SET_PROPOSALS":
-      return { ...state, proposals: action.proposals };
-    case "CLEAR_SCHOLAR_CANDIDATE":
-      return { ...state, scholarCandidate: null };
-    case "SET_SCHOLAR_CANDIDATE":
-      return { ...state, scholarCandidate: action.candidate };
-    default:
-      return state;
-  }
-}
-
-const INITIAL_STATE: PageState = {
-  stages: { profile: "idle", enrich: "idle", scan: "idle", match: "idle", propose: "idle" },
-  log: [],
-  matches: [],
-  proposals: [],
-  scholarCandidate: null,
-  logCounter: 0,
-};
+import { reducer, INITIAL_STATE } from "@/lib/sessionReducer";
 
 export default function SessionPage({ params }: { params: { name: string } }) {
   const { name } = params;

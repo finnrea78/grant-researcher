@@ -37,10 +37,9 @@ describe("normaliseGtrProject", () => {
     expect(normaliseGtrProject(sampleProject).status).toBe("active_award");
   });
 
-  it("amount fields are null (not provided by GtR list API)", () => {
+  it("amount is null (not provided by GtR list API)", () => {
     const result = normaliseGtrProject(sampleProject);
-    expect(result.amount_min).toBeNull();
-    expect(result.amount_max).toBeNull();
+    expect(result.amount).toBeNull();
   });
 
   it("extracts classifications with percentages", () => {
@@ -51,12 +50,14 @@ describe("normaliseGtrProject", () => {
     ]);
   });
 
-  it("stores abstract in source_metadata", () => {
+  it("maps abstract to top-level field", () => {
     const result = normaliseGtrProject(sampleProject);
-    expect(result.source_metadata).toMatchObject({
-      abstract: "A study of digital heritage...",
-      gtr_id: "abc123",
-    });
+    expect(result.abstract).toBe("A study of digital heritage...");
+  });
+
+  it("stores gtr_id in source_metadata", () => {
+    const result = normaliseGtrProject(sampleProject);
+    expect(result.source_metadata).toMatchObject({ gtr_id: "abc123" });
   });
 
   it("maps funder name to slug", () => {

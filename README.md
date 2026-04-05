@@ -253,8 +253,8 @@ The scan stage uses `data/funding-sources/_urls.md` as its seed list. This shoul
 - **Database** — Supabase (Postgres)
 - **Streaming** — Server-Sent Events (SSE) for live pipeline output
 - **Data pipeline** — TypeScript CLI with Commander, Cheerio
-- **Deployment** — Railway
 - **Monorepo** — npm workspaces
+- **Deployment** — Railway
 
 ---
 
