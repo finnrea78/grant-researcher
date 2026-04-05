@@ -1,21 +1,22 @@
 import { Command } from "commander";
 import { supabase } from "@grant-researcher/db";
-import { fetchGtrProjects } from "./sources/gtr.js";
+import { fetchGtrProjects, GTR_COUNCIL_NAMES } from "./sources/gtr.js";
 import { fetchUkriOpportunities } from "./sources/ukri-finder.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { upsertFunder } from "./loaders/upsert-funder.js";
-import { upsertSchemes } from "./loaders/upsert-schemes.js";
+import { upsertGrants } from "./loaders/upsert-grants.js";
+import { upsertOpportunities } from "./loaders/upsert-opportunities.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
-import type { NormalisedScheme } from "./types.js";
+import type { NormalisedGrant, NormalisedOpportunity } from "./types.js";
 
 const program = new Command();
 program.name("ingest").description("Grant data ingestion pipeline").version("0.1.0");
 
 async function ensureFunders(
-  schemes: NormalisedScheme[]
+  items: Array<{ funder_slug: string }>
 ): Promise<Map<string, { id: string; name: string }>> {
-  const slugs = [...new Set(schemes.map((s) => s.funder_slug))];
+  const slugs = [...new Set(items.map((s) => s.funder_slug))];
   const map = new Map<string, { id: string; name: string }>();
   for (const slug of slugs) {
     const id = await upsertFunder({
@@ -36,24 +37,28 @@ async function ensureFunders(
 program
   .command("gtr")
   .description("Ingest awarded grants from UKRI Gateway to Research API")
-  .option("--council <name>", "Filter by UKRI council (e.g. ahrc, epsrc)")
+  .option("--council <name>", "Filter by UKRI council slug (e.g. ahrc, epsrc)")
   .option("--all", "Ingest from all UKRI councils")
   .option("--limit <n>", "Max projects to fetch", parseInt)
+  .option("--since <year>", "Only fetch projects with fund_start >= this year (default 2016)", parseInt)
   .action(async (opts) => {
     const councils = opts.all
-      ? ["ahrc", "bbsrc", "epsrc", "esrc", "mrc", "nerc", "stfc", "innovate-uk"]
+      ? Object.keys(GTR_COUNCIL_NAMES)
       : opts.council ? [opts.council] : [];
     if (councils.length === 0) { console.error("Specify --council <name> or --all"); process.exit(1); }
+
+    const sinceYear: number = opts.since ?? 2016;
+
     for (const council of councils) {
-      console.log(`\nIngesting GtR: ${council}`);
+      console.log(`\nIngesting GtR: ${council} (since ${sinceYear})`);
       const runId = await startRun("gtr", council);
-      const allSchemes: NormalisedScheme[] = [];
+      const allGrants: NormalisedGrant[] = [];
       try {
-        for await (const batch of fetchGtrProjects({ council, limit: opts.limit })) {
-          allSchemes.push(...batch.map(normaliseGtrProject));
+        for await (const batch of fetchGtrProjects({ council, limit: opts.limit, sinceYear })) {
+          allGrants.push(...batch.map(normaliseGtrProject));
         }
-        const funderMap = await ensureFunders(allSchemes);
-        const counters = await upsertSchemes(allSchemes, funderMap);
+        const funderMap = await ensureFunders(allGrants);
+        const counters = await upsertGrants(allGrants, funderMap);
         console.log(`  Done: ${counters.created} created, ${counters.updated} updated, ${counters.skipped} skipped`);
         await completeRun(runId, "success", counters);
       } catch (err) {
@@ -73,9 +78,9 @@ program
     const runId = await startRun("ukri_funding_finder", opts.council);
     try {
       const raw = await fetchUkriOpportunities(opts.council);
-      const schemes = raw.map(normaliseUkriOpportunity);
-      const funderMap = await ensureFunders(schemes);
-      const counters = await upsertSchemes(schemes, funderMap);
+      const opportunities: NormalisedOpportunity[] = raw.map(normaliseUkriOpportunity);
+      const funderMap = await ensureFunders(opportunities);
+      const counters = await upsertOpportunities(opportunities, funderMap);
       console.log(`  Done: ${counters.created} created, ${counters.updated} updated, ${counters.skipped} skipped`);
       await completeRun(runId, "success", counters);
     } catch (err) {
@@ -87,15 +92,25 @@ program
 
 program
   .command("status")
-  .description("Show last ingestion runs")
+  .description("Show database record counts and last ingestion runs")
   .action(async () => {
+    // Show table counts
+    const [grantsResult, oppsResult] = await Promise.all([
+      supabase.from("awarded_grants").select("id", { count: "exact", head: true }),
+      supabase.from("opportunities").select("id", { count: "exact", head: true }),
+    ]);
+    console.log("\nDatabase counts:");
+    console.log(`  awarded_grants:  ${grantsResult.count ?? "error"}`);
+    console.log(`  opportunities:   ${oppsResult.count ?? "error"}`);
+
+    // Show recent ingestion runs
     const { data, error } = await supabase
       .from("ingestion_runs")
       .select("source, funder_slug, status, records_created, records_updated, started_at")
       .order("started_at", { ascending: false })
       .limit(20);
     if (error) { console.error(`Failed to fetch status: ${error.message}`); process.exit(1); }
-    if (!data || data.length === 0) { console.log("No ingestion runs found."); return; }
+    if (!data || data.length === 0) { console.log("\nNo ingestion runs found."); return; }
     console.log("\nRecent ingestion runs:");
     console.log("─".repeat(80));
     for (const run of data) {
