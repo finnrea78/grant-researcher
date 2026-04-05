@@ -9,6 +9,10 @@ function makeOpp(overrides: Partial<RawUkriOpportunity> = {}): RawUkriOpportunit
     closingDate: "15 June 2026",
     fundingAmount: "£50,000-£200,000",
     status: "open",
+    fundingType: null,
+    description: null,
+    eligibility: null,
+    scope: null,
     ...overrides,
   };
 }
@@ -96,9 +100,10 @@ describe("normaliseUkriOpportunity", () => {
 
   it("sets fixed null fields", () => {
     const result = normaliseUkriOpportunity(makeOpp());
-    expect(result.duration).toBeNull();
-    expect(result.career_stage).toBeNull();
-    expect(result.grant_reference).toBeNull();
+    expect(result.funding_type).toBeNull();
+    expect(result.description).toBeNull();
+    expect(result.eligibility).toBeNull();
+    expect(result.scope).toBeNull();
   });
 
   it("stores raw council in source_metadata", () => {

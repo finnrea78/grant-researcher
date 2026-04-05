@@ -52,7 +52,7 @@ describe("sessionReducer", () => {
     });
 
     it("populates matches and proposals", () => {
-      const matches = [{ scheme: "Fellowship", funder: "Wellcome", score: 8, tier: 1, amount: "£50k", deadline: "2026-01-01", status: "open" }];
+      const matches = [{ scheme: "Fellowship", funder: "Wellcome", score: 8, tier: 1 as const, amount: "£50k", deadline: "2026-01-01" }];
       const proposals = [{ filename: "proposal.md", content: "# Proposal" }];
       const state = reducer(idle, {
         type: "INIT",
@@ -129,7 +129,7 @@ describe("sessionReducer", () => {
 
   describe("SET_MATCHES / SET_PROPOSALS", () => {
     it("replaces matches on SET_MATCHES", () => {
-      const matches = [{ scheme: "X", funder: "Y", score: 5, tier: 2, amount: "£10k", deadline: "2026-06-01", status: "open" }];
+      const matches = [{ scheme: "X", funder: "Y", score: 5, tier: 2 as const, amount: "£10k", deadline: "2026-06-01" }];
       const state = reducer(idle, { type: "SET_MATCHES", matches });
       expect(state.matches).toEqual(matches);
     });
