@@ -2,37 +2,36 @@
 
 AI-powered grant discovery for researchers. Upload a CV, run the pipeline, get ranked funding matches and a tailored proposal outline — all in the browser.
 
+Key selling points:
 
-Key selling points: 
-
-- Agent driven research in to the researcher
+- Agent-driven research into the researcher
 - Built for admins
-- Match agaist thousands of datasets of grants
+- Match against thousands of datasets of grants
 - Key proposals write
-- specific for UK academics 
-- Agentic first research and proposal writing (more expensive but much deeper understand)
-- To be linked directly into university systems to see grants and researchers published papers pulling in infomation
-- ensure that these systems can be liable to hallucinate all details are given as suggestions. 
+- Specific for UK academics
+- Agentic-first research and proposal writing (more expensive but much deeper understanding)
+- To be linked directly into university systems to see grants and researchers' published papers, pulling in information
+- Ensure that these systems can be liable to hallucinate — all details are given as suggestions
 
-- use gateway to research to enhance proposal and matching logic - they have over 173,000 papers on how todo this.
+- Use Gateway to Research to enhance proposal and matching logic — they have over 173,000 papers on how to do this.
 
-
-- todo: security and protects agaist prompt ingestions. 
+- TODO: security and protection against prompt injection
 
 ---
 
 ## How it works
 
-Grant Researcher runs a four-stage pipeline driven by Claude:
+Grant Researcher runs a five-stage pipeline driven by Claude:
 
 ```
-CV upload → Profile → Scan → Match → Propose
+CV upload → Profile → Enrich → Scan → Match → Propose
 ```
 
 1. **Profile** — Claude reads the CV and extracts a structured researcher profile (themes, track record, career stage, gaps)
-2. **Scan** — harvests funding source data from known URLs and stores it locally as markdown
-3. **Match** — scores every funding scheme against the researcher profile across five dimensions, producing a tiered ranked list
-4. **Propose** — drafts a strategic alignment document for a selected grant
+2. **Enrich** — web research to fill gaps (Google Scholar, institutional pages, ORCID)
+3. **Scan** — harvests funding source data from known URLs and stores it locally as markdown
+4. **Match** — scores every funding scheme against the researcher profile across five dimensions, producing a tiered ranked list
+5. **Propose** — drafts a strategic alignment document for a selected grant
 
 Each stage streams its output live to the browser via Server-Sent Events (SSE).
 
@@ -45,10 +44,10 @@ Matches are scored using a weighted rubric:
 | Dimension | Weight | Description |
 |---|---|---|
 | Eligibility | Gate | Binary — ineligible schemes score 0 regardless |
-| Thematic alignment | 3× | How well the researcher's themes match funder priorities |
-| Track record fit | 2× | Publication record and prior grants vs scheme expectations |
-| Strategic fit | 1× | How much this grant would advance the researcher's career |
-| Practical factors | 1× | Deadline proximity, application complexity, success rate |
+| Thematic alignment | 3x | How well the researcher's themes match funder priorities |
+| Track record fit | 2x | Publication record and prior grants vs scheme expectations |
+| Strategic fit | 1x | How much this grant would advance the researcher's career |
+| Practical factors | 1x | Deadline proximity, application complexity, success rate |
 
 **Overall score** = `(thematic×3 + track_record×2 + strategic×1 + practical×1) / 7`
 
@@ -56,33 +55,46 @@ Results are grouped into three tiers: **Strong Matches (7+)**, **Worth Exploring
 
 ---
 
-## Monorepo structure
+## Project structure
 
 ```
 grant-researcher/
-├── core/                        # TypeScript CLI and AI pipeline
-│   ├── src/
-│   │   ├── cli.ts               # Entry point: profile, scan, match, propose commands
-│   │   ├── commands/            # Command implementations
-│   │   ├── prompts/             # Claude prompt templates
-│   │   └── stream.ts            # Claude Agent SDK streaming helper
-│   ├── data/
-│   │   ├── funding-sources/     # Harvested grant data (markdown per funder)
-│   │   ├── researchers/         # Researcher profiles and CVs
-│   │   └── outputs/             # Match results and proposals
-│   └── dist/                    # Compiled output
+├── src/                             # Next.js 14 App Router
+│   ├── app/
+│   │   ├── page.tsx                 # CV upload home page
+│   │   ├── session/[name]/          # Session pipeline page
+│   │   └── api/
+│   │       ├── orcid/               # ORCID API integration
+│   │       └── session/[name]/      # Agent API routes (profile, enrich, scan, match, propose)
+│   ├── components/                  # IntakeWizard, PipelineBar, StageLog, MatchList, ProposalViewer
+│   └── lib/
+│       ├── prompts/                 # Claude prompt templates (5 agents)
+│       ├── types.ts                 # Core interfaces
+│       ├── sse.ts                   # SSE streaming helper
+│       └── researcher-store.ts      # Supabase sync
 │
-├── grant-researcher/            # Next.js 14 frontend
+├── data-pipeline/                   # Grant ingestion CLI (UKRI GtR + Finder)
 │   └── src/
-│       ├── app/
-│       │   ├── page.tsx         # CV upload home page
-│       │   ├── session/[name]/  # Session pipeline page
-│       │   └── api/session/     # SSE API routes
-│       ├── components/          # CVDropZone, PipelineBar, MatchList, ProposalViewer, StageLog
-│       └── lib/                 # parseMatches, slugify, SSE helpers
+│       ├── cli.ts                   # Commander-based entry point
+│       ├── sources/                 # Fetchers (gtr.ts, ukri-finder.ts)
+│       ├── transforms/              # Normalisation and parsing
+│       └── loaders/                 # Supabase upserts
 │
-├── docs/                        # Design specs and plans
-└── package.json                 # Workspace root (npm workspaces)
+├── db/                              # Supabase schema & client (@grant-researcher/db)
+│   └── src/
+│
+├── data/                            # Local filesystem storage
+│   ├── funding-sources/             # Harvested grant data (markdown per funder)
+│   ├── researchers/                 # Researcher profiles and CVs
+│   └── outputs/                     # Match results and proposals
+│
+├── docs/                            # Domain knowledge and reference
+│   └── domain.md                    # Grant landscape knowledge
+│
+├── CLAUDE.md                        # Quick-ref for Claude Code sessions
+├── CONTEXT.md                       # Product vision and current state
+├── DECISIONS.md                     # Technical decisions and rationale
+└── package.json                     # Workspace root (npm workspaces)
 ```
 
 ---
@@ -98,39 +110,11 @@ npm install
 # Set your API key
 echo "ANTHROPIC_API_KEY=sk-..." > .env.local
 
-# Build the core CLI
-cd core && npm run build && cd ..
-
-# Start the frontend dev server (run from monorepo root)
-npm run dev -w grant-researcher
+# Start the dev server (run from project root)
+npm run dev
 ```
 
 Open `http://localhost:3000`, upload a CV, and run the pipeline.
-
----
-
-## CLI usage
-
-The core pipeline can also be run directly from the command line:
-
-```bash
-# Build a researcher profile from their CV
-grant-researcher profile <name>
-
-# Harvest / refresh the funding database
-grant-researcher scan
-grant-researcher scan --check    # only re-fetch sources older than 7 days
-grant-researcher scan --force    # re-harvest everything
-
-# Score all grants against a researcher profile
-grant-researcher match <name>
-
-# Draft a proposal alignment document
-grant-researcher propose <funder> <scheme>
-grant-researcher propose <name> <funder> <scheme>
-```
-
-Researcher data lives in `core/data/researchers/<name>/`. Place a CV at `core/data/researchers/<name>/raw/cv.md` (or `.pdf` / `.docx`) before running `profile`.
 
 ---
 
@@ -142,16 +126,18 @@ Add a new markdown file to `data/funding-sources/` following the template at `_t
 
 The UKRI Gateway to Research (GtR) API holds 173,000+ past funded projects — useful for understanding funder priorities and for enriching match reasoning ("this researcher's profile resembles past AHRC award winners"). But it records what was already funded, not what is currently open to apply for. Open calls live only on individual funder websites.
 
-The scan stage uses `data/funding-sources/_urls.md` as its seed list. This should contain the funding listing pages for each funder you want to track. See [`research-docs/grant-databases.md`](research-docs/grant-databases.md) for a full catalogue of UK grant databases, APIs, and recommended seed URLs.
+The scan stage uses `data/funding-sources/_urls.md` as its seed list. This should contain the funding listing pages for each funder you want to track.
 
 ---
 
 ## Tech stack
 
 - **AI** — Anthropic Claude via `@anthropic-ai/claude-agent-sdk`
-- **Frontend** — Next.js 14, Tailwind CSS, React
+- **Frontend** — Next.js 14, Tailwind CSS, shadcn/ui, React
+- **Database** — Supabase (Postgres)
 - **Streaming** — Server-Sent Events (SSE) for live pipeline output
-- **CLI** — TypeScript + Commander
+- **Data pipeline** — TypeScript CLI with Commander, Cheerio
+- **Deployment** — Railway
 
 ---
 
