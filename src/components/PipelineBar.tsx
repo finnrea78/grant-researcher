@@ -1,12 +1,8 @@
-export type StageStatus = "idle" | "running" | "complete" | "error";
+import { isReady, STAGE_ORDER } from "@/lib/pipelineStages";
+export type { StageStatus, StageState } from "@/lib/pipelineStages";
+export { isReady } from "@/lib/pipelineStages";
 
-export interface StageState {
-  profile: StageStatus;
-  enrich: StageStatus;
-  scan: StageStatus;
-  match: StageStatus;
-  propose: StageStatus;
-}
+import type { StageState } from "@/lib/pipelineStages";
 
 interface PipelineBarProps {
   stages: StageState;
@@ -20,15 +16,6 @@ const STAGE_LABELS: Record<keyof StageState, string> = {
   match: "Match",
   propose: "Propose",
 };
-
-const STAGE_ORDER: Array<keyof StageState> = ["profile", "enrich", "scan", "match", "propose"];
-
-function isReady(stage: keyof StageState, stages: StageState): boolean {
-  const idx = STAGE_ORDER.indexOf(stage);
-  if (idx === 0) return stages[stage] === "idle" || stages[stage] === "error";
-  const prev = STAGE_ORDER[idx - 1];
-  return stages[prev] === "complete" && (stages[stage] === "idle" || stages[stage] === "error");
-}
 
 export function PipelineBar({ stages, onRun }: PipelineBarProps) {
   return (

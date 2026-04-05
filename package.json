@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "db:push": "npm run db:push -w db"
+    "db:push": "npm run db:push -w db",
+    "test": "jest",
+    "test:all": "jest && npm test -w data-pipeline"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.87",
@@ -41,6 +43,7 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
+    "roots": ["<rootDir>/src"],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
     }
