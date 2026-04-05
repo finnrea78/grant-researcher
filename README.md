@@ -112,7 +112,7 @@ cp .env.example .env.local
 # Push database schema
 npm run db:push
 
-# Start the dev server (run from project root)
+# Start the Next.js dev server (must run from monorepo root — API routes use cwd)
 npm run dev
 ```
 
@@ -165,6 +165,31 @@ npm run db:status -w db
 # Generate a diff from current schema
 npm run db:diff -w db
 ```
+
+---
+
+## CLI usage (file-based pipeline)
+
+The core pipeline can also be run directly against local files (no database required):
+
+```bash
+# Build a researcher profile from their CV
+grant-researcher profile <name>
+
+# Harvest / refresh the funding database
+grant-researcher scan
+grant-researcher scan --check    # only re-fetch sources older than 7 days
+grant-researcher scan --force    # re-harvest everything
+
+# Score all grants against a researcher profile
+grant-researcher match <name>
+
+# Draft a proposal alignment document
+grant-researcher propose <funder> <scheme>
+grant-researcher propose <name> <funder> <scheme>
+```
+
+Researcher data lives in `data/researchers/<name>/`. Place a CV at `data/researchers/<name>/raw/cv.md` (or `.pdf` / `.docx`) before running `profile`.
 
 ---
 
@@ -230,12 +255,6 @@ The scan stage uses `data/funding-sources/_urls.md` as its seed list. This shoul
 - **Data pipeline** — TypeScript CLI with Commander, Cheerio
 - **Monorepo** — npm workspaces
 - **Deployment** — Railway
-
----
-
-## Security
-
-User-supplied CV content is inserted into Claude prompts. See [issue #16](https://github.com/finnrea78/grant-researcher/issues/16) for the ongoing prompt injection audit. Do not deploy to a public endpoint before that work is complete.
 
 ---
 
