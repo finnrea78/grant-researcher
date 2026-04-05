@@ -30,8 +30,9 @@ data/funding-sources/*.json
 design-explorer.html
 research-docs/
 
-# Claude Code local config
-.claude/
+# Claude Code local config (settings are personal, but project docs are shared)
+.claude/settings.json
+.claude/settings.local.json
 .superpowers/
 data-pipeline/.env
 

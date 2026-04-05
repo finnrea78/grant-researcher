@@ -32,6 +32,6 @@ Assistant message content lives at `message.message.content` (nested BetaMessage
 - `match` route must never include `WebFetch` or `WebSearch` in `allowedTools`
 
 ## Deeper context
-- `CONTEXT.md` — product vision, target user, current milestone
-- `DECISIONS.md` — why we chose this stack and architecture
-- `docs/domain.md` — grant landscape domain knowledge
+- `.claude/CONTEXT.md` — product vision, target user, current milestone
+- `.claude/DECISIONS.md` — why we chose this stack and architecture
+- `.claude/docs/domain.md` — grant landscape domain knowledge

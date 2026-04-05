@@ -88,12 +88,13 @@ grant-researcher/
 │   ├── researchers/                 # Researcher profiles and CVs
 │   └── outputs/                     # Match results and proposals
 │
-├── docs/                            # Domain knowledge and reference
-│   └── domain.md                    # Grant landscape knowledge
+├── .claude/                         # Claude Code project context
+│   ├── CONTEXT.md                   # Product vision and current state
+│   ├── DECISIONS.md                 # Technical decisions and rationale
+│   └── docs/
+│       └── domain.md                # Grant landscape domain knowledge
 │
 ├── CLAUDE.md                        # Quick-ref for Claude Code sessions
-├── CONTEXT.md                       # Product vision and current state
-├── DECISIONS.md                     # Technical decisions and rationale
 └── package.json                     # Workspace root (npm workspaces)
 ```
 
