@@ -14,6 +14,11 @@ The agent pipeline writes intermediate files to `data/` on the local filesystem 
 ## Next.js 14 (not 15)
 Chosen for the stable App Router. Next.js 15 changed the `params` API to async (breaking), and TypeScript config support was still experimental. 14 is proven and well-documented.
 
+## DB is source of truth for opportunities and funders
+The `opportunities` and `funders` tables in Supabase are the canonical data store for all funding data, regardless of how it was discovered (pipeline, agentic scan, or manual entry). Markdown files in `data/funding-sources/` are an ephemeral export format — agents write them so the match stage can read them locally, but they are not the source of truth. Exceptions where markdown/JSON stays primary: proposal content, researcher profiles, and other document-shaped data.
+
+This enables a self-improvement loop: every scan persists discoveries to Supabase, and future scans query the DB for previously found sources, so the dataset compounds over time.
+
 ## Local filesystem for agent data
 Agents read and write markdown files in `data/`. This is simpler than storing unstructured grant content in a database — the files are human-readable, diffable, and easy for Claude to work with via Read/Write/Glob tools. Trade-off: doesn't scale horizontally, but fine for the current single-server deployment.
 

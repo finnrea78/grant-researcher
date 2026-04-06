@@ -26,11 +26,20 @@ When a researcher profile is provided in the task prompt, perform a smart scan:
    - "[discipline] research grants UK 2026"
    - "[funder type] funding [research theme]"
    - "[geographic focus] studies fellowship"
-3. Combine discovered URLs with the seed list from \`funding-sources/_urls.md\`.
-4. Harvest all URLs (discovered + seed) using **WebFetch**.
-5. When writing each funder file, add a \`disciplines:\` field listing which research fields this funder covers (e.g. \`disciplines: art-history, african-studies, museum-studies\`).
+3. Combine discovered URLs with the seed list from \`funding-sources/_urls.md\` AND any database-sourced URLs provided in the task prompt.
+4. When you discover a new funder URL via WebSearch that is NOT already in \`_urls.md\` or the database-sourced list, append it to \`_urls.md\` (so future non-smart scans pick it up) in the same format: \`funder-slug | https://url\`.
+5. Harvest all URLs (seed + database-sourced + newly discovered) using **WebFetch**.
+6. When writing each funder file, add a \`disciplines:\` field listing which research fields this funder covers (e.g. \`disciplines: art-history, african-studies, museum-studies\`).
 
-If no researcher profile is provided, fall back to harvesting the seed URL list only (no WebSearch).
+If no researcher profile is provided, fall back to harvesting the seed URL list and any database-sourced URLs (no WebSearch).
+
+---
+
+## Database-Sourced URLs
+
+When the task prompt includes a section headed "Database-sourced funders", treat those entries exactly like seed URLs — harvest them in the same flow. These were discovered by previous scans and should be re-harvested to keep opportunities current.
+
+The task prompt may also include a list of existing opportunity slugs under "Existing opportunity slugs". When harvesting, skip any opportunity whose slug matches this list — it is already in the database and does not need re-extraction unless its fields have changed.
 
 ---
 
@@ -68,6 +77,35 @@ For each URL to process:
 3. Write the extracted data to the corresponding \`funding-sources/<funder>.md\` file following the \`_template.md\` schema exactly.
 4. If a researcher profile was provided, add \`disciplines: [field1, field2]\` to the funder file header.
 5. Update \`_last-harvested.json\` with the current date for this source.
+6. Append this funder's structured data to \`funding-sources/_discovered.json\`. This is a **cumulative array file** — read it first if it exists, then append. Each entry must follow this schema exactly:
+   \`\`\`json
+   {
+     "funder_slug": "wellcome",
+     "funder_name": "Wellcome Trust",
+     "source_url": "https://wellcome.org/grant-funding/schemes",
+     "disciplines": ["health", "biomedical"],
+     "opportunities": [
+       {
+         "name": "Discovery Research",
+         "slug": "discovery-research",
+         "status": "open",
+         "deadline_raw": "2026-07-15",
+         "deadline_date": "2026-07-15",
+         "amount_raw": "Up to £3M",
+         "amount_min": null,
+         "amount_max": 3000000,
+         "url": "https://wellcome.org/grant-funding/schemes/discovery-research",
+         "funding_type": "research grant",
+         "description": "Supports discovery research with no defined scope.",
+         "eligibility": "Must be at a UK/Republic of Ireland organisation.",
+         "scope": "Any area of health-relevant research."
+       }
+     ]
+   }
+   \`\`\`
+   - Use \`null\` for any fields you cannot extract from the page. Never guess or invent values.
+   - The \`slug\` for each opportunity should be a lowercase, hyphen-separated version of the scheme name.
+   - \`deadline_date\` must be in ISO 8601 format (YYYY-MM-DD) if determinable, otherwise \`null\`.
 
 ### Step 4: Handle Failures Honestly
 

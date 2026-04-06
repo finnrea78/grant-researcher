@@ -24,7 +24,8 @@
     "testEnvironment": "node",
     "roots": ["<rootDir>/tests"],
     "moduleNameMapper": {
-      "^(\\.{1,2}/.*)\\.js$": "$1"
+      "^(\\.{1,2}/.*)\\.js$": "$1",
+      "^@grant-researcher/db$": "<rootDir>/../db/src/index.ts"
     }
   }
 }

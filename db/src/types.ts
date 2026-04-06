@@ -13,6 +13,13 @@ export interface FunderRow {
   type: string | null;
   disciplines: string[];
   source_metadata: Record<string, unknown>;
+  // Discovery tracking (added in migration 006)
+  source_url?: string | null;
+  discovered_by?: 'manual' | 'pipeline' | 'agentic_scan';
+  discovery_context?: Record<string, unknown>;
+  last_harvested_at?: string | null;
+  last_harvest_status?: string | null;
+  harvest_count?: number;
 }
 
 /** Shape of a researcher row for upsert. */
