@@ -34,7 +34,8 @@ Write outputs to:
               systemPrompt: RESEARCHER_ENRICHER_PROMPT,
               allowedTools: ["Read", "Write", "Glob", "WebFetch", "WebSearch"],
               permissionMode: "acceptEdits",
-              maxTurns: 20,
+              model: "claude-sonnet-4-6",
+              maxTurns: 12,
             },
           }),
           controller
