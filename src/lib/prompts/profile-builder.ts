@@ -1,27 +1,23 @@
 export const PROFILE_BUILDER_PROMPT = `
-Parse a researcher's intake data and/or CV file into a structured JSON profile and a thematic publications summary.
+Parse a researcher's intake data and/or CV text into a structured JSON profile and a thematic publications summary.
+
+The researcher's intake form data and CV text are provided directly in the user message — there are no files to read.
 
 ## Input Modes
-
-You will receive an intake.json file and optionally a CV file. Handle each case:
 
 **Form + CV (both present):** Treat the structured fields in intake.json as ground truth. Use the CV only to fill fields not already covered by intake.json (e.g. publications list, prior grants, conference papers). Never override an intake.json field with a CV-extracted value.
 
 **Form only (no CV):** Build the profile entirely from intake.json. Set publications, prior_grants, conference_papers, and exhibitions_curated to empty arrays unless intake data implies otherwise. Generate key_strengths and potential_gaps based on the available structured fields.
 
-**CV only (intake.json has no structured fields):** Use the existing CV extraction flow as normal.
+**CV only (no intake data):** Use the CV text for all fields.
 
-**Proposal intent (optional):** If a file named \`proposal-intent.json\` exists alongside intake.json, read it. It contains an optional project title, description, target discipline, and methodology that the researcher is considering for their next grant proposal. Use this to inform the \`current_projects\`, \`research_themes\`, and \`key_strengths\` fields — but only where it adds genuine signal beyond what the CV and intake.json already provide.
+**Proposal intent (optional):** If proposal intent data is included in the user message, use it to inform the \`current_projects\`, \`research_themes\`, and \`key_strengths\` fields — but only where it adds genuine signal beyond what the CV and intake data already provide.
 
 ## Instructions
 
-### Step 1: Read the CV
+### Step 1: Extract the JSON Profile
 
-Read the CV file in full before extracting anything.
-
-### Step 2: Extract the JSON Profile
-
-Write the profile.json file following this schema exactly:
+Produce a profile following this schema exactly:
 
 \`\`\`json
 {
@@ -80,9 +76,9 @@ Write the profile.json file following this schema exactly:
 - \`key_strengths\`: 5-8 items distilled from the CV — what makes this researcher fundable (publication record, track record with specific funders, institutional roles, public engagement, etc.).
 - \`potential_gaps\`: honest assessment — e.g. "no PI grant in last 10 years", "limited international co-investigator network", "no ERC or Horizon experience".
 
-### Step 3: Generate Publications Summary
+### Step 2: Generate Publications Summary
 
-Write the publications.md file — a thematic analysis of the researcher's publication record.
+Produce a publications_md string — a thematic analysis of the researcher's publication record.
 
 **Structure:**
 
@@ -118,19 +114,21 @@ Write the publications.md file — a thematic analysis of the researcher's publi
 **Recommendations:** [1-2 sentences on how this publication record positions the researcher for funding]
 \`\`\`
 
-### Step 4: Do Not Infer
+### Step 3: Do Not Infer
 
-- Only extract information explicitly stated in the CV.
-- If a field cannot be populated from the CV, use \`[]\` for arrays or \`""\` for strings.
+- Only extract information explicitly stated in the provided data.
+- If a field cannot be populated, use \`[]\` for arrays or \`""\` for strings.
 - Do not invent publications, grants, or roles.
-- For \`key_strengths\` and \`potential_gaps\`, use your analytical judgement — but base it solely on what the CV contains.
+- For \`key_strengths\` and \`potential_gaps\`, use your analytical judgement — but base it solely on what the data contains.
 
-### Step 5: Report Completion
+## Response Format
 
-After writing both files, report:
-- Researcher name and career stage identified
-- Number of publications extracted
-- Number of prior grants extracted
-- Any fields that could not be populated
-- Any uncertainties or ambiguities in the CV
+Respond with a JSON object and no markdown fences or extra text — just the raw JSON:
+
+\`\`\`
+{
+  "profile": { ...ResearcherProfile },
+  "publications_md": "...markdown string..."
+}
+\`\`\`
 `.trim();

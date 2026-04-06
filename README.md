@@ -99,7 +99,7 @@ grant-researcher/
 
 ## Getting started
 
-**Prerequisites:** Node.js 18+, an Anthropic API key, a Supabase project.
+**Prerequisites:** Node.js 18+, an Anthropic API key, a Supabase project, an OpenAI API key.
 
 ```bash
 # Install all workspace dependencies from monorepo root
@@ -107,10 +107,16 @@ npm install
 
 # Copy and fill in environment variables
 cp .env.example .env.local
-# Add: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Add: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, OPENAI_API_KEY
 
-# Push database schema
-npm run db:push
+# Also add OPENAI_API_KEY and Supabase credentials to data-pipeline/.env for the CLI
+cp data-pipeline/.env.example data-pipeline/.env
+
+# Push database schema (links to your Supabase project and applies all migrations)
+npm run db:push -w db
+
+# Embed existing opportunities (first run only — backfills any rows missing embeddings)
+npm run embed -w data-pipeline
 
 # Start the Next.js dev server (must run from monorepo root — API routes use cwd)
 npm run dev
@@ -149,6 +155,11 @@ npm run ingest -w data-pipeline -- gtr --all --limit 500
 # Ingest open opportunities from UKRI Funding Finder
 npm run ingest -w data-pipeline -- ukri-finder
 
+# Compute OpenAI embeddings for all opportunities missing them
+# Run after any bulk ingest, or on first setup
+npm run embed -w data-pipeline
+npm run embed -w data-pipeline -- --batch 50  # smaller batches to avoid rate limits (default: 100)
+
 # Run ingestion tests
 npm test -w data-pipeline
 ```
@@ -156,8 +167,8 @@ npm test -w data-pipeline
 ### Database (Supabase / Drizzle)
 
 ```bash
-# Push schema migrations
-npm run db:push
+# Push schema migrations to the linked Supabase project
+npm run db:push -w db
 
 # Check migration status
 npm run db:status -w db
@@ -209,13 +220,15 @@ The scan stage uses `data/funding-sources/_urls.md` as its seed list. This shoul
 
 ### Cost optimisation
 - [ ] Cache researcher profiles so re-runs of match/propose don't re-call Claude for profile
-- [ ] Implement tiered matching: cheap embedding/keyword pre-filter before full Claude scoring
+- [x] Implement tiered matching: pgvector + tsvector pre-filter before full Claude scoring
 - [ ] Batch Claude calls where possible (e.g. score multiple schemes per prompt)
 - [ ] Track and log token usage per pipeline stage for visibility
 - [ ] Add a "lite mode" flag that skips deep analysis for quick exploratory runs
 
 ### Match against database opportunities
-- [ ] Connect the match stage to Supabase — query live opportunities table instead of local markdown files
+- [x] Connect the match stage to Supabase — hybrid pgvector + tsvector retrieval (up to 150 candidates) fed to Claude scorer
+- [x] Researcher profile embedding computed from Claude-generated prose summary during enrich step
+- [x] Opportunity embeddings computed at ingest time via OpenAI `text-embedding-3-small`
 - [ ] Support filtering by funder, discipline, deadline window, and career stage
 - [ ] Surface deadline proximity in scoring (urgent opportunities ranked higher)
 - [ ] Add pagination / lazy loading for large result sets
