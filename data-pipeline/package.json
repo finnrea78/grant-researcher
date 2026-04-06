@@ -10,7 +10,8 @@
     "@grant-researcher/db": "*",
     "@supabase/supabase-js": "^2.49.0",
     "cheerio": "^1.0.0",
-    "commander": "^13.0.0"
+    "commander": "^13.0.0",
+    "openai": "^6.33.0"
   },
   "devDependencies": {
     "@types/jest": "^29.0.0",
@@ -22,7 +23,9 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "roots": ["<rootDir>/tests"],
+    "roots": [
+      "<rootDir>/tests"
+    ],
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1",
       "^@grant-researcher/db$": "<rootDir>/../db/src/index.ts"
