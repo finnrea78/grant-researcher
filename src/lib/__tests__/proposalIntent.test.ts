@@ -173,8 +173,11 @@ describe("cleanupProposalIntent", () => {
 // ─── Phase 5: Agent prompts reference proposal-intent.json ───────────────────
 
 describe("Agent prompts include proposal-intent.json", () => {
-  it("PROFILE_BUILDER_PROMPT mentions proposal-intent.json", () => {
-    expect(PROFILE_BUILDER_PROMPT).toContain("proposal-intent.json");
+  it("PROFILE_BUILDER_PROMPT handles proposal intent via user message", () => {
+    // Profile stage is no longer agentic — the route reads proposal-intent.json
+    // directly and embeds the data in the user message. The prompt describes the
+    // "Proposal Intent" section rather than a file path.
+    expect(PROFILE_BUILDER_PROMPT).toContain("Proposal intent");
   });
 
   it("MATCHER_PROMPT mentions proposal-intent.json", () => {
