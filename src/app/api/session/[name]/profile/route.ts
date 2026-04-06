@@ -28,6 +28,8 @@ If it exists, use it to supplement the intake data. If it does not exist, build 
 
 If intake.json contains an orcid_raw field, use it to supplement the profile — particularly employment history (institution, department), education (career stage, PhD year), and works (research themes, keywords).
 
+If a file exists at ${researcherDir}/proposal-intent.json, read it. It contains the researcher's intended proposal direction (project title, description, target discipline, methodology). Use it to inform current_projects, research_themes, and key_strengths where it adds signal beyond the CV and intake.json.
+
 Write outputs to:
 - ${researcherDir}/profile.json
 - ${researcherDir}/publications.md`,

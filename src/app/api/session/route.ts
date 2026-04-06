@@ -2,6 +2,8 @@ import { mkdirSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { slugify } from "@/lib/slugify";
 import { upsertResearcher, updateOrcidData } from "@/lib/researcher-store";
+import { stripEphemeralFields } from "@/lib/stripEphemeral";
+import { writeProposalIntent } from "@/lib/proposalIntent";
 import type { IntakeData } from "@/lib/types";
 
 export async function POST(req: Request): Promise<Response> {
@@ -65,9 +67,13 @@ export async function POST(req: Request): Promise<Response> {
   // Write intake.json to disk (Claude agents read this)
   writeFileSync(resolve(researcherDir, "intake.json"), JSON.stringify(intake, null, 2));
 
+  // Write proposal-intent.json separately (ephemeral — deleted after matching)
+  writeProposalIntent(researcherDir, intake.proposal_intent);
+
   // Supabase sync — non-critical, pipeline reads from disk
+  // Strip proposal_intent: sensitive IP, never persisted to Supabase
   try {
-    await upsertResearcher(intake, name);
+    await upsertResearcher(stripEphemeralFields(intake), name);
   } catch (err) {
     console.error(`[session] Supabase upsert failed for ${name}:`, err);
   }

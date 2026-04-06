@@ -98,6 +98,13 @@ export interface CollaborationProfile {
   preferred_roles?: ('PI' | 'Co-I' | 'partner')[];
 }
 
+export interface ProposalIntent {
+  project_title?: string;
+  description?: string;
+  target_discipline?: string;
+  methodology?: string;
+}
+
 export interface IntakeData {
   // Core identity
   name?: string;
@@ -125,6 +132,9 @@ export interface IntakeData {
 
   // Eligibility (factual only)
   eligibility?: EligibilityConstraints;
+
+  // Proposal intent (ephemeral — never synced to Supabase)
+  proposal_intent?: ProposalIntent;
 
   // Optional CV text (extracted from uploaded file)
   cv_text?: string;
