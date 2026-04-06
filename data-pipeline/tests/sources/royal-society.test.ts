@@ -1,40 +1,47 @@
 import { parseRoyalSocietyPage } from "../../src/sources/royal-society";
 
-// Fixture based on Royal Society's actual card structure
+// Fixture matches real Royal Society card HTML structure
 const FIXTURE_HTML = `
 <!DOCTYPE html>
 <html>
 <body>
 <div class="container">
-  <div class="grant-search-results">
-    <div class="grant-search-result">
-      <a href="/grants/apex-awards/" class="grant-search-result__link">
-        <div class="grant-search-result__content">
-          <h4 class="grant-search-result__title">APEX Awards</h4>
-          <p class="grant-search-result__description">Awards for excellent scientists to pursue novel interdisciplinary research.</p>
-          <span class="grant-search-result__status">Opening 05 August 2026</span>
+  <article class="card card--grant">
+    <a class="card__link" href="/grants/apex-awards/">
+      <div class="card__text">
+        <h4 class="card__title">APEX Awards</h4>
+        <div class="card__desc"><p>Awards for excellent scientists to pursue novel interdisciplinary research.</p></div>
+        <div class="card__meta">
+          <div><strong>Opening 05 August 2026</strong></div>
         </div>
-      </a>
-    </div>
-    <div class="grant-search-result">
-      <a href="/grants/research-grants/" class="grant-search-result__link">
-        <div class="grant-search-result__content">
-          <h4 class="grant-search-result__title">Research Grants</h4>
-          <p class="grant-search-result__description">Support for early-stage innovative research.</p>
-          <span class="grant-search-result__status">Closed</span>
+      </div>
+      <span class="card__tag category-tag">Closed </span>
+    </a>
+  </article>
+  <article class="card card--grant">
+    <a class="card__link" href="/grants/research-grants/">
+      <div class="card__text">
+        <h4 class="card__title">Research Grants</h4>
+        <div class="card__desc"><p>Support for early-stage innovative research.</p></div>
+        <div class="card__meta">
+          <div><strong></strong></div>
         </div>
-      </a>
-    </div>
-    <div class="grant-search-result">
-      <a href="/grants/newton-international-fellowships/" class="grant-search-result__link">
-        <div class="grant-search-result__content">
-          <h4 class="grant-search-result__title">Newton International Fellowships</h4>
-          <p class="grant-search-result__description">Bringing researchers to the UK.</p>
-          <span class="grant-search-result__status">Closed</span>
+      </div>
+      <span class="card__tag category-tag">Closed </span>
+    </a>
+  </article>
+  <article class="card card--grant">
+    <a class="card__link" href="/grants/newton-international/">
+      <div class="card__text">
+        <h4 class="card__title">Newton International Fellowships</h4>
+        <div class="card__desc"><p>Bringing researchers to the UK.</p></div>
+        <div class="card__meta">
+          <div><strong></strong></div>
         </div>
-      </a>
-    </div>
-  </div>
+      </div>
+      <span class="card__tag category-tag">Open </span>
+    </a>
+  </article>
   <div class="grant-search__count">You've viewed 3 of 28 grants</div>
 </div>
 </body>
@@ -57,27 +64,27 @@ describe("parseRoyalSocietyPage", () => {
     expect(result.schemes[0].url).toBe("https://royalsociety.org/grants/apex-awards/");
   });
 
-  it("detects open status from 'Opening' badge", () => {
+  it("detects open status from card__tag badge", () => {
     const result = parseRoyalSocietyPage(FIXTURE_HTML);
-    expect(result.schemes[0].status).toBe("open");
+    expect(result.schemes[2].status).toBe("open");
   });
 
-  it("detects closed status", () => {
+  it("detects closed status from card__tag badge", () => {
     const result = parseRoyalSocietyPage(FIXTURE_HTML);
     expect(result.schemes[1].status).toBe("closed");
   });
 
-  it("extracts deadline date from Opening badge", () => {
+  it("extracts next opening date from card__meta strong", () => {
     const result = parseRoyalSocietyPage(FIXTURE_HTML);
     expect(result.schemes[0].deadlineText).toBe("05 August 2026");
   });
 
-  it("sets deadlineText to null for closed schemes", () => {
+  it("sets deadlineText to null when card__meta is empty", () => {
     const result = parseRoyalSocietyPage(FIXTURE_HTML);
     expect(result.schemes[1].deadlineText).toBeNull();
   });
 
-  it("extracts description", () => {
+  it("extracts description from card__desc", () => {
     const result = parseRoyalSocietyPage(FIXTURE_HTML);
     expect(result.schemes[0].description).toBe("Awards for excellent scientists to pursue novel interdisciplinary research.");
   });

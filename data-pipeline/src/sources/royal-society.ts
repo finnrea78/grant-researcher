@@ -14,27 +14,26 @@ export function parseRoyalSocietyPage(html: string): RoyalSocietyPageData {
   const $ = cheerio.load(html);
   const schemes: RawRoyalSocietyScheme[] = [];
 
-  // Cards can be within various container structures
-  $(".grant-search-result").each((_i, el) => {
+  $("article.card--grant").each((_i, el) => {
     const $el = $(el);
 
-    const titleEl = $el.find("h4, h5, h3").first();
-    const title = titleEl.text().trim();
+    const title = $el.find(".card__title").first().text().trim();
     if (!title) return;
 
-    const linkEl = $el.find("a").first();
-    const href = linkEl.attr("href") ?? "";
+    const href = $el.find("a.card__link").first().attr("href") ?? "";
     const url = href.startsWith("http") ? href : `${BASE_URL}${href}`;
 
-    const description = $el.find("p").first().text().trim();
+    const description = $el.find(".card__desc p").first().text().trim();
 
-    const statusText = $el.find("[class*='status']").first().text().trim();
-    const isOpen = /opening/i.test(statusText);
-    const status = isOpen ? "open" : "closed";
+    // Status tag contains "Open" or "Closed"
+    const tagText = $el.find(".card__tag").first().text().trim();
+    const status = /open/i.test(tagText) ? "open" : "closed";
 
+    // card__meta strong may contain "Opening DD Month YYYY" for upcoming schemes
+    const metaText = $el.find(".card__meta strong").first().text().trim();
     let deadlineText: string | null = null;
-    if (isOpen) {
-      const match = statusText.match(/opening\s+(.+)/i);
+    if (metaText) {
+      const match = metaText.match(/opening\s+(.+)/i);
       if (match) deadlineText = match[1].trim();
     }
 
@@ -47,7 +46,7 @@ export function parseRoyalSocietyPage(html: string): RoyalSocietyPageData {
 
   // Extract total from "You've viewed N of M grants"
   let totalCount = schemes.length;
-  const countText = $("[class*='count']").text();
+  const countText = $(".grant-search__count").text();
   const countMatch = countText.match(/of\s+(\d+)\s+grants/i);
   if (countMatch) totalCount = parseInt(countMatch[1], 10);
 
