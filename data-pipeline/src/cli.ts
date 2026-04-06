@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { resolve } from "path";
 import { supabase } from "@grant-researcher/db";
 import { fetchGtrProjects, GTR_COUNCIL_NAMES } from "./sources/gtr.js";
 import { fetchUkriOpportunities } from "./sources/ukri-finder.js";
@@ -16,6 +17,7 @@ import { upsertFunder } from "./loaders/upsert-funder.js";
 import { upsertGrants } from "./loaders/upsert-grants.js";
 import { upsertOpportunities } from "./loaders/upsert-opportunities.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
+import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
 import type { NormalisedGrant, NormalisedOpportunity } from "./types.js";
 
 const program = new Command();
@@ -212,6 +214,23 @@ program
     for (const run of data) {
       const funder = run.funder_slug ? ` (${run.funder_slug})` : "";
       console.log(`  ${run.source}${funder}  ${run.status}  +${run.records_created} created  ${run.started_at}`);
+    }
+  });
+
+program
+  .command("seed-sources")
+  .description("Seed funders table with source URLs from data/funding-sources/_urls.md")
+  .option("--urls <path>", "Path to _urls.md", "data/funding-sources/_urls.md")
+  .action(async (opts) => {
+    const urlsPath = resolve(process.cwd(), opts.urls);
+    console.log(`\nSeeding funders from ${urlsPath}`);
+    try {
+      const count = await seedSourcesFromUrlList(urlsPath);
+      console.log(`  Done: ${count} sources seeded into funders table`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`  Error: ${msg}`);
+      process.exit(1);
     }
   });
 

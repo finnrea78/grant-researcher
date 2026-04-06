@@ -148,3 +148,29 @@ export interface ScholarCandidate {
 export interface HarvestTimestamps {
   [funder: string]: string; // ISO date string
 }
+
+export interface DiscoveredFunder {
+  slug: string;
+  name: string;
+  website: string | null;
+  source_url: string;
+  disciplines: string[];
+  discovered_by: 'agentic_scan' | 'manual';
+  discovery_context?: Record<string, unknown>;
+}
+
+export interface DiscoveredOpportunity {
+  name: string;
+  slug: string;
+  status: string | null;
+  deadline_raw: string | null;
+  deadline_date: string | null;
+  amount_raw: string | null;
+  amount_min: number | null;
+  amount_max: number | null;
+  url: string | null;
+  funding_type: string | null;
+  description: string | null;
+  eligibility: string | null;
+  scope: string | null;
+}

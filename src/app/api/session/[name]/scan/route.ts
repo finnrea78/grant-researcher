@@ -3,6 +3,8 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { GRANT_SCANNER_PROMPT } from "@/lib/prompts/grant-scanner";
 import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
+import { persistDiscoveredManifest } from "@/lib/scan-persistence";
+import { buildScanDbContext } from "@/lib/scan-db-context";
 
 export async function POST(
   req: Request,
@@ -11,9 +13,12 @@ export async function POST(
   const { name } = params;
   const dataDir = resolve(process.cwd(), "data");
 
-  // Build profile context for smart scan
+  // Build profile context for smart scan + DB context for self-improvement loop
   let profileContext = "";
   const allowedTools = ["Read", "Write", "Glob", "WebFetch"];
+
+  // Fetch DB-sourced funders to feed back into the agent (closes the loop)
+  const dbContext = await buildScanDbContext();
 
   const profilePath = resolve(dataDir, `researchers/${name}/profile.json`);
   if (existsSync(profilePath)) {
@@ -40,7 +45,8 @@ Mode: HARVEST mode: full harvest of all sources
 URL list: ${dataDir}/funding-sources/_urls.md
 Template: ${dataDir}/funding-sources/_template.md
 Timestamps: ${dataDir}/funding-sources/_last-harvested.json
-Funder files directory: ${dataDir}/funding-sources/${profileContext}`,
+Funder files directory: ${dataDir}/funding-sources/
+Manifest output: ${dataDir}/funding-sources/_discovered.json${profileContext}${dbContext}`,
           options: {
             cwd: dataDir,
             systemPrompt: GRANT_SCANNER_PROMPT,
@@ -51,6 +57,16 @@ Funder files directory: ${dataDir}/funding-sources/${profileContext}`,
         }),
         controller
       );
+      // Persist structured discoveries to Supabase
+      const manifestPath = resolve(dataDir, "funding-sources/_discovered.json");
+      const discoveryContext: Record<string, unknown> = { researcher: name };
+      if (existsSync(profilePath)) {
+        const profile = JSON.parse(readFileSync(profilePath, "utf-8"));
+        discoveryContext.disciplines = profile.disciplinary_fields;
+        discoveryContext.research_themes = profile.research_themes;
+      }
+      await persistDiscoveredManifest(manifestPath, discoveryContext);
+
       // Write per-researcher marker so this session's scan is recoverable on refresh
       writeFileSync(
         resolve(dataDir, `researchers/${name}/_scan-complete`),
