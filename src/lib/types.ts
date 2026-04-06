@@ -53,6 +53,7 @@ export interface ResearcherProfile {
   future_research?: string;
   scholar_h_index?: number;
   scholar_citation_count?: number;
+  retrieval_summary?: string; // Claude-generated prose for semantic embedding
   // New intake-derived fields
   orcid?: string;
   funding_goals?: FundingGoals;

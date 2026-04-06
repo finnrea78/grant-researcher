@@ -86,7 +86,27 @@ Format:
 [2-3 sentences: How does this enriched context change or strengthen the grant matching picture? What does the web research reveal that the CV alone did not?]
 \`\`\`
 
-### Step 6: Report Completion
+### Step 6: Write retrieval_summary into profile.json
+
+Read the current profile.json. Add a new field \`retrieval_summary\` — a single string of approximately 400 words written in natural, coherent prose.
+
+This summary is used to compute a semantic embedding for grant matching. Write it to surface implicit connections and research affinities, NOT as a keyword dump.
+
+Include:
+- What the researcher actually studies (their core intellectual concerns, not just subject labels)
+- Their key methodological approaches and theoretical frameworks
+- The geographic, cultural, or thematic contexts of their work
+- What their current projects are trying to achieve
+- The trajectory of their career and where they are heading
+- What kinds of funding and collaborations would suit them
+
+Write in third-person, present tense. Be specific about their actual work, not generic. A good summary makes it possible to find funding opportunities that fit even if they use different terminology.
+
+Example opening: "Dr [Name] is a [field] researcher at [institution] whose work centres on [specific topic]. Their current projects explore [specific angles]..."
+
+Write the updated profile.json with this new field added (do not overwrite other fields).
+
+### Step 7: Report Completion
 
 After writing both files, report:
 - Whether Google Scholar was found and at what confidence level
