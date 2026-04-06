@@ -1,4 +1,6 @@
+// data-pipeline/src/loaders/upsert-opportunities.ts
 import { supabase } from "@grant-researcher/db";
+import { buildOpportunityText, embedText } from "../lib/embedder.js";
 import type { NormalisedOpportunity, RunCounters } from "../types.js";
 
 export async function upsertOpportunities(
@@ -38,7 +40,7 @@ export async function upsertOpportunities(
     const result = await supabase
       .from("opportunities")
       .upsert(row, { onConflict: "funder_id,slug" })
-      .select("id, created_at, updated_at")
+      .select("id, created_at, updated_at, embedding")
       .single();
 
     if (result.error) {
@@ -53,6 +55,20 @@ export async function upsertOpportunities(
     const wasCreated = result.data.created_at === result.data.updated_at;
     if (wasCreated) counters.created++;
     else counters.updated++;
+
+    // Compute and store embedding only if not already present
+    if (!result.data.embedding) {
+      try {
+        const text = buildOpportunityText(opp);
+        const embedding = await embedText(text);
+        await supabase
+          .from("opportunities")
+          .update({ embedding })
+          .eq("id", result.data.id);
+      } catch (err) {
+        console.warn(`Failed to embed opportunity "${opp.name}": ${err instanceof Error ? err.message : err}`);
+      }
+    }
   }
 
   return counters;
