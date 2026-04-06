@@ -131,28 +131,48 @@ describe("getExistingOpportunities", () => {
 
 describe("getFunderSourceUrls", () => {
   it("returns only funders that have a non-null source_url", async () => {
+    // Both have no last_harvested_at → both go into toHarvest
     setupChain({
       data: [
-        { slug: "wellcome", source_url: "https://wellcome.org/grant-funding/schemes" },
-        { slug: "ahrc", source_url: "https://www.ukri.org/councils/ahrc/funding/" },
+        { slug: "wellcome", source_url: "https://wellcome.org/grant-funding/schemes", last_harvested_at: null },
+        { slug: "ahrc", source_url: "https://www.ukri.org/councils/ahrc/funding/", last_harvested_at: null },
       ],
       error: null,
     });
 
-    const urls = await getFunderSourceUrls();
+    const result = await getFunderSourceUrls();
 
     expect(mockFrom).toHaveBeenCalledWith("funders");
     expect(currentChain.not).toHaveBeenCalledWith("source_url", "is", null);
-    expect(urls).toEqual([
+    expect(result.toHarvest).toEqual([
       { slug: "wellcome", url: "https://wellcome.org/grant-funding/schemes" },
       { slug: "ahrc", url: "https://www.ukri.org/councils/ahrc/funding/" },
     ]);
+    expect(result.fresh).toEqual([]);
   });
 
-  it("returns empty array when no funders have source_url", async () => {
+  it("puts recently harvested funders into fresh, stale ones into toHarvest", async () => {
+    const recentDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(); // 1 day ago
+    const staleDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(); // 10 days ago
+    setupChain({
+      data: [
+        { slug: "wellcome", source_url: "https://wellcome.org/grant-funding/schemes", last_harvested_at: recentDate },
+        { slug: "ahrc", source_url: "https://www.ukri.org/councils/ahrc/funding/", last_harvested_at: staleDate },
+      ],
+      error: null,
+    });
+
+    const result = await getFunderSourceUrls(7);
+
+    expect(result.fresh.map((f) => f.slug)).toEqual(["wellcome"]);
+    expect(result.toHarvest.map((f) => f.slug)).toEqual(["ahrc"]);
+  });
+
+  it("returns empty lists when no funders have source_url", async () => {
     setupChain({ data: [], error: null });
-    const urls = await getFunderSourceUrls();
-    expect(urls).toEqual([]);
+    const result = await getFunderSourceUrls();
+    expect(result.toHarvest).toEqual([]);
+    expect(result.fresh).toEqual([]);
   });
 });
 

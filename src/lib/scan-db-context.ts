@@ -11,27 +11,35 @@ import {
  * Returns an empty string on error so the scan route can continue without DB context
  * (graceful degradation — scan still works, just doesn't benefit from prior discoveries).
  */
-export async function buildScanDbContext(): Promise<string> {
+export async function buildScanDbContext(staleDays = 7): Promise<string> {
   try {
-    const [sourceUrls, existingSlugs] = await Promise.all([
-      getFunderSourceUrls(),
+    const [{ toHarvest, fresh }, existingSlugs] = await Promise.all([
+      getFunderSourceUrls(staleDays),
       getExistingFunderSlugs(),
     ]);
 
-    if (sourceUrls.length === 0 && existingSlugs.length === 0) return "";
+    if (toHarvest.length === 0 && fresh.length === 0 && existingSlugs.length === 0) return "";
 
     const parts: string[] = [];
 
-    if (sourceUrls.length > 0) {
+    if (toHarvest.length > 0) {
       parts.push(
-        "Database-sourced funders (harvest these alongside seed URLs):\n" +
-          sourceUrls.map((s) => `${s.slug} | ${s.url}`).join("\n")
+        `Database-sourced funders to harvest (not yet harvested or stale — older than ${staleDays} days):\n` +
+          toHarvest.map((s) => `${s.slug} | ${s.url}`).join("\n")
+      );
+    }
+
+    if (fresh.length > 0) {
+      // Fresh sources: already harvested recently — pass slugs only for dedup, skip re-fetching
+      parts.push(
+        `Recently harvested funders (DO NOT re-fetch — already up to date. Use slugs for dedup only):\n` +
+          fresh.map((s) => s.slug).join(", ")
       );
     }
 
     if (existingSlugs.length > 0) {
       parts.push(
-        "Existing funder slugs (already in database — you may skip re-extracting opportunities whose slug and funder_slug combination already exists):\n" +
+        "Existing funder slugs in database (skip re-extracting opportunities already captured):\n" +
           existingSlugs.join(", ")
       );
     }

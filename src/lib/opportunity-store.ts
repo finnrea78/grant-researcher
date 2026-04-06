@@ -30,20 +30,38 @@ export async function getExistingOpportunities(
   return data ?? [];
 }
 
-/** Return all funders that have a source_url set (for building the harvest list). */
-export async function getFunderSourceUrls(): Promise<
-  Array<{ slug: string; url: string }>
-> {
+/**
+ * Return funders that have a source_url, split into two lists:
+ * - `toHarvest`: not yet harvested, or last harvested more than `staleDays` ago
+ * - `fresh`: harvested within `staleDays` — skip re-fetching, use for dedup only
+ */
+export async function getFunderSourceUrls(staleDays = 7): Promise<{
+  toHarvest: Array<{ slug: string; url: string }>;
+  fresh: Array<{ slug: string; url: string }>;
+}> {
   const { data, error } = await supabase
     .from("funders")
-    .select("slug, source_url")
+    .select("slug, source_url, last_harvested_at")
     .not("source_url", "is", null);
 
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r: { slug: string; source_url: string }) => ({
-    slug: r.slug,
-    url: r.source_url,
-  }));
+
+  const cutoff = new Date(Date.now() - staleDays * 24 * 60 * 60 * 1000);
+
+  const toHarvest: Array<{ slug: string; url: string }> = [];
+  const fresh: Array<{ slug: string; url: string }> = [];
+
+  for (const r of data ?? []) {
+    const entry = { slug: r.slug, url: r.source_url as string };
+    const harvested = r.last_harvested_at ? new Date(r.last_harvested_at) : null;
+    if (harvested && harvested > cutoff) {
+      fresh.push(entry);
+    } else {
+      toHarvest.push(entry);
+    }
+  }
+
+  return { toHarvest, fresh };
 }
 
 // ─── Writing ──────────────────────────────────────────────────────────────────
