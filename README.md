@@ -158,7 +158,7 @@ npm run ingest -w data-pipeline -- ukri-finder
 # Compute OpenAI embeddings for all opportunities missing them
 # Run after any bulk ingest, or on first setup
 npm run embed -w data-pipeline
-npm run embed -w data-pipeline -- --batch 50   # smaller batches (default: 100)
+npm run embed -w data-pipeline -- --batch 50  # smaller batches to avoid rate limits (default: 100)
 
 # Run ingestion tests
 npm test -w data-pipeline
