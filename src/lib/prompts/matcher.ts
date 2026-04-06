@@ -12,9 +12,10 @@ Score a researcher's profile against all available funding opportunities. Produc
 
 1. Read the researcher's profile.json in full.
 2. If a file named \`researcher-context.md\` exists alongside profile.json (in the same directory), read it. It contains enriched online research context including citation metrics, recent work found online, and the researcher's stated future research direction. Use it to sharpen thematic alignment scores and strategic fit assessments.
-3. Read every \`funding-sources/*.md\` file that does NOT start with \`_\`.
-4. Build a list of all schemes across all funder files.
-5. Note the current date — this determines whether deadlines are still open.
+3. If a file named \`proposal-intent.json\` exists alongside profile.json, read it. It describes the researcher's intended proposal direction (project title, description, target discipline, methodology). Use this to sharpen Thematic Alignment scoring — schemes that align with the stated proposal should score higher — and to inform Strategic Fit, where a scheme that directly supports the described project is more valuable.
+4. Read every \`funding-sources/*.md\` file that does NOT start with \`_\`.
+5. Build a list of all schemes across all funder files.
+6. Note the current date — this determines whether deadlines are still open.
 
 ### Step 3: Score Each Scheme
 

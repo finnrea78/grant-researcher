@@ -11,6 +11,8 @@ You will receive an intake.json file and optionally a CV file. Handle each case:
 
 **CV only (intake.json has no structured fields):** Use the existing CV extraction flow as normal.
 
+**Proposal intent (optional):** If a file named \`proposal-intent.json\` exists alongside intake.json, read it. It contains an optional project title, description, target discipline, and methodology that the researcher is considering for their next grant proposal. Use this to inform the \`current_projects\`, \`research_themes\`, and \`key_strengths\` fields — but only where it adds genuine signal beyond what the CV and intake.json already provide.
+
 ## Instructions
 
 ### Step 1: Read the CV

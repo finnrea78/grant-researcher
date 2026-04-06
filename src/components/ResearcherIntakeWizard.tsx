@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { IntakeData, FundingGoals, CollaborationProfile, EligibilityConstraints } from "@/lib/types";
+import { IntakeData, FundingGoals, CollaborationProfile, EligibilityConstraints, ProposalIntent } from "@/lib/types";
+import { TOTAL_STEPS } from "@/components/ResearcherIntakeWizard.constants";
 
 export interface ResearcherIntakeWizardProps {
   onSubmit: (formData: FormData) => void;
   loading?: boolean;
 }
 
-const TOTAL_STEPS = 7;
 
 const INTENDED_USE_OPTIONS: { value: NonNullable<FundingGoals["intended_use"]>[number]; label: string }[] = [
   { value: "phd_students", label: "PhD students" },
@@ -84,6 +84,12 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
   const [disciplinaryFieldsText, setDisciplinaryFieldsText] = useState("");
   const [geographicFocusText, setGeographicFocusText] = useState("");
 
+  // Proposal intent (step 4) — ephemeral, never stored in Supabase
+  const [proposalTitle, setProposalTitle] = useState("");
+  const [proposalDescription, setProposalDescription] = useState("");
+  const [proposalDiscipline, setProposalDiscipline] = useState("");
+  const [proposalMethodology, setProposalMethodology] = useState("");
+
   function mergeIntake(partial: Partial<IntakeData>, fields: string[]) {
     setIntake((prev) => ({ ...prev, ...partial }));
     setAutoFilledFields((prev) => {
@@ -154,12 +160,21 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
   }
 
   function handleSubmit() {
+    const proposalIntent: ProposalIntent = {
+      project_title: proposalTitle || undefined,
+      description: proposalDescription || undefined,
+      target_discipline: proposalDiscipline || undefined,
+      methodology: proposalMethodology || undefined,
+    };
+    const hasProposal = Object.values(proposalIntent).some(Boolean);
+
     const finalIntake: IntakeData = {
       ...intake,
       research_themes: parseCommaSeparated(researchThemesText),
       research_keywords: parseCommaSeparated(researchKeywordsText),
       disciplinary_fields: parseCommaSeparated(disciplinaryFieldsText),
       geographic_focus: parseCommaSeparated(geographicFocusText),
+      ...(hasProposal ? { proposal_intent: proposalIntent } : {}),
     };
 
     const formData = new FormData();
@@ -370,8 +385,58 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
           </>
         )}
 
-        {/* Step 4: Funding */}
+        {/* Step 4: Proposal */}
         {step === 4 && (
+          <>
+            <h2 className="text-slate-100 font-semibold">Project Proposal</h2>
+            <p className="text-slate-500 text-sm">
+              Describe the project you have in mind. This helps us match you to the most relevant funding opportunities — and is never stored after matching.
+            </p>
+            <div>
+              <FieldLabel>Project title</FieldLabel>
+              <input
+                type="text"
+                placeholder="A working title for your proposed project"
+                value={proposalTitle}
+                onChange={(e) => setProposalTitle(e.target.value)}
+                className={inputClass()}
+              />
+            </div>
+            <div>
+              <FieldLabel>Project description</FieldLabel>
+              <textarea
+                placeholder="What is the research question or problem? What makes this work significant? Who does it benefit and how?"
+                value={proposalDescription}
+                onChange={(e) => setProposalDescription(e.target.value)}
+                rows={5}
+                className={textareaClass()}
+              />
+            </div>
+            <div>
+              <FieldLabel>Primary discipline</FieldLabel>
+              <input
+                type="text"
+                placeholder="e.g. Computational Biology, Urban Planning, Medieval History"
+                value={proposalDiscipline}
+                onChange={(e) => setProposalDiscipline(e.target.value)}
+                className={inputClass()}
+              />
+            </div>
+            <div>
+              <FieldLabel>Methodology</FieldLabel>
+              <textarea
+                placeholder="How will you approach this? What methods, tools, or techniques will you use?"
+                value={proposalMethodology}
+                onChange={(e) => setProposalMethodology(e.target.value)}
+                rows={3}
+                className={textareaClass()}
+              />
+            </div>
+          </>
+        )}
+
+        {/* Step 5: Funding */}
+        {step === 5 && (
           <>
             <h2 className="text-slate-100 font-semibold">Funding goals</h2>
             <div>
@@ -493,8 +558,8 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
           </>
         )}
 
-        {/* Step 5: Collaboration */}
-        {step === 5 && (
+        {/* Step 6: Collaboration */}
+        {step === 6 && (
           <>
             <h2 className="text-slate-100 font-semibold">Collaboration</h2>
             <div className="flex items-center gap-3">
@@ -586,8 +651,8 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
           </>
         )}
 
-        {/* Step 6: Eligibility */}
-        {step === 6 && (
+        {/* Step 7: Eligibility */}
+        {step === 7 && (
           <>
             <h2 className="text-slate-100 font-semibold">Eligibility</h2>
             <div>
@@ -677,8 +742,8 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
           </>
         )}
 
-        {/* Step 7: CV Upload */}
-        {step === 7 && (
+        {/* Step 8: CV Upload */}
+        {step === 8 && (
           <>
             <h2 className="text-slate-100 font-semibold">CV Upload</h2>
             <p className="text-slate-500 text-sm">
