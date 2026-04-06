@@ -31,7 +31,6 @@ data/funding-sources/*.json
 
 # Scratch and generated files
 design-explorer.html
-research-docs/
 
 # Claude Code local config (settings are personal, but project docs are shared)
 .claude/settings.json
