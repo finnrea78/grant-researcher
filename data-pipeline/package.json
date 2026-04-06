@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "ingest": "node --env-file=.env --import=tsx src/cli.ts",
+    "embed": "node --env-file=.env --import=tsx src/cli.ts embed",
     "test": "jest"
   },
   "dependencies": {
