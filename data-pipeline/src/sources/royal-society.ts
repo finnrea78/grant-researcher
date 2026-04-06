@@ -60,7 +60,7 @@ export async function fetchRoyalSocietySchemes(): Promise<RawRoyalSocietyScheme[
 
   const response = await fetch(GRANTS_URL, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; grant-researcher-bot/1.0)",
+      "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     },
   });
   if (!response.ok) {
