@@ -1,6 +1,15 @@
-/** Shape written to the opportunities table (open funding calls — UKRI Finder). */
+export type OpportunitySource =
+  | "ukri_funding_finder"
+  | "web_scrape"
+  | "find_a_grant"
+  | "wellcome"
+  | "leverhulme"
+  | "royal_society";
+
+/** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
   funder_slug: string;
+  funder_name?: string | null;
   name: string;
   slug: string;
   status: string | null;
@@ -15,7 +24,7 @@ export interface NormalisedOpportunity {
   description: string | null;
   eligibility: string | null;
   scope: string | null;
-  source: "ukri_funding_finder" | "web_scrape";
+  source: OpportunitySource;
   source_metadata: Record<string, unknown>;
 }
 

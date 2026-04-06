@@ -1,4 +1,5 @@
 import type { GtrApiResponse, GtrProject } from "../types.js";
+import { sleep } from "../utils/sleep.js";
 
 const BASE_URL = "https://gtr.ukri.org/gtr/api/projects";
 const DELAY_MS = 500;
@@ -14,10 +15,6 @@ export const GTR_COUNCIL_NAMES: Record<string, string> = {
   stfc: "STFC",
   "innovate-uk": "Innovate UK",
 };
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export interface GtrFetchOptions {
   council: string;        // slug, e.g. "ahrc"

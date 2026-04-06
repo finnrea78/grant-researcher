@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { sleep } from "../utils/sleep.js";
 
 const BASE_URL = "https://www.ukri.org/opportunity/";
 const DETAIL_DELAY_MS = 300;
@@ -135,10 +136,6 @@ async function fetchOpportunityDetails(url: string): Promise<Pick<RawUkriOpportu
   if (dateMatch) closingDate = dateMatch[1];
 
   return { fundingType, description, eligibility, scope, closingDate };
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
