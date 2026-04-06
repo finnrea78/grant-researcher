@@ -1,5 +1,6 @@
 // Server-only module — only import in Next.js API routes, not client components.
 import { supabase } from "@/lib/supabase";
+import { embedText } from "@/lib/embedder";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
 
 /**
@@ -86,4 +87,43 @@ export async function updateOrcidData(
   if (error) {
     throw new Error(`Failed to update ORCID data for ${slug}: ${error.message}`);
   }
+}
+
+/**
+ * Compute a semantic embedding from the researcher's Claude-generated
+ * retrieval_summary and store it in researchers.profile_embedding.
+ */
+export async function updateProfileEmbedding(
+  slug: string,
+  summaryText: string
+): Promise<void> {
+  const profile_embedding = await embedText(summaryText);
+  const { error } = await supabase
+    .from("researchers")
+    .update({ profile_embedding })
+    .eq("slug", slug);
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+/**
+ * Fetch only the fields needed for opportunity retrieval.
+ */
+export async function getResearcherForMatching(slug: string): Promise<{
+  profile_embedding: number[] | null;
+  research_themes: string[];
+  research_keywords: string[];
+}> {
+  const { data, error } = await supabase
+    .from("researchers")
+    .select("profile_embedding, research_themes, research_keywords")
+    .eq("slug", slug)
+    .single();
+  if (error) throw new Error(error.message);
+  return {
+    profile_embedding: data.profile_embedding ?? null,
+    research_themes: data.research_themes ?? [],
+    research_keywords: data.research_keywords ?? [],
+  };
 }
