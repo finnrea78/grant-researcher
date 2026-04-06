@@ -1,25 +1,19 @@
 export const MATCHER_PROMPT = `
-Score a researcher's profile against all available funding opportunities. Produce a ranked, tiered list of matches with transparent reasoning. This agent runs entirely on local files — it makes zero web calls.
+Score a researcher's profile against the provided funding opportunities. Produce a ranked, tiered list of matches with transparent reasoning. Opportunities are passed directly as JSON — do NOT search for files.
 
 ## Instructions
 
-### Step 1: Verify Preconditions
-
-1. Check that the researcher's profile.json exists. If not, stop and report: "Profile not found. Run the profile stage first."
-2. Check that funding source files exist and have been harvested (not just placeholder "Pending" files). If most are still placeholders, warn: "Funding database not populated. Run the scan stage first."
-
-### Step 2: Read All Inputs
+### Step 1: Read Inputs
 
 1. Read the researcher's profile.json in full.
-2. If a file named \`researcher-context.md\` exists alongside profile.json (in the same directory), read it. It contains enriched online research context including citation metrics, recent work found online, and the researcher's stated future research direction. Use it to sharpen thematic alignment scores and strategic fit assessments.
-3. If a file named \`proposal-intent.json\` exists alongside profile.json, read it. It describes the researcher's intended proposal direction (project title, description, target discipline, methodology). Use this to sharpen Thematic Alignment scoring — schemes that align with the stated proposal should score higher — and to inform Strategic Fit, where a scheme that directly supports the described project is more valuable.
-4. Read every \`funding-sources/*.md\` file that does NOT start with \`_\`.
-5. Build a list of all schemes across all funder files.
-6. Note the current date — this determines whether deadlines are still open.
+2. If a file named \`researcher-context.md\` exists alongside profile.json, read it for enriched context (citations, online presence, future research direction).
+3. If a file named \`proposal-intent.json\` exists alongside profile.json, read it. Use it to sharpen Thematic Alignment and Strategic Fit scoring.
+4. Read the list of funding opportunities from the \`<opportunities>\` JSON block in your input prompt. Do NOT read any files from funding-sources/.
+5. Note the current date — this determines whether deadlines are still open.
 
-### Step 3: Score Each Scheme
+### Step 2: Score Each Opportunity
 
-For each scheme, apply the scoring framework below. Scores are 0-10 per dimension.
+For each opportunity in the JSON, apply the scoring framework below. Scores are 0-10 per dimension.
 
 ---
 
@@ -28,7 +22,7 @@ For each scheme, apply the scoring framework below. Scores are 0-10 per dimensio
 If the researcher is ineligible, set overall score = 0 and move to the "Not Eligible" list with the reason. Do not score further.
 
 Check:
-- **Career stage:** Does the scheme's career stage requirement match the researcher's? (e.g. "early_career only" schemes exclude established researchers)
+- **Career stage:** Does the scheme's career stage requirement match the researcher's?
 - **Institution:** Must be UK HEI? Is the researcher at a qualifying institution?
 - **Nationality/residency:** Any restrictions that exclude this researcher?
 - **Prior grant restrictions:** e.g. "must not have held a major grant" — check against \`prior_grants\` in profile.
@@ -47,7 +41,7 @@ Score 0-10. This is the most important dimension.
 - 1-2: Minimal overlap. Only very general alignment (e.g. "humanities").
 - 0: No thematic alignment.
 
-Cross-reference: \`research_themes\`, \`research_keywords\`, \`geographic_focus\`, \`disciplinary_fields\` from profile vs \`Themes/priorities\` and \`What they're looking for\` in funder file.
+Cross-reference: \`research_themes\`, \`research_keywords\`, \`geographic_focus\`, \`disciplinary_fields\` from profile vs \`scope\`, \`description\` from the opportunity.
 
 ---
 
@@ -62,7 +56,7 @@ Score 0-10.
 - 1-2: Weak record relative to scheme requirements.
 - 0: Insufficient track record for this scheme.
 
-Consider: \`publications\` (recency, venue quality, relevance), \`prior_grants\` (funder, role, amount), \`phd_supervision\` (relevant for some schemes).
+Consider: \`publications\` (recency, venue quality, relevance), \`prior_grants\` (funder, role, amount), \`phd_supervision\`.
 
 ---
 
@@ -70,13 +64,13 @@ Consider: \`publications\` (recency, venue quality, relevance), \`prior_grants\`
 
 Score 0-10.
 
-- 9-10: This grant perfectly fills a gap in the researcher's CV (e.g. no solo PI grant → fellowship would establish independence). Or directly supports an active project.
+- 9-10: This grant perfectly fills a gap in the researcher's CV or directly supports an active project.
 - 7-8: Clear strategic value — career progression, new collaborations, or supports current work.
 - 5-6: Useful but not strategically critical.
-- 3-4: Low strategic value. Would be nice but not a priority.
+- 3-4: Low strategic value.
 - 1-2: Unlikely to advance the researcher's career goals.
 
-Consider: \`key_strengths\`, \`potential_gaps\`, \`current_projects\` from profile. What would most help this researcher right now?
+Consider: \`key_strengths\`, \`potential_gaps\`, \`current_projects\` from profile.
 
 ---
 
@@ -84,30 +78,28 @@ Consider: \`key_strengths\`, \`potential_gaps\`, \`current_projects\` from profi
 
 Score 0-10.
 
-- 9-10: Rolling or imminent deadline. Straightforward application process. High amount relative to scope.
-- 7-8: Clear deadline within 6 months. Moderate application complexity.
+- 9-10: Rolling or imminent deadline. Straightforward application. High amount relative to scope.
+- 7-8: Deadline within 6 months. Moderate complexity.
 - 5-6: Deadline in 6-12 months. Standard complexity.
-- 3-4: Application process is complex (multi-stage, requires co-investigators, institution sign-off). Low chance of success relative to effort.
-- 1-2: Highly competitive scheme with very low success rates. Or very onerous process.
+- 3-4: Complex process. Low success rate relative to effort.
+- 1-2: Highly competitive, onerous process.
 - 0: Deadline unclear or scheme inactive.
 
-Consider: \`deadline\`, \`status\`, \`application_process\`, \`amount\`, scheme competitiveness.
+Consider: \`deadline_date\`, \`deadline_raw\`, \`status\`, \`funding_type\`, \`amount_raw\`.
 
 ---
 
-### Step 4: Calculate Overall Score
+### Step 3: Calculate Overall Score
 
 \`\`\`
 overall_score = (thematic_alignment × 3 + track_record × 2 + strategic_fit × 1 + practical × 1) / 7
 \`\`\`
 
-Round to 1 decimal place.
-
-Eligibility-failed schemes score 0 overall.
+Round to 1 decimal place. Eligibility-failed schemes score 0 overall.
 
 ---
 
-### Step 5: Write Output
+### Step 4: Write Output
 
 Write the matches.md file following this format exactly:
 
@@ -116,21 +108,19 @@ Write the matches.md file following this format exactly:
 
 > Generated: YYYY-MM-DD
 > Profile version: [date of profile.json]
-> Sources scanned: [count of funder files read]
-> Schemes evaluated: [total count]
+> Opportunities evaluated: [total count from JSON]
 
 ## Tier 1: Strong Matches (score 7.0+)
 
 ### 1. [Scheme Name] — [Funder]
 - **Overall score:** X.X/10
 - **Amount:** £X | **Deadline:** YYYY-MM-DD or rolling | **Status:** open
+- **URL:** [url from opportunity]
 - **Why this matches:**
   - [2-3 sentences explaining the alignment — be specific about which themes match]
-- **Key strengths:** [what makes this researcher competitive for this scheme]
-- **Potential weaknesses:** [honest gaps to address in application]
-- **Action:** [apply now / prepare for next round / expression of interest by X / monitor for next cycle]
-
-### 2. ...
+- **Key strengths:** [what makes this researcher competitive]
+- **Potential weaknesses:** [honest gaps to address]
+- **Action:** [apply now / prepare for next round / monitor for next cycle]
 
 ## Tier 2: Worth Exploring (score 4.0–6.9)
 
@@ -138,21 +128,20 @@ Write the matches.md file following this format exactly:
 
 ## Tier 3: Long Shots or Future Opportunities (score 1.0–3.9)
 
-[Same format — brief reasoning, why it's a long shot or not yet right]
+[Same format — brief reasoning]
 
 ## Not Eligible
 
-- **[Scheme] — [Funder]:** [One-line reason, e.g. "early career only", "deadline passed", "UK nationals only"]
+- **[Scheme] — [Funder]:** [One-line reason]
 
 ## Funding Gaps Identified
 
-[1-2 paragraphs analysing gaps in the researcher's funding portfolio. What types of grants are missing? What would strengthen their position? Which funders should they build a relationship with?]
+[1-2 paragraphs: gaps in the researcher's portfolio, types missing, funders to build relationships with]
 \`\`\`
 
-### Step 6: Constraints
+### Step 5: Constraints
 
-- Make ZERO web calls. All reasoning is based solely on local files.
-- Never stretch a match to make it look better. Be honest about weak fits.
-- If a funder file only contains "Harvest pending", note this in the output and skip scoring for that funder.
-- Flag any schemes with deadlines within 30 days prominently with ⚠️ URGENT.
+- Make ZERO web calls.
+- Never stretch a match. Be honest about weak fits.
+- Flag schemes with deadlines within 30 days with ⚠️ URGENT.
 `.trim();
