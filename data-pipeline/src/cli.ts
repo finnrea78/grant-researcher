@@ -111,7 +111,7 @@ program
   .option("--limit <n>", "Max opportunities to fetch", parseInt)
   .action(async (opts) => {
     console.log("\nIngesting Find a Grant (GOV.UK)");
-    const runId = await startRun("find_a_grant", null);
+    const runId = await startRun("find_a_grant", undefined);
     try {
       const raw = await fetchFindAGrantOpportunities(opts.limit);
       const opportunities: NormalisedOpportunity[] = raw.map(normaliseFindAGrant);
