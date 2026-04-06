@@ -1,6 +1,6 @@
 # UK Grant Landscape
 
-> Related: [[00 - Home]] | [[Grant Databases — Full Catalogue]] | [[Free APIs]] | [[Paid Grant Databases]]
+> Related: [[Home]] | [[Grant Databases — Full Catalogue]] | [[Free APIs]] | [[Paid Grant Databases]]
 
 ## The Core Finding
 

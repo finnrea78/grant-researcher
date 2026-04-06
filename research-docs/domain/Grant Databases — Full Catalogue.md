@@ -1,6 +1,6 @@
 # Grant Databases — Full Catalogue
 
-> Related: [[00 - Home]] | [[UK Grant Landscape]] | [[Free APIs]] | [[Paid Grant Databases]] | [[OpenAlex]] | [[Pipeline Status]]
+> Related: [[Home]] | [[UK Grant Landscape]] | [[Free APIs]] | [[Paid Grant Databases]] | [[OpenAlex]] | [[Pipeline Status]]
 > Date: 2026-04-02 (updated 2026-04-06)
 > Scope: UK researchers (all UKRI councils + independent UK foundations)
 > Purpose: Catalogue of all grant databases and data sources relevant to the grant-researcher app

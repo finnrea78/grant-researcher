@@ -1,6 +1,6 @@
 # Paid Grant Databases
 
-> Related: [[00 - Home]] | [[UK Grant Landscape]] | [[Free APIs]]
+> Related: [[Home]] | [[UK Grant Landscape]] | [[Free APIs]]
 
 Institutional and commercial databases. None have free public APIs (with one exception). All require institutional subscription or significant individual spend.
 

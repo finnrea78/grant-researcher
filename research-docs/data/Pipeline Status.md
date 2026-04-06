@@ -1,6 +1,6 @@
 # Pipeline Status
 
-> Related: [[00 - Home]] | [[UK Grant Landscape]] | [[Free APIs]] | [[OpenAlex]]
+> Related: [[Home]] | [[UK Grant Landscape]] | [[Free APIs]] | [[OpenAlex]]
 > Codebase: `data-pipeline/` in the monorepo root
 
 Current state of the `data-pipeline` package — what's built, what's working, what needs attention.

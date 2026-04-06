@@ -1,6 +1,6 @@
 # OpenAlex
 
-> Related: [[00 - Home]] | [[Free APIs]] | [[UK Grant Landscape]] | [[Pipeline Status]]
+> Related: [[Home]] | [[Free APIs]] | [[UK Grant Landscape]] | [[Pipeline Status]]
 
 ## What it is
 

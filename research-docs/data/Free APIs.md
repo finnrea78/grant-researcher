@@ -1,6 +1,6 @@
 # Free Grant APIs
 
-> Related: [[00 - Home]] | [[UK Grant Landscape]] | [[OpenAlex]] | [[Grant Databases — Full Catalogue]]
+> Related: [[Home]] | [[UK Grant Landscape]] | [[OpenAlex]] | [[Grant Databases — Full Catalogue]]
 
 APIs with no cost and no (or minimal) authentication. All suitable for ETL integration.
 
