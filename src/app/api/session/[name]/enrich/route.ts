@@ -2,7 +2,8 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { RESEARCHER_ENRICHER_PROMPT } from "@/lib/prompts/researcher-enricher";
-import { updateProfileEmbedding, updateResearcherProfile } from "@/lib/researcher-store";
+import { supabase } from "@/lib/supabase";
+import { updateProfileEmbedding, updateResearcherProfile, updateScholarCandidate, updatePipelineState } from "@/lib/researcher-store";
 import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
 
@@ -55,6 +56,22 @@ Write outputs to:
             console.error(`[enrich] Supabase sync failed for ${name}:`, syncErr);
           }
         }
+        // Sync enrich pipeline state to DB
+        try {
+          const enrichPendingPath = resolve(researcherDir, "enrich-pending.json");
+          const enrichContextPath = resolve(researcherDir, "researcher-context.md");
+          if (existsSync(enrichPendingPath)) {
+            // Agent found a Scholar candidate — store it for the UI to confirm
+            const candidate = JSON.parse(readFileSync(enrichPendingPath, "utf-8"));
+            await updateScholarCandidate(name, candidate);
+            // Do NOT set pipeline_state.enrich yet — enrich is pending user confirmation
+          } else if (existsSync(enrichContextPath)) {
+            // Agent completed enrichment without finding a Scholar candidate
+            await updatePipelineState(name, 'enrich');
+          }
+        } catch (stateErr) {
+          console.error(`[enrich] pipeline state sync failed for ${name}:`, stateErr);
+        }
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
         controller.close();
@@ -88,6 +105,14 @@ export async function PATCH(
     const pendingPath = resolve(researcherDir, "enrich-pending.json");
     if (existsSync(pendingPath)) unlinkSync(pendingPath);
 
+    // Update DB: clear scholar candidate and set google_scholar_url
+    try {
+      await updateScholarCandidate(name, null);
+      await supabase.from("researchers").update({ google_scholar_url: body.scholar_url }).eq("slug", name);
+    } catch (err) {
+      console.error(`[enrich PATCH confirm] DB sync failed for ${name}:`, err);
+    }
+
     return Response.json({ ok: true, action: "confirmed" });
   }
 
@@ -95,5 +120,13 @@ export async function PATCH(
   const pendingPath = resolve(researcherDir, "enrich-pending.json");
   if (existsSync(pendingPath)) unlinkSync(pendingPath);
   writeFileSync(resolve(researcherDir, "_scholar-skip"), new Date().toISOString());
+
+  try {
+    await updateScholarCandidate(name, null);
+    await updatePipelineState(name, 'enrich');
+  } catch (err) {
+    console.error(`[enrich PATCH skip] DB sync failed for ${name}:`, err);
+  }
+
   return Response.json({ ok: true, action: "skipped" });
 }
