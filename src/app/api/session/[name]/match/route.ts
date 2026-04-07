@@ -1,10 +1,11 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { resolve } from "path";
-import { mkdirSync } from "fs";
+import { mkdirSync, existsSync, readFileSync } from "fs";
 import { MATCHER_PROMPT } from "@/lib/prompts/matcher";
 import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { cleanupProposalIntent } from "@/lib/proposalIntent";
 import { retrieveCandidates } from "@/lib/opportunity-retrieval";
+import { updateMatchResults, updatePipelineState } from "@/lib/researcher-store";
 
 export async function POST(
   _req: Request,
@@ -56,6 +57,17 @@ Score each opportunity against the researcher's profile. Use the researcher-cont
         );
       } finally {
         cleanupProposalIntent(researcherDir);
+        // Sync match results to DB (best-effort)
+        try {
+          const matchesPath = resolve(dataDir, `outputs/${name}/matches.md`);
+          if (existsSync(matchesPath)) {
+            const matchesMd = readFileSync(matchesPath, "utf-8");
+            await updateMatchResults(name, matchesMd);
+            await updatePipelineState(name, 'match');
+          }
+        } catch (syncErr) {
+          console.error(`[match] DB sync failed for ${name}:`, syncErr);
+        }
       }
     },
   });
