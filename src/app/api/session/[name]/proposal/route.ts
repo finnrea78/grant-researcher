@@ -1,22 +1,20 @@
-import { existsSync, readFileSync, readdirSync } from "fs";
-import { resolve } from "path";
+import { getProposals } from "@/lib/proposal-store";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ name: string }> }
+  { params }: { params: { name: string } }
 ): Promise<Response> {
-  const { name } = await params;
-  const proposalsDir = resolve(process.cwd(), `data/outputs/${name}/proposals`);
+  const { name } = params;
 
-  if (!existsSync(proposalsDir)) {
+  try {
+    const proposals = await getProposals(name);
+    return Response.json({
+      proposals: proposals.map((p) => ({
+        filename: `${p.funder_slug}-${p.scheme_slug}.md`,
+        content: p.content,
+      })),
+    });
+  } catch {
     return Response.json({ proposals: [] });
   }
-
-  const files = readdirSync(proposalsDir).filter((f) => f.endsWith(".md"));
-  const proposals = files.map((filename) => ({
-    filename,
-    content: readFileSync(resolve(proposalsDir, filename), "utf-8"),
-  }));
-
-  return Response.json({ proposals });
 }
