@@ -4,37 +4,50 @@ import { mkdirSync } from "fs";
 import { MATCHER_PROMPT } from "@/lib/prompts/matcher";
 import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { cleanupProposalIntent } from "@/lib/proposalIntent";
+import { retrieveCandidates } from "@/lib/opportunity-retrieval";
 
 export async function POST(
   _req: Request,
-  { params }: { params: Promise<{ name: string }> }
+  { params }: { params: { name: string } }
 ): Promise<Response> {
-  const { name } = await params;
+  const { name } = params;
   const dataDir = resolve(process.cwd(), "data");
   const researcherDir = resolve(dataDir, `researchers/${name}`);
 
   // Ensure outputs directory exists
   mkdirSync(resolve(dataDir, `outputs/${name}`), { recursive: true });
 
+  // Retrieve candidates from DB before starting the stream
+  let candidatesJson = "[]";
+  try {
+    const candidates = await retrieveCandidates(name);
+    candidatesJson = JSON.stringify(candidates, null, 2);
+  } catch (err) {
+    console.error(`[match] Failed to retrieve candidates for ${name}:`, err);
+  }
+
   const stream = new ReadableStream<string>({
     async start(controller) {
       try {
         await pipeQueryToSSE(
           query({
-            prompt: `Score and rank all funding opportunities for researcher "${name}".
+            prompt: `Score and rank funding opportunities for researcher "${name}".
 
 Researcher profile: ${researcherDir}/profile.json
-Funding sources directory: ${dataDir}/funding-sources/ (read all *.md files that do NOT start with _)
+Proposal intent (optional): ${researcherDir}/proposal-intent.json
 Write output to: ${dataDir}/outputs/${name}/matches.md
 
-If a file exists at ${researcherDir}/proposal-intent.json, read it. It describes the researcher's intended proposal (project title, description, target discipline, methodology). Use this to sharpen Thematic Alignment and Strategic Fit scoring.
+Funding opportunities retrieved from database:
+<opportunities>
+${candidatesJson}
+</opportunities>
 
-Remember: make ZERO web calls. All matching is based solely on local files.`,
+Score each opportunity against the researcher's profile. Use the researcher-context.md file if it exists alongside profile.json.`,
             options: {
               cwd: dataDir,
               systemPrompt: MATCHER_PROMPT,
-              // NO WebFetch or WebSearch — hard constraint
-              allowedTools: ["Read", "Write", "Glob"],
+              // NO WebFetch, WebSearch, or Glob — candidates are in context
+              allowedTools: ["Read", "Write"],
               permissionMode: "acceptEdits",
               maxTurns: 30,
             },
@@ -42,7 +55,6 @@ Remember: make ZERO web calls. All matching is based solely on local files.`,
           controller
         );
       } finally {
-        // Proposal intent is ephemeral — delete after matching completes
         cleanupProposalIntent(researcherDir);
       }
     },

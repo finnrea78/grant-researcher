@@ -1,5 +1,6 @@
 // Server-only module — only import in Next.js API routes, not client components.
 import { supabase } from "@/lib/supabase";
+import { embedText } from "@/lib/embedder";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
 
 /**
@@ -60,6 +61,8 @@ export async function updateResearcherProfile(
     .update({
       enriched_profile: profile,
       enriched_at: new Date().toISOString(),
+      research_themes: profile.research_themes ?? [],
+      research_keywords: profile.research_keywords ?? [],
     })
     .eq("slug", slug);
 
@@ -86,4 +89,73 @@ export async function updateOrcidData(
   if (error) {
     throw new Error(`Failed to update ORCID data for ${slug}: ${error.message}`);
   }
+}
+
+/**
+ * Compute a semantic embedding from the researcher's Claude-generated
+ * retrieval_summary and store it in researchers.profile_embedding.
+ */
+export async function updateProfileEmbedding(
+  slug: string,
+  summaryText: string
+): Promise<void> {
+  const profile_embedding = await embedText(summaryText);
+  const { error } = await supabase
+    .from("researchers")
+    .update({ profile_embedding })
+    .eq("slug", slug);
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+/**
+ * List all researchers that have a completed enriched_profile (reusable for hydration).
+ */
+export async function listResearchersWithProfiles(): Promise<{ slug: string; name: string }[]> {
+  const { data, error } = await supabase
+    .from("researchers")
+    .select("slug, name")
+    .not("enriched_profile", "is", null)
+    .order("name");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: { slug: string; name: string }) => ({ slug: r.slug, name: r.name }));
+}
+
+/**
+ * Fetch a researcher by slug for filesystem hydration.
+ */
+export async function getResearcherBySlug(slug: string): Promise<{
+  slug: string;
+  name: string;
+  enriched_profile: ResearcherProfile;
+} | null> {
+  const { data, error } = await supabase
+    .from("researchers")
+    .select("slug, name, enriched_profile")
+    .eq("slug", slug)
+    .single();
+  if (error || !data?.enriched_profile) return null;
+  return { slug: data.slug, name: data.name, enriched_profile: data.enriched_profile as ResearcherProfile };
+}
+
+/**
+ * Fetch only the fields needed for opportunity retrieval.
+ */
+export async function getResearcherForMatching(slug: string): Promise<{
+  profile_embedding: number[] | null;
+  research_themes: string[];
+  research_keywords: string[];
+}> {
+  const { data, error } = await supabase
+    .from("researchers")
+    .select("profile_embedding, research_themes, research_keywords")
+    .eq("slug", slug)
+    .single();
+  if (error) throw new Error(error.message);
+  return {
+    profile_embedding: data.profile_embedding ?? null,
+    research_themes: data.research_themes ?? [],
+    research_keywords: data.research_keywords ?? [],
+  };
 }

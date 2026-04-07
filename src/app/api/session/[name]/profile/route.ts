@@ -1,16 +1,10 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { PROFILE_BUILDER_PROMPT } from "@/lib/prompts/profile-builder";
 import { updateResearcherProfile } from "@/lib/researcher-store";
 import { formatSSEEvent, sseResponse } from "@/lib/sse";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
-
-const anthropic = new Anthropic();
-
-// Haiku 4.5 pricing ($/M tokens)
-const INPUT_COST_PER_M = 0.80;
-const OUTPUT_COST_PER_M = 4.00;
 
 function buildUserPrompt(
   name: string,
@@ -87,17 +81,32 @@ export async function POST(
 
         controller.enqueue(formatSSEEvent({ type: "text", text: "Building researcher profile…" }));
 
-        const response = await anthropic.messages.create({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 8192,
-          system: PROFILE_BUILDER_PROMPT,
-          messages: [{ role: "user", content: userPrompt }],
-        });
+        // Collect the full text response from the agent query
+        let rawText = "";
+        let resultCost = 0;
+        let resultTurns = 0;
 
-        const rawText = response.content
-          .filter((b): b is Anthropic.TextBlock => b.type === "text")
-          .map((b) => b.text)
-          .join("");
+        for await (const message of query({
+          prompt: userPrompt,
+          options: {
+            cwd: researcherDir,
+            systemPrompt: PROFILE_BUILDER_PROMPT,
+            allowedTools: [],
+            model: "haiku",
+            maxTurns: 1,
+          },
+        })) {
+          if (message.type === "assistant") {
+            for (const block of message.message.content) {
+              if (block.type === "text" && block.text.trim()) {
+                rawText += block.text;
+              }
+            }
+          } else if (message.type === "result" && !message.is_error) {
+            if ("total_cost_usd" in message) resultCost = message.total_cost_usd;
+            if ("num_turns" in message) resultTurns = message.num_turns;
+          }
+        }
 
         const { profile, publications_md } = parseProfileResponse(rawText);
 
@@ -112,12 +121,8 @@ export async function POST(
           console.error(`[profile] Supabase sync failed for ${name}:`, syncErr);
         }
 
-        const cost =
-          (response.usage.input_tokens / 1_000_000) * INPUT_COST_PER_M +
-          (response.usage.output_tokens / 1_000_000) * OUTPUT_COST_PER_M;
-
         controller.enqueue(
-          formatSSEEvent({ type: "result", turns: 1, cost, duration: Date.now() - startMs })
+          formatSSEEvent({ type: "result", turns: resultTurns, cost: resultCost, duration: Date.now() - startMs })
         );
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));

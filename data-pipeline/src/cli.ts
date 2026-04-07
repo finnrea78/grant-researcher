@@ -18,6 +18,7 @@ import { upsertGrants } from "./loaders/upsert-grants.js";
 import { upsertOpportunities } from "./loaders/upsert-opportunities.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
 import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
+import { embedBackfill } from "./commands/embed-backfill.js";
 import type { NormalisedGrant, NormalisedOpportunity } from "./types.js";
 
 const program = new Command();
@@ -230,6 +231,22 @@ program
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`  Error: ${msg}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("embed")
+  .description("Compute and store embeddings for all opportunities missing them")
+  .option("--batch <n>", "Batch size (default 100)", parseInt)
+  .action(async (opts) => {
+    const batchSize = opts.batch ?? 100;
+    console.log(`\nEmbedding opportunities (batch: ${batchSize})`);
+    try {
+      const { embedded, skipped } = await embedBackfill({ batchSize });
+      console.log(`  Done: ${embedded} embedded, ${skipped} failed`);
+    } catch (err) {
+      console.error(`  Error: ${err instanceof Error ? err.message : err}`);
       process.exit(1);
     }
   });

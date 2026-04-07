@@ -2,7 +2,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { RESEARCHER_ENRICHER_PROMPT } from "@/lib/prompts/researcher-enricher";
-import { updateResearcherProfile } from "@/lib/researcher-store";
+import { updateProfileEmbedding, updateResearcherProfile } from "@/lib/researcher-store";
 import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
 
@@ -47,6 +47,10 @@ Write outputs to:
           try {
             const profile = JSON.parse(readFileSync(profilePath, "utf-8")) as ResearcherProfile;
             await updateResearcherProfile(name, profile);
+            // Compute and store profile embedding if retrieval_summary was written
+            if (profile.retrieval_summary) {
+              await updateProfileEmbedding(name, profile.retrieval_summary);
+            }
           } catch (syncErr) {
             console.error(`[enrich] Supabase sync failed for ${name}:`, syncErr);
           }
