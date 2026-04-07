@@ -4,6 +4,7 @@ import { slugify } from "@/lib/slugify";
 import { upsertResearcher, updateOrcidData } from "@/lib/researcher-store";
 import { stripEphemeralFields } from "@/lib/stripEphemeral";
 import { writeProposalIntent } from "@/lib/proposalIntent";
+import { extractCvText } from "@/lib/extractCvText";
 import type { IntakeData } from "@/lib/types";
 
 export async function POST(req: Request): Promise<Response> {
@@ -55,12 +56,15 @@ export async function POST(req: Request): Promise<Response> {
     writeFileSync(cvPath, Buffer.from(bytes));
   }
 
-  // Extract CV text for Supabase storage
+  // Extract CV text for Supabase storage and downstream agents
   if (file && file.size > 0 && bytes !== null) {
-    if (cvExt === "md" || cvExt === "txt") {
-      intake = { ...intake, cv_text: Buffer.from(bytes).toString("utf-8") };
-    } else if (cvExt === "pdf") {
-      intake = { ...intake, cv_text: "[PDF uploaded — text extraction not yet supported]" };
+    const cvText = await extractCvText(Buffer.from(bytes), file.name);
+    if (cvText) {
+      intake = { ...intake, cv_text: cvText };
+      // Profile builder reads raw/cv.md — write extracted text so non-text uploads work
+      if (cvExt !== "md" && cvExt !== "txt") {
+        writeFileSync(resolve(rawDir, "cv.md"), cvText);
+      }
     }
   }
 

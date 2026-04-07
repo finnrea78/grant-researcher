@@ -763,7 +763,7 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".md,.pdf,.txt"
+                accept=".md,.pdf,.txt,.docx"
                 className="hidden"
                 onChange={(e) => setCvFile(e.target.files?.[0] ?? null)}
               />
@@ -773,7 +773,7 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
               ) : (
                 <>
                   <p className="text-slate-400 text-sm">Drop your CV here or click to browse</p>
-                  <p className="text-slate-600 text-xs mt-1">.md, .pdf, or .txt</p>
+                  <p className="text-slate-600 text-xs mt-1">.md, .pdf, .docx, or .txt</p>
                 </>
               )}
             </div>
