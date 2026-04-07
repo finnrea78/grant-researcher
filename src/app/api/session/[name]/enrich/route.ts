@@ -105,10 +105,11 @@ export async function PATCH(
     const pendingPath = resolve(researcherDir, "enrich-pending.json");
     if (existsSync(pendingPath)) unlinkSync(pendingPath);
 
-    // Update DB: clear scholar candidate and set google_scholar_url
+    // Update DB: clear scholar candidate, set google_scholar_url, and mark enrich complete
     try {
       await updateScholarCandidate(name, null);
       await supabase.from("researchers").update({ google_scholar_url: body.scholar_url }).eq("slug", name);
+      await updatePipelineState(name, 'enrich');
     } catch (err) {
       console.error(`[enrich PATCH confirm] DB sync failed for ${name}:`, err);
     }

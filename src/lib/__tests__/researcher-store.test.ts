@@ -277,9 +277,9 @@ describe("getResearcherPipelineState", () => {
     });
   });
 
-  it("returns null when data is null (researcher not found)", async () => {
-    // single() with PGRST116 (no rows) returns error, but we test the data=null branch
-    setupChain({ data: null, error: null });
+  it("returns null when researcher not found (PGRST116)", async () => {
+    // single() returns a PGRST116 error when zero rows match
+    setupChain({ data: null, error: { code: 'PGRST116', message: 'No rows found' } });
 
     const result = await getResearcherPipelineState("ghost");
     expect(result).toBeNull();

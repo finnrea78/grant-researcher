@@ -314,7 +314,10 @@ export async function getResearcherPipelineState(slug: string): Promise<{
     .select("pipeline_state, scholar_candidate, match_results_md")
     .eq("slug", slug)
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.code === 'PGRST116') return null; // researcher not found
+    throw new Error(error.message);
+  }
   if (!data) return null;
   return {
     pipeline_state: (data.pipeline_state as Record<string, boolean>) ?? {},

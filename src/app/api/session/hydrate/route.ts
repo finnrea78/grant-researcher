@@ -51,7 +51,11 @@ export async function POST(req: Request): Promise<Response> {
 
   // Sync research_themes and research_keywords to DB top-level columns
   // (enriched_profile JSONB has the data but the retrieval columns may be empty)
-  await updateResearcherProfile(slug, researcher.enriched_profile);
+  try {
+    await updateResearcherProfile(slug, researcher.enriched_profile);
+  } catch (err) {
+    console.error(`[hydrate] profile sync failed for ${slug}:`, err);
+  }
 
   // Generate profile embedding if retrieval_summary exists but embedding is missing
   if (researcher.enriched_profile.retrieval_summary) {
