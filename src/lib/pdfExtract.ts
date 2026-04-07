@@ -20,7 +20,9 @@ export async function extractPdfText(buffer: Buffer): Promise<string> {
     const content = await page.getTextContent();
     pages.push(
       content.items
-        .map((item: { str: string }) => item.str)
+        .filter((item) => "str" in item)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((item) => (item as any).str as string)
         .join(" ")
     );
   }
