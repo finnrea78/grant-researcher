@@ -1,5 +1,6 @@
 // Server-only module — only import in Next.js API routes, not client components.
 import { supabase } from "@/lib/supabase";
+import { embedText } from "@/lib/embedder";
 import type { DiscoveredFunder, DiscoveredOpportunity } from "@/lib/types";
 
 // ─── Reading ──────────────────────────────────────────────────────────────────
@@ -113,6 +114,19 @@ export async function upsertOpportunityFromDiscovery(
   opp: DiscoveredOpportunity,
   funderId: string
 ): Promise<void> {
+  // Build embedding from available text fields
+  let embedding: number[] | null = null;
+  const embeddingText = [opp.name, opp.description, opp.scope, opp.eligibility]
+    .filter(Boolean)
+    .join("\n");
+  if (embeddingText) {
+    try {
+      embedding = await embedText(embeddingText);
+    } catch (err) {
+      console.error(`[opportunity-store] embedding failed for ${opp.slug}:`, err);
+    }
+  }
+
   const { error } = await supabase.from("opportunities").upsert(
     {
       funder_id: funderId,
@@ -130,11 +144,83 @@ export async function upsertOpportunityFromDiscovery(
       eligibility: opp.eligibility,
       scope: opp.scope,
       source: "agentic_scan",
+      ...(embedding ? { embedding } : {}),
     },
     { onConflict: "funder_id,slug" }
   );
 
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Fetch a single opportunity by funder slug and opportunity name.
+ * Used by the propose route to pull scheme details from the DB.
+ */
+export async function getOpportunityByFunderAndName(
+  funderIdentifier: string,
+  opportunityName: string
+): Promise<{
+  name: string;
+  description: string | null;
+  scope: string | null;
+  eligibility: string | null;
+  url: string | null;
+  funding_type: string | null;
+  deadline_date: string | null;
+  deadline_raw: string | null;
+  amount_raw: string | null;
+  status: string | null;
+  funder_name: string;
+  funder_website: string | null;
+  funder_source_url: string | null;
+} | null> {
+  // Step 1: resolve funder_id by slug (lowercased) or by name (case-insensitive)
+  const slug = funderIdentifier.toLowerCase().replace(/\s+/g, "-");
+  let { data: funderRow } = await supabase
+    .from("funders")
+    .select("id, name, website, source_url")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!funderRow) {
+    // Fall back to name ilike (handles "AHRC", "Wellcome Trust", etc.)
+    const { data } = await supabase
+      .from("funders")
+      .select("id, name, website, source_url")
+      .ilike("name", `%${funderIdentifier}%`)
+      .limit(1)
+      .maybeSingle();
+    funderRow = data;
+  }
+
+  if (!funderRow) return null;
+
+  // Step 2: find opportunity by funder_id + name (case-insensitive)
+  const { data: opp } = await supabase
+    .from("opportunities")
+    .select("name, description, scope, eligibility, url, funding_type, deadline_date, deadline_raw, amount_raw, status")
+    .eq("funder_id", funderRow.id)
+    .ilike("name", opportunityName)
+    .limit(1)
+    .maybeSingle();
+
+  if (!opp) return null;
+
+  return {
+    name: opp.name,
+    description: opp.description,
+    scope: opp.scope,
+    eligibility: opp.eligibility,
+    url: opp.url,
+    funding_type: opp.funding_type,
+    deadline_date: opp.deadline_date,
+    deadline_raw: opp.deadline_raw,
+    amount_raw: opp.amount_raw,
+    status: opp.status,
+    funder_name: funderRow.name,
+    funder_website: funderRow.website,
+    funder_source_url: funderRow.source_url,
+  };
 }
 
 /** Update harvest tracking fields on a funder after a scan completes. */

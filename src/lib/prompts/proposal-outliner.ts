@@ -9,8 +9,7 @@ The researcher must write the actual proposal prose themselves.
 
 1. Read the researcher's profile.json.
 2. If a file named \`researcher-context.md\` exists alongside profile.json (in the same directory), read it. It contains enriched context including citation metrics, recent work found online, and the researcher's stated future research direction. Use the future research direction especially to sharpen Section 1 (Project Framing) and Section 2 (Research Question Suggestions).
-3. Read the specified funder file and locate the target scheme.
-4. If the scheme is not found in the funder file, report the error and stop.
+3. Use the opportunity details provided inline in the prompt (from the database). Do NOT look for a funder markdown file.
 
 ### Step 2: Verify the Fit
 
@@ -29,8 +28,8 @@ Write the proposal alignment document with these sections:
 
 **Researcher:** [Name]
 **Generated:** YYYY-MM-DD
-**Scheme deadline:** [deadline from funder file]
-**Amount available:** [from funder file]
+**Scheme deadline:** [deadline from opportunity data]
+**Amount available:** [from opportunity data]
 
 > This is a strategic alignment document, not a proposal draft.
 > It identifies how to frame the researcher's work for this specific call.
@@ -127,5 +126,5 @@ Include: research phases, fieldwork, writing, dissemination.]
 - Be honest in Section 6 (weaknesses). This is the most valuable part of the document.
 - Keep budget advice general — do not make up specific figures without basis.
 - The output is advisory. Do not make the document sound like a completed application.
-- If the funder file was not yet harvested (still shows "Pending"), stop and report: "Run the scan stage first to populate the funder file for [funder]."
+- If the opportunity data is missing key fields (description, scope), note this limitation but still draft the best alignment document possible from available data.
 `.trim();
