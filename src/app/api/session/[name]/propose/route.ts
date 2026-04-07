@@ -1,9 +1,10 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { resolve } from "path";
-import { mkdirSync } from "fs";
+import { mkdirSync, existsSync, readFileSync } from "fs";
 import { PROPOSAL_OUTLINER_PROMPT } from "@/lib/prompts/proposal-outliner";
 import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { getOpportunityByFunderAndName } from "@/lib/opportunity-store";
+import { upsertProposal } from "@/lib/proposal-store";
 
 export async function POST(
   req: Request,
@@ -62,6 +63,17 @@ Use the opportunity data above as the authoritative source for scheme details (d
         }),
         controller
       );
+
+      // Sync proposal to DB (best-effort)
+      try {
+        const proposalPath = resolve(proposalsDir, `${funder}-${schemeSlug}.md`);
+        if (existsSync(proposalPath)) {
+          const content = readFileSync(proposalPath, "utf-8");
+          await upsertProposal(name, funder, schemeSlug, content);
+        }
+      } catch (syncErr) {
+        console.error(`[propose] DB sync failed for ${name}/${funder}/${schemeSlug}:`, syncErr);
+      }
     },
   });
 
