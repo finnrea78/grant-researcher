@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "fs";
 import { resolve } from "path";
-import { getResearcherBySlug, updateResearcherProfile, updateProfileEmbedding } from "@/lib/researcher-store";
+import { getResearcherBySlug, updateResearcherProfile, updateProfileEmbedding, updatePipelineState } from "@/lib/researcher-store";
 
 export async function POST(req: Request): Promise<Response> {
   const { slug } = (await req.json()) as { slug: string };
@@ -36,6 +36,18 @@ export async function POST(req: Request): Promise<Response> {
   // Write stage completion markers
   writeFileSync(resolve(researcherDir, "_scholar-skip"), new Date().toISOString());
   writeFileSync(resolve(researcherDir, "_scan-complete"), new Date().toISOString());
+
+  // Sync pipeline state to DB (best-effort)
+  try {
+    // Profile exists (we fetched it) — mark profile stage complete
+    await updatePipelineState(slug, 'profile');
+    // Hydration writes _scholar-skip → enrich is complete
+    await updatePipelineState(slug, 'enrich');
+    // Hydration writes _scan-complete → scan is complete
+    await updatePipelineState(slug, 'scan');
+  } catch (stateErr) {
+    console.error(`[hydrate] pipeline state sync failed for ${slug}:`, stateErr);
+  }
 
   // Sync research_themes and research_keywords to DB top-level columns
   // (enriched_profile JSONB has the data but the retrieval columns may be empty)
