@@ -119,20 +119,23 @@ export async function updateProfileEmbedding(
 }
 
 /**
- * List all researchers that have a completed enriched_profile.
+ * List all researchers for the current user.
  * When called with an RLS-scoped client, automatically filters to the current user's researchers.
  */
 export async function listResearchersWithProfiles(
   client?: SupabaseClient
-): Promise<{ slug: string; name: string }[]> {
+): Promise<{ slug: string; name: string; hasProfile: boolean }[]> {
   const db = client ?? serviceClient;
   const { data, error } = await db
     .from("researchers")
-    .select("slug, name")
-    .not("enriched_profile", "is", null)
+    .select("slug, name, enriched_profile")
     .order("name");
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r: { slug: string; name: string }) => ({ slug: r.slug, name: r.name }));
+  return (data ?? []).map((r: { slug: string; name: string; enriched_profile: unknown }) => ({
+    slug: r.slug,
+    name: r.name,
+    hasProfile: r.enriched_profile !== null,
+  }));
 }
 
 /**
