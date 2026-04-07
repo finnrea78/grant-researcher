@@ -1,18 +1,19 @@
-import { existsSync, readFileSync } from "fs";
-import { resolve } from "path";
+import { getResearcherPipelineState } from "@/lib/researcher-store";
 import { parseMatches } from "@/lib/parseMatches";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ name: string }> }
+  { params }: { params: { name: string } }
 ): Promise<Response> {
-  const { name } = await params;
-  const matchesPath = resolve(process.cwd(), `data/outputs/${name}/matches.md`);
+  const { name } = params;
 
-  if (!existsSync(matchesPath)) {
+  try {
+    const state = await getResearcherPipelineState(name);
+    if (!state?.match_results_md) {
+      return Response.json({ matches: [] });
+    }
+    return Response.json({ matches: parseMatches(state.match_results_md) });
+  } catch {
     return Response.json({ matches: [] });
   }
-
-  const text = readFileSync(matchesPath, "utf-8");
-  return Response.json({ matches: parseMatches(text) });
 }
