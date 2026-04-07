@@ -124,6 +124,7 @@ export async function listResearchersWithProfiles(): Promise<{ slug: string; nam
 
 /**
  * Fetch a researcher by slug for filesystem hydration.
+ * Returns null if not found or if enriched_profile is missing.
  */
 export async function getResearcherBySlug(slug: string): Promise<{
   slug: string;
@@ -155,6 +156,55 @@ export async function getResearcherBySlug(slug: string): Promise<{
     slug: data.slug,
     name: data.name,
     enriched_profile: data.enriched_profile as ResearcherProfile,
+    cv_text: data.cv_text ?? null,
+    institution: data.institution ?? null,
+    department: data.department ?? null,
+    career_stage: data.career_stage ?? null,
+    research_themes: data.research_themes ?? [],
+    research_keywords: data.research_keywords ?? [],
+    disciplinary_fields: data.disciplinary_fields ?? [],
+    geographic_focus: data.geographic_focus ?? [],
+    future_research: data.future_research ?? null,
+    research_trajectory: data.research_trajectory ?? null,
+    funding_goals: data.funding_goals ?? {},
+    collaboration: data.collaboration ?? {},
+    eligibility: data.eligibility ?? {},
+  };
+}
+
+/**
+ * Fetch intake fields for a researcher by slug (no enriched_profile requirement).
+ * Used by the profile route to read DB intake before enrichment has run.
+ * Returns null if the researcher row does not exist.
+ */
+export async function getResearcherIntake(slug: string): Promise<{
+  slug: string;
+  name: string;
+  cv_text: string | null;
+  institution: string | null;
+  department: string | null;
+  career_stage: string | null;
+  research_themes: string[];
+  research_keywords: string[];
+  disciplinary_fields: string[];
+  geographic_focus: string[];
+  future_research: string | null;
+  research_trajectory: string | null;
+  funding_goals: Record<string, unknown>;
+  collaboration: Record<string, unknown>;
+  eligibility: Record<string, unknown>;
+} | null> {
+  const { data, error } = await supabase
+    .from("researchers")
+    .select(
+      "slug, name, cv_text, institution, department, career_stage, research_themes, research_keywords, disciplinary_fields, geographic_focus, future_research, research_trajectory, funding_goals, collaboration, eligibility"
+    )
+    .eq("slug", slug)
+    .single();
+  if (error || !data) return null;
+  return {
+    slug: data.slug,
+    name: data.name,
     cv_text: data.cv_text ?? null,
     institution: data.institution ?? null,
     department: data.department ?? null,

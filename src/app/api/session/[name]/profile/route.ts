@@ -2,7 +2,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { PROFILE_BUILDER_PROMPT } from "@/lib/prompts/profile-builder";
-import { updateResearcherProfile } from "@/lib/researcher-store";
+import { getResearcherIntake, updatePublications, updatePipelineState, updateResearcherProfile } from "@/lib/researcher-store";
 import { formatSSEEvent, sseResponse } from "@/lib/sse";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
 
@@ -55,23 +55,40 @@ export async function POST(
     async start(controller) {
       const startMs = Date.now();
       try {
-        // Read intake data
-        const intakePath = resolve(researcherDir, "intake.json");
-        const intake: IntakeData | null = existsSync(intakePath)
-          ? (JSON.parse(readFileSync(intakePath, "utf-8")) as IntakeData)
+        // Read intake data from DB (primary source)
+        const dbResearcher = await getResearcherIntake(name).catch(() => null);
+        const intake: IntakeData | null = dbResearcher
+          ? ({
+              name: dbResearcher.name,
+              institution: dbResearcher.institution ?? undefined,
+              department: dbResearcher.department ?? undefined,
+              career_stage: dbResearcher.career_stage as IntakeData["career_stage"] ?? undefined,
+              research_themes: dbResearcher.research_themes ?? [],
+              research_keywords: dbResearcher.research_keywords ?? [],
+              disciplinary_fields: dbResearcher.disciplinary_fields ?? [],
+              geographic_focus: dbResearcher.geographic_focus ?? [],
+              future_research: dbResearcher.future_research ?? undefined,
+              research_trajectory: dbResearcher.research_trajectory ?? undefined,
+              funding_goals: dbResearcher.funding_goals as IntakeData["funding_goals"] ?? {},
+              collaboration: dbResearcher.collaboration as IntakeData["collaboration"] ?? {},
+              eligibility: dbResearcher.eligibility as IntakeData["eligibility"] ?? {},
+              cv_text: dbResearcher.cv_text ?? undefined,
+            } as IntakeData)
           : null;
 
-        // Find CV text
-        let cvText: string | null = null;
-        for (const ext of [".md", ".txt"]) {
-          const cvPath = resolve(researcherDir, `raw/cv${ext}`);
-          if (existsSync(cvPath)) {
-            cvText = readFileSync(cvPath, "utf-8");
-            break;
+        // CV text: prefer DB, fall back to file
+        let cvText: string | null = dbResearcher?.cv_text ?? null;
+        if (!cvText) {
+          for (const ext of [".md", ".txt"]) {
+            const cvPath = resolve(researcherDir, `raw/cv${ext}`);
+            if (existsSync(cvPath)) {
+              cvText = readFileSync(cvPath, "utf-8");
+              break;
+            }
           }
         }
 
-        // Read proposal intent if present
+        // Read proposal intent if present (ephemeral — never persisted to DB)
         const intentPath = resolve(researcherDir, "proposal-intent.json");
         const proposalIntent: Record<string, unknown> | null = existsSync(intentPath)
           ? (JSON.parse(readFileSync(intentPath, "utf-8")) as Record<string, unknown>)
@@ -117,6 +134,8 @@ export async function POST(
         // Sync to Supabase (best-effort)
         try {
           await updateResearcherProfile(name, profile);
+          await updatePublications(name, publications_md);
+          await updatePipelineState(name, 'profile');
         } catch (syncErr) {
           console.error(`[profile] Supabase sync failed for ${name}:`, syncErr);
         }
