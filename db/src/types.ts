@@ -25,6 +25,7 @@ export interface FunderRow {
 /** Shape of a researcher row for upsert. */
 export interface ResearcherRow {
   slug: string;
+  user_id?: string;
   name: string;
   email?: string;
   orcid?: string;

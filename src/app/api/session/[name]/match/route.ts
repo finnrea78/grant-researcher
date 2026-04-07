@@ -5,11 +5,19 @@ import { MATCHER_PROMPT } from "@/lib/prompts/matcher";
 import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { cleanupProposalIntent } from "@/lib/proposalIntent";
 import { retrieveCandidates } from "@/lib/opportunity-retrieval";
+import { requireUser } from "@/lib/auth";
 
 export async function POST(
   _req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  try {
+    await requireUser();
+  } catch (err) {
+    if (err instanceof Response) return err;
+    throw err;
+  }
+
   const { name } = params;
   const dataDir = resolve(process.cwd(), "data");
   const researcherDir = resolve(dataDir, `researchers/${name}`);

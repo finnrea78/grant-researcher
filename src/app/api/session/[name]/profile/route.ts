@@ -4,6 +4,7 @@ import { resolve } from "path";
 import { PROFILE_BUILDER_PROMPT } from "@/lib/prompts/profile-builder";
 import { updateResearcherProfile } from "@/lib/researcher-store";
 import { formatSSEEvent, sseResponse } from "@/lib/sse";
+import { requireUser } from "@/lib/auth";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
 
 function buildUserPrompt(
@@ -47,6 +48,13 @@ export async function POST(
   _req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  try {
+    await requireUser();
+  } catch (err) {
+    if (err instanceof Response) return err;
+    throw err;
+  }
+
   const { name } = params;
   const dataDir = resolve(process.cwd(), "data");
   const researcherDir = resolve(dataDir, `researchers/${name}`);

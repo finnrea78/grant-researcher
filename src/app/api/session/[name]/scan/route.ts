@@ -5,11 +5,19 @@ import { GRANT_SCANNER_PROMPT } from "@/lib/prompts/grant-scanner";
 import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { persistDiscoveredManifest } from "@/lib/scan-persistence";
 import { buildScanDbContext } from "@/lib/scan-db-context";
+import { requireUser } from "@/lib/auth";
 
 export async function POST(
   req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  try {
+    await requireUser();
+  } catch (err) {
+    if (err instanceof Response) return err;
+    throw err;
+  }
+
   const { name } = params;
   const dataDir = resolve(process.cwd(), "data");
 

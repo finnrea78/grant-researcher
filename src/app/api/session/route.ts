@@ -5,9 +5,19 @@ import { upsertResearcher, updateOrcidData } from "@/lib/researcher-store";
 import { stripEphemeralFields } from "@/lib/stripEphemeral";
 import { writeProposalIntent } from "@/lib/proposalIntent";
 import { extractCvText } from "@/lib/extractCvText";
+import { requireUser } from "@/lib/auth";
 import type { IntakeData } from "@/lib/types";
 
 export async function POST(req: Request): Promise<Response> {
+  let userId: string;
+  try {
+    const { user } = await requireUser();
+    userId = user.id;
+  } catch (err) {
+    if (err instanceof Response) return err;
+    throw err;
+  }
+
   const formData = await req.formData();
   const file = formData.get("cv") as File | null;
   const rawName = formData.get("name") as string | null;
@@ -77,7 +87,7 @@ export async function POST(req: Request): Promise<Response> {
   // Supabase sync — non-critical, pipeline reads from disk
   // Strip proposal_intent: sensitive IP, never persisted to Supabase
   try {
-    await upsertResearcher(stripEphemeralFields(intake), name);
+    await upsertResearcher(stripEphemeralFields(intake), name, userId);
   } catch (err) {
     console.error(`[session] Supabase upsert failed for ${name}:`, err);
   }

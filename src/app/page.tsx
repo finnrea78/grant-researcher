@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ResearcherIntakeWizard } from "@/components/ResearcherIntakeWizard";
+import { createSupabaseBrowser } from "@/lib/supabase/browser";
 
 export default function HomePage() {
   const router = useRouter();
@@ -66,8 +67,21 @@ export default function HomePage() {
     }
   }
 
+  async function handleSignOut() {
+    const supabase = createSupabaseBrowser();
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
+
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen px-4 py-12">
+    <main className="flex flex-col items-center justify-center min-h-screen px-4 py-12 relative">
+      <button
+        onClick={handleSignOut}
+        className="absolute top-4 right-4 text-slate-500 hover:text-slate-300 text-xs transition-colors"
+      >
+        Sign out
+      </button>
+
       <h1 className="text-2xl font-bold text-slate-100 mb-2">Grant Scout</h1>
       <p className="text-slate-500 text-sm mb-10">Find funding for your research</p>
 
@@ -77,7 +91,7 @@ export default function HomePage() {
         <div className="w-full max-w-xl mt-8">
           <div className="flex items-center gap-3 mb-3">
             <div className="flex-1 h-px bg-slate-700" />
-            <span className="text-slate-500 text-xs">or resume existing researcher</span>
+            <span className="text-slate-500 text-xs">or resume a previous researcher</span>
             <div className="flex-1 h-px bg-slate-700" />
           </div>
           <div className="flex gap-2">
