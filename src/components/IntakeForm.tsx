@@ -42,7 +42,7 @@ export function IntakeForm({ onSubmit, loading = false }: IntakeFormProps) {
         <input
           ref={inputRef}
           type="file"
-          accept=".md,.pdf,.txt"
+          accept=".md,.pdf,.txt,.docx"
           className="hidden"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
