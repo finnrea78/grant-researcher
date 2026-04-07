@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, readdirSync } from "fs";
-import { resolve } from "path";
+import { getResearcherPipelineState } from "@/lib/researcher-store";
+import { getProposals } from "@/lib/proposal-store";
 import type { ScholarCandidate } from "@/lib/types";
 
 export async function GET(
@@ -7,37 +7,25 @@ export async function GET(
   { params }: { params: { name: string } }
 ): Promise<Response> {
   const { name } = params;
-  const dataDir = resolve(process.cwd(), "data");
 
-  const profilePath = resolve(dataDir, `researchers/${name}/profile.json`);
-  const enrichPath = resolve(dataDir, `researchers/${name}/researcher-context.md`);
-  const enrichSkipPath = resolve(dataDir, `researchers/${name}/_scholar-skip`);
-  const enrichPendingPath = resolve(dataDir, `researchers/${name}/enrich-pending.json`);
-  const scanMarkerPath = resolve(dataDir, `researchers/${name}/_scan-complete`);
-  const matchesPath = resolve(dataDir, `outputs/${name}/matches.md`);
-  const proposalsDir = resolve(dataDir, `outputs/${name}/proposals`);
+  const [stateResult, proposals] = await Promise.allSettled([
+    getResearcherPipelineState(name),
+    getProposals(name),
+  ]);
 
-  const enrichComplete = existsSync(enrichPath) || existsSync(enrichSkipPath);
+  const state = stateResult.status === "fulfilled" ? stateResult.value : null;
+  const proposalList = proposals.status === "fulfilled" ? proposals.value : [];
 
-  let scholarCandidate: ScholarCandidate | null = null;
-  if (existsSync(enrichPendingPath)) {
-    try {
-      scholarCandidate = JSON.parse(readFileSync(enrichPendingPath, "utf-8"));
-    } catch {
-      // Ignore malformed pending file
-    }
-  }
-
-  const proposals = existsSync(proposalsDir)
-    ? readdirSync(proposalsDir).filter((f) => f.endsWith(".md"))
-    : [];
+  const pipelineState = state?.pipeline_state ?? {};
 
   return Response.json({
-    profile: existsSync(profilePath),
-    enrich: enrichComplete,
-    scan: existsSync(scanMarkerPath),
-    match: existsSync(matchesPath),
-    proposals,
-    scholarCandidate,
+    profile: pipelineState.profile === true,
+    enrich: pipelineState.enrich === true,
+    scan: pipelineState.scan === true,
+    match: pipelineState.match === true,
+    proposals: proposalList.map(
+      (p) => `${p.funder_slug}-${p.scheme_slug}.md`
+    ),
+    scholarCandidate: (state?.scholar_candidate as ScholarCandidate | null) ?? null,
   });
 }
