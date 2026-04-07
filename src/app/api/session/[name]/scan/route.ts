@@ -5,6 +5,7 @@ import { GRANT_SCANNER_PROMPT } from "@/lib/prompts/grant-scanner";
 import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { persistDiscoveredManifest } from "@/lib/scan-persistence";
 import { buildScanDbContext } from "@/lib/scan-db-context";
+import { getResearcherBySlug, updatePipelineState } from "@/lib/researcher-store";
 
 export async function POST(
   req: Request,
@@ -20,17 +21,19 @@ export async function POST(
   // Fetch DB-sourced funders to feed back into the agent (closes the loop)
   const dbContext = await buildScanDbContext();
 
-  const profilePath = resolve(dataDir, `researchers/${name}/profile.json`);
-  if (existsSync(profilePath)) {
-    const profile = JSON.parse(readFileSync(profilePath, "utf-8"));
-    profileContext = `
+  // Read profile from DB (primary), fall back to file
+  const dbResearcher = await getResearcherBySlug(name).catch(() => null);
+  const profile = dbResearcher?.enriched_profile ?? (() => {
+    // File fallback
+    const profilePath = resolve(dataDir, `researchers/${name}/profile.json`);
+    if (existsSync(profilePath)) {
+      try { return JSON.parse(readFileSync(profilePath, "utf-8")); } catch { return null; }
+    }
+    return null;
+  })();
 
-Researcher profile provided for smart scan:
-- Disciplinary fields: ${(profile.disciplinary_fields ?? []).join(", ")}
-- Research themes: ${(profile.research_themes ?? []).join(", ")}
-- Geographic focus: ${(profile.geographic_focus ?? []).join(", ")}
-
-Use WebSearch to discover additional grant URLs relevant to these fields.`;
+  if (profile) {
+    profileContext = `\n\nResearcher profile provided for smart scan:\n- Disciplinary fields: ${(profile.disciplinary_fields ?? []).join(", ")}\n- Research themes: ${(profile.research_themes ?? []).join(", ")}\n- Geographic focus: ${(profile.geographic_focus ?? []).join(", ")}\n\nUse WebSearch to discover additional grant URLs relevant to these fields.`;
     allowedTools.push("WebSearch");
   }
 
@@ -60,8 +63,7 @@ Manifest output: ${dataDir}/funding-sources/_discovered.json${profileContext}${d
       // Persist structured discoveries to Supabase
       const manifestPath = resolve(dataDir, "funding-sources/_discovered.json");
       const discoveryContext: Record<string, unknown> = { researcher: name };
-      if (existsSync(profilePath)) {
-        const profile = JSON.parse(readFileSync(profilePath, "utf-8"));
+      if (profile) {
         discoveryContext.disciplines = profile.disciplinary_fields;
         discoveryContext.research_themes = profile.research_themes;
       }
@@ -72,6 +74,13 @@ Manifest output: ${dataDir}/funding-sources/_discovered.json${profileContext}${d
         resolve(dataDir, `researchers/${name}/_scan-complete`),
         new Date().toISOString()
       );
+
+      // Sync scan completion to DB (best-effort)
+      try {
+        await updatePipelineState(name, 'scan');
+      } catch (stateErr) {
+        console.error(`[scan] pipeline state sync failed for ${name}:`, stateErr);
+      }
     },
   });
 
