@@ -11,6 +11,16 @@ interface ProposalViewerProps {
   proposals: Proposal[];
 }
 
+function downloadProposal(proposal: Proposal) {
+  const blob = new Blob([proposal.content], { type: "text/markdown" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = proposal.filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function ProposalViewer({ proposals }: ProposalViewerProps) {
   const [activeIdx, setActiveIdx] = useState(proposals.length - 1);
 
@@ -20,8 +30,26 @@ export function ProposalViewer({ proposals }: ProposalViewerProps) {
 
   return (
     <div className="mt-6">
-      <div className="text-xs text-slate-500 font-bold uppercase mb-3">
-        Proposal Alignments
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-xs text-slate-500 font-bold uppercase">
+          Proposal Alignments
+        </div>
+        <div className="flex gap-2">
+          {proposals.length > 1 && (
+            <button
+              onClick={() => proposals.forEach(downloadProposal)}
+              className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              Download all
+            </button>
+          )}
+          <button
+            onClick={() => downloadProposal(active)}
+            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            ↓ Download
+          </button>
+        </div>
       </div>
 
       {proposals.length > 1 && (

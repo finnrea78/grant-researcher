@@ -161,4 +161,39 @@ describe("sessionReducer", () => {
     const state = reducer(idle, { type: "UNKNOWN" });
     expect(state).toEqual(idle);
   });
+
+  describe("proposingScheme", () => {
+    it("initial state has proposingScheme null", () => {
+      expect(idle.proposingScheme).toBeNull();
+    });
+
+    it("sets proposingScheme on SET_PROPOSING_SCHEME", () => {
+      const state = reducer(idle, { type: "SET_PROPOSING_SCHEME", scheme: "Early Career Fellowship" });
+      expect(state.proposingScheme).toBe("Early Career Fellowship");
+    });
+
+    it("clears proposingScheme on CLEAR_PROPOSING_SCHEME", () => {
+      const s1 = reducer(idle, { type: "SET_PROPOSING_SCHEME", scheme: "Fellowship" });
+      const s2 = reducer(s1, { type: "CLEAR_PROPOSING_SCHEME" });
+      expect(s2.proposingScheme).toBeNull();
+    });
+
+    it("clears proposingScheme on COMPLETE for propose stage", () => {
+      const s1 = reducer(idle, { type: "SET_PROPOSING_SCHEME", scheme: "Fellowship" });
+      const s2 = reducer(s1, { type: "COMPLETE", stage: "propose" });
+      expect(s2.proposingScheme).toBeNull();
+    });
+
+    it("clears proposingScheme on ERROR for propose stage", () => {
+      const s1 = reducer(idle, { type: "SET_PROPOSING_SCHEME", scheme: "Fellowship" });
+      const s2 = reducer(s1, { type: "ERROR", stage: "propose" });
+      expect(s2.proposingScheme).toBeNull();
+    });
+
+    it("does not clear proposingScheme on COMPLETE for other stages", () => {
+      const s1 = reducer(idle, { type: "SET_PROPOSING_SCHEME", scheme: "Fellowship" });
+      const s2 = reducer(s1, { type: "COMPLETE", stage: "match" });
+      expect(s2.proposingScheme).toBe("Fellowship");
+    });
+  });
 });

@@ -85,3 +85,27 @@ Manifest output: ${dataDir}/funding-sources/_discovered.json${profileContext}${d
 
   return sseResponse(stream);
 }
+
+/**
+ * PATCH — skip the scan stage by writing the completion marker without running the agent.
+ * Match can still run against opportunities already in the database.
+ */
+export async function PATCH(
+  _req: Request,
+  { params }: { params: { name: string } }
+): Promise<Response> {
+  try {
+    await requireUser();
+  } catch (err) {
+    if (err instanceof Response) return err;
+    throw err;
+  }
+
+  const { name } = params;
+  const dataDir = resolve(process.cwd(), "data");
+  writeFileSync(
+    resolve(dataDir, `researchers/${name}/_scan-complete`),
+    new Date().toISOString()
+  );
+  return Response.json({ ok: true });
+}
