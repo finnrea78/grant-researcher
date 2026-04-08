@@ -1,15 +1,24 @@
 import { mkdirSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { getResearcherBySlug, updateResearcherProfile, updateProfileEmbedding } from "@/lib/researcher-store";
+import { requireUser } from "@/lib/auth";
 
 export async function POST(req: Request): Promise<Response> {
+  let supabase: Awaited<ReturnType<typeof requireUser>>["supabase"];
+  try {
+    ({ supabase } = await requireUser());
+  } catch (err) {
+    if (err instanceof Response) return err;
+    throw err;
+  }
+
   const { slug } = (await req.json()) as { slug: string };
 
   if (!slug) {
     return Response.json({ error: "slug is required" }, { status: 400 });
   }
 
-  const researcher = await getResearcherBySlug(slug);
+  const researcher = await getResearcherBySlug(slug, supabase);
   if (!researcher) {
     return Response.json(
       { error: `Researcher "${slug}" not found or has no completed profile` },

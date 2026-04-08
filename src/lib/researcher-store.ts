@@ -1,17 +1,22 @@
 // Server-only module — only import in Next.js API routes, not client components.
-import { supabase } from "@/lib/supabase";
+import { supabase as serviceClient } from "@/lib/supabase";
 import { embedText } from "@/lib/embedder";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Upsert a researcher from intake form data. Returns the researcher's UUID.
- * Uses slug as the conflict key (matches session naming convention).
+ * Pass userId to associate with an authenticated user (sets user_id column).
+ * Pass client to use a per-request RLS-scoped client instead of service-role.
  */
 export async function upsertResearcher(
   intake: IntakeData,
-  slug: string
+  slug: string,
+  userId?: string,
+  client?: SupabaseClient
 ): Promise<string> {
-  const row = {
+  const db = client ?? serviceClient;
+  const row: Record<string, unknown> = {
     slug,
     name: intake.name ?? slug,
     orcid: intake.identifiers?.orcid,
@@ -37,7 +42,11 @@ export async function upsertResearcher(
     intake_completed_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  if (userId) {
+    row.user_id = userId;
+  }
+
+  const { data, error } = await db
     .from("researchers")
     .upsert(row, { onConflict: "slug" })
     .select("id")
@@ -56,7 +65,7 @@ export async function updateResearcherProfile(
   slug: string,
   profile: ResearcherProfile
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await serviceClient
     .from("researchers")
     .update({
       enriched_profile: profile,
@@ -78,7 +87,7 @@ export async function updateOrcidData(
   slug: string,
   orcidData: Record<string, unknown>
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await serviceClient
     .from("researchers")
     .update({
       orcid_data: orcidData,
@@ -100,7 +109,7 @@ export async function updateProfileEmbedding(
   summaryText: string
 ): Promise<void> {
   const profile_embedding = await embedText(summaryText);
-  const { error } = await supabase
+  const { error } = await serviceClient
     .from("researchers")
     .update({ profile_embedding })
     .eq("slug", slug);
@@ -110,27 +119,39 @@ export async function updateProfileEmbedding(
 }
 
 /**
- * List all researchers that have a completed enriched_profile (reusable for hydration).
+ * List all researchers for the current user.
+ * When called with an RLS-scoped client, automatically filters to the current user's researchers.
  */
-export async function listResearchersWithProfiles(): Promise<{ slug: string; name: string }[]> {
-  const { data, error } = await supabase
+export async function listResearchersWithProfiles(
+  client?: SupabaseClient
+): Promise<{ slug: string; name: string; hasProfile: boolean }[]> {
+  const db = client ?? serviceClient;
+  const { data, error } = await db
     .from("researchers")
-    .select("slug, name")
-    .not("enriched_profile", "is", null)
+    .select("slug, name, enriched_profile")
     .order("name");
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r: { slug: string; name: string }) => ({ slug: r.slug, name: r.name }));
+  return (data ?? []).map((r: { slug: string; name: string; enriched_profile: unknown }) => ({
+    slug: r.slug,
+    name: r.name,
+    hasProfile: r.enriched_profile !== null,
+  }));
 }
 
 /**
- * Fetch a researcher by slug for filesystem hydration.
+ * Fetch a researcher by slug.
+ * When called with an RLS-scoped client, returns null if the researcher belongs to a different user.
  */
-export async function getResearcherBySlug(slug: string): Promise<{
+export async function getResearcherBySlug(
+  slug: string,
+  client?: SupabaseClient
+): Promise<{
   slug: string;
   name: string;
   enriched_profile: ResearcherProfile;
 } | null> {
-  const { data, error } = await supabase
+  const db = client ?? serviceClient;
+  const { data, error } = await db
     .from("researchers")
     .select("slug, name, enriched_profile")
     .eq("slug", slug)
@@ -147,7 +168,7 @@ export async function getResearcherForMatching(slug: string): Promise<{
   research_themes: string[];
   research_keywords: string[];
 }> {
-  const { data, error } = await supabase
+  const { data, error } = await serviceClient
     .from("researchers")
     .select("profile_embedding, research_themes, research_keywords")
     .eq("slug", slug)

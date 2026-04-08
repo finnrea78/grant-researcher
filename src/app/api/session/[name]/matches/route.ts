@@ -1,12 +1,20 @@
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
+import { requireUser } from "@/lib/auth";
 import { parseMatches } from "@/lib/parseMatches";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ name: string }> }
+  { params }: { params: { name: string } }
 ): Promise<Response> {
-  const { name } = await params;
+  try {
+    await requireUser();
+  } catch (err) {
+    if (err instanceof Response) return err;
+    throw err;
+  }
+
+  const { name } = params;
   const matchesPath = resolve(process.cwd(), `data/outputs/${name}/matches.md`);
 
   if (!existsSync(matchesPath)) {

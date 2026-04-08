@@ -1,11 +1,19 @@
 import { existsSync, readFileSync, readdirSync } from "fs";
 import { resolve } from "path";
+import { requireUser } from "@/lib/auth";
 import type { ScholarCandidate } from "@/lib/types";
 
 export async function GET(
   _req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  try {
+    await requireUser();
+  } catch (err) {
+    if (err instanceof Response) return err;
+    throw err;
+  }
+
   const { name } = params;
   const dataDir = resolve(process.cwd(), "data");
 

@@ -4,11 +4,19 @@ import { mkdirSync } from "fs";
 import { PROPOSAL_OUTLINER_PROMPT } from "@/lib/prompts/proposal-outliner";
 import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { getOpportunityByFunderAndName } from "@/lib/opportunity-store";
+import { requireUser } from "@/lib/auth";
 
 export async function POST(
   req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  try {
+    await requireUser();
+  } catch (err) {
+    if (err instanceof Response) return err;
+    throw err;
+  }
+
   const { name } = params;
   const { funder, scheme } = (await req.json()) as { funder: string; scheme: string };
 
