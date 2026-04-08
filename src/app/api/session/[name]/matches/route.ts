@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import { requireUser } from "@/lib/auth";
 import { parseMatches } from "@/lib/parseMatches";
+import { validateMatches } from "@/lib/validateMatches";
 
 export async function GET(
   _req: Request,
@@ -22,5 +23,5 @@ export async function GET(
   }
 
   const text = readFileSync(matchesPath, "utf-8");
-  return Response.json({ matches: parseMatches(text) });
+  return Response.json({ matches: validateMatches(parseMatches(text)) });
 }

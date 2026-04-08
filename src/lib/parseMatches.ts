@@ -14,9 +14,14 @@ export function parseMatches(text: string): Match[] {
   let currentTier: 1 | 2 | 3 = 1;
 
   const lines = text.split("\n");
+  let inNotEligible = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+
+    // Stop parsing once we hit the Not Eligible section
+    if (/^## Not Eligible/.test(line)) { inNotEligible = true; continue; }
+    if (inNotEligible) continue;
 
     // Detect tier changes
     if (/^## Tier 1/.test(line)) { currentTier = 1; continue; }
