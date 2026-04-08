@@ -128,6 +128,13 @@ export default function SessionPage({ params }: { params: { name: string } }) {
     runStage(stage, urls[stage]);
   }
 
+  async function handleSkip(stage: keyof StageState) {
+    if (stage === "scan") {
+      await fetch(`/api/session/${name}/scan`, { method: "PATCH" });
+      dispatch({ type: "COMPLETE", stage: "scan" });
+    }
+  }
+
   function handlePropose(funder: string, scheme: string) {
     dispatch({ type: "SET_PROPOSING_SCHEME", scheme });
     runStage("propose", `/api/session/${name}/propose`, { funder, scheme });
@@ -212,7 +219,7 @@ export default function SessionPage({ params }: { params: { name: string } }) {
         <p className="text-slate-500 text-sm mt-1">{name}</p>
       </div>
 
-      <PipelineBar stages={state.stages} onRun={handleRun} />
+      <PipelineBar stages={state.stages} onRun={handleRun} onSkip={handleSkip} skippable={["scan"]} />
 
       {scholarBannerCandidate && (
         <div className="mt-4 border border-blue-700 bg-blue-950 rounded-lg px-4 py-4">
