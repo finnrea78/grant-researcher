@@ -1,8 +1,12 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { isReady, STAGE_ORDER } from "@/lib/pipelineStages";
 export type { StageStatus, StageState } from "@/lib/pipelineStages";
 export { isReady } from "@/lib/pipelineStages";
 
 import type { StageState } from "@/lib/pipelineStages";
+import { formatElapsed } from "@/lib/formatElapsed";
 
 interface PipelineBarProps {
   stages: StageState;
@@ -16,6 +20,25 @@ const STAGE_LABELS: Record<keyof StageState, string> = {
   match: "Match",
   propose: "Propose",
 };
+
+const STAGE_DESCRIPTIONS: Record<keyof StageState, string> = {
+  profile: "Parse CV & build profile",
+  enrich: "Research & enhance with web data",
+  scan: "Harvest funding opportunities",
+  match: "Score & rank opportunities",
+  propose: "Draft proposal alignment",
+};
+
+function ElapsedTimer() {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return <span>{formatElapsed(seconds)}</span>;
+}
 
 export function PipelineBar({ stages, onRun }: PipelineBarProps) {
   return (
@@ -48,6 +71,8 @@ export function PipelineBar({ stages, onRun }: PipelineBarProps) {
           status === "error" ? `✗ ${STAGE_LABELS[stage].toUpperCase()}` :
           `○ ${STAGE_LABELS[stage].toUpperCase()}`;
 
+        const showDescription = ready || status === "running" || status === "complete";
+
         const roundedLeft = idx === 0 ? "rounded-l-lg" : "";
         const roundedRight = idx === STAGE_ORDER.length - 1 ? "rounded-r-lg" : "";
 
@@ -57,6 +82,11 @@ export function PipelineBar({ stages, onRun }: PipelineBarProps) {
             className={`flex-1 border ${borderColor} ${bgColor} ${roundedLeft} ${roundedRight} px-3 py-3 text-center`}
           >
             <div className={`text-xs font-bold ${textColor}`}>{label}</div>
+            {showDescription && (
+              <div className="mt-0.5 text-slate-600 text-[10px] leading-tight hidden lg:block">
+                {STAGE_DESCRIPTIONS[stage]}
+              </div>
+            )}
             {ready && stage !== "propose" && (
               <button
                 onClick={() => onRun(stage)}
@@ -66,7 +96,9 @@ export function PipelineBar({ stages, onRun }: PipelineBarProps) {
               </button>
             )}
             {status === "running" && (
-              <div className="mt-1 text-xs text-blue-500 animate-pulse">running…</div>
+              <div className="mt-1 text-xs text-blue-500 animate-pulse">
+                <ElapsedTimer />
+              </div>
             )}
           </div>
         );

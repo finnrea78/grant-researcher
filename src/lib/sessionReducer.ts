@@ -12,6 +12,7 @@ export interface PageState {
   matches: Match[];
   proposals: Proposal[];
   scholarCandidate: ScholarCandidate | null;
+  proposingScheme: string | null;
   logCounter: number;
 }
 
@@ -24,7 +25,9 @@ export type Action =
   | { type: "SET_MATCHES"; matches: Match[] }
   | { type: "SET_PROPOSALS"; proposals: Proposal[] }
   | { type: "CLEAR_SCHOLAR_CANDIDATE" }
-  | { type: "SET_SCHOLAR_CANDIDATE"; candidate: ScholarCandidate };
+  | { type: "SET_SCHOLAR_CANDIDATE"; candidate: ScholarCandidate }
+  | { type: "SET_PROPOSING_SCHEME"; scheme: string }
+  | { type: "CLEAR_PROPOSING_SCHEME" };
 
 export function reducer(state: PageState, action: Action): PageState {
   switch (action.type) {
@@ -45,9 +48,17 @@ export function reducer(state: PageState, action: Action): PageState {
     case "START":
       return { ...state, stages: { ...state.stages, [action.stage]: "running" as StageStatus } };
     case "COMPLETE":
-      return { ...state, stages: { ...state.stages, [action.stage]: "complete" as StageStatus } };
+      return {
+        ...state,
+        stages: { ...state.stages, [action.stage]: "complete" as StageStatus },
+        proposingScheme: action.stage === "propose" ? null : state.proposingScheme,
+      };
     case "ERROR":
-      return { ...state, stages: { ...state.stages, [action.stage]: "error" as StageStatus } };
+      return {
+        ...state,
+        stages: { ...state.stages, [action.stage]: "error" as StageStatus },
+        proposingScheme: action.stage === "propose" ? null : state.proposingScheme,
+      };
     case "LOG":
       return {
         ...state,
@@ -62,6 +73,10 @@ export function reducer(state: PageState, action: Action): PageState {
       return { ...state, scholarCandidate: null };
     case "SET_SCHOLAR_CANDIDATE":
       return { ...state, scholarCandidate: action.candidate };
+    case "SET_PROPOSING_SCHEME":
+      return { ...state, proposingScheme: action.scheme };
+    case "CLEAR_PROPOSING_SCHEME":
+      return { ...state, proposingScheme: null };
     default:
       return state;
   }
@@ -73,5 +88,6 @@ export const INITIAL_STATE: PageState = {
   matches: [],
   proposals: [],
   scholarCandidate: null,
+  proposingScheme: null,
   logCounter: 0,
 };

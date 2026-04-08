@@ -4,16 +4,27 @@ interface MatchListProps {
   matches: Match[];
   onPropose: (funder: string, scheme: string) => void;
   proposing: boolean;
+  proposingScheme?: string | null;
 }
 
-export function MatchList({ matches, onPropose, proposing }: MatchListProps) {
+export function MatchList({ matches, onPropose, proposing, proposingScheme }: MatchListProps) {
   const tier1 = matches.filter((m) => m.tier === 1);
   const tier2 = matches.filter((m) => m.tier === 2);
   const tier3 = matches.filter((m) => m.tier === 3);
 
-  if (matches.length === 0) return null;
+  if (matches.length === 0) {
+    return (
+      <div className="mt-6">
+        <div className="text-xs text-slate-500 font-bold uppercase mb-2">Matches</div>
+        <div className="bg-slate-900 border border-slate-800 rounded-lg px-4 py-6 text-center">
+          <p className="text-slate-500 text-sm">No matches found yet — run the pipeline to discover grants</p>
+        </div>
+      </div>
+    );
+  }
 
   function MatchRow({ match }: { match: Match }) {
+    const isProposing = proposing && proposingScheme === match.scheme;
     return (
       <button
         onClick={() => onPropose(match.funder, match.scheme)}
@@ -24,7 +35,10 @@ export function MatchList({ matches, onPropose, proposing }: MatchListProps) {
           <div>
             <div className="text-slate-200 text-sm font-medium">{match.scheme}</div>
             <div className="text-slate-500 text-xs mt-0.5">
-              {match.funder} · {match.amount} · {match.deadline}
+              {isProposing
+                ? <span className="text-blue-400 animate-pulse">Generating proposal…</span>
+                : <>{match.funder} · {match.amount} · {match.deadline}</>
+              }
             </div>
           </div>
           <div className="ml-4 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-slate-300 text-xs font-bold shrink-0">

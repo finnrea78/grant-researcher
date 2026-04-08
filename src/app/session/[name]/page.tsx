@@ -14,26 +14,38 @@ export default function SessionPage({ params }: { params: { name: string } }) {
   const { name } = params;
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const [scholarInput, setScholarInput] = useState("");
+  const [pageLoading, setPageLoading] = useState(true);
+  const [pageError, setPageError] = useState<string | null>(null);
   const runningRef = useRef(false);
 
   // Load initial state on mount
   useEffect(() => {
     async function loadStatus() {
-      const [statusRes, proposalRes] = await Promise.all([
-        fetch(`/api/session/${name}/status`),
-        fetch(`/api/session/${name}/proposal`),
-      ]);
-      const status = await statusRes.json();
-      const { proposals } = await proposalRes.json();
+      try {
+        const [statusRes, proposalRes] = await Promise.all([
+          fetch(`/api/session/${name}/status`),
+          fetch(`/api/session/${name}/proposal`),
+        ]);
+        if (!statusRes.ok || !proposalRes.ok) {
+          setPageError("Failed to load session — try refreshing");
+          return;
+        }
+        const status = await statusRes.json();
+        const { proposals } = await proposalRes.json();
 
-      let matches: Match[] = [];
-      if (status.match) {
-        const matchesRes = await fetch(`/api/session/${name}/matches`);
-        const data = await matchesRes.json();
-        matches = data.matches ?? [];
+        let matches: Match[] = [];
+        if (status.match) {
+          const matchesRes = await fetch(`/api/session/${name}/matches`);
+          const data = await matchesRes.json();
+          matches = data.matches ?? [];
+        }
+
+        dispatch({ type: "INIT", ...status, proposals, matches });
+      } catch {
+        setPageError("Network error — is the server running?");
+      } finally {
+        setPageLoading(false);
       }
-
-      dispatch({ type: "INIT", ...status, proposals, matches });
     }
     loadStatus();
   }, [name]);
@@ -117,6 +129,7 @@ export default function SessionPage({ params }: { params: { name: string } }) {
   }
 
   function handlePropose(funder: string, scheme: string) {
+    dispatch({ type: "SET_PROPOSING_SCHEME", scheme });
     runStage("propose", `/api/session/${name}/propose`, { funder, scheme });
   }
 
@@ -147,6 +160,50 @@ export default function SessionPage({ params }: { params: { name: string } }) {
     state.stages.enrich !== "complete" && state.stages.enrich !== "running"
       ? state.scholarCandidate
       : null;
+
+  const showMatches = state.stages.match === "complete" || state.matches.length > 0;
+  const showProposals = state.proposals.length > 0;
+
+  if (pageLoading) {
+    return (
+      <main className="max-w-3xl mx-auto px-4 py-10">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-slate-100">Grant Scout</h1>
+          <p className="text-slate-500 text-sm mt-1">{name}</p>
+        </div>
+        {/* Skeleton pipeline bar */}
+        <div className="flex w-full animate-pulse">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className={`flex-1 border border-slate-800 bg-slate-900 px-3 py-3 text-center
+                ${i === 0 ? "rounded-l-lg" : ""} ${i === 4 ? "rounded-r-lg" : ""}`}
+            >
+              <div className="h-3 bg-slate-700 rounded w-3/4 mx-auto" />
+            </div>
+          ))}
+        </div>
+        {/* Skeleton log area */}
+        <div className="mt-4 bg-slate-950 border border-slate-800 rounded-lg p-4 h-48 animate-pulse flex items-center justify-center">
+          <p className="text-slate-700 text-sm">Loading session…</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (pageError) {
+    return (
+      <main className="max-w-3xl mx-auto px-4 py-10">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-slate-100">Grant Scout</h1>
+          <p className="text-slate-500 text-sm mt-1">{name}</p>
+        </div>
+        <div className="bg-red-950 border border-red-700 rounded-lg px-4 py-4">
+          <p className="text-red-300 text-sm">{pageError}</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-10">
@@ -213,15 +270,16 @@ export default function SessionPage({ params }: { params: { name: string } }) {
         <StageLog entries={state.log} />
       </div>
 
-      {state.matches.length > 0 && (
+      {showMatches && (
         <MatchList
           matches={state.matches}
           onPropose={handlePropose}
           proposing={state.stages.propose === "running"}
+          proposingScheme={state.proposingScheme}
         />
       )}
 
-      {state.proposals.length > 0 && (
+      {showProposals && (
         <ProposalViewer proposals={state.proposals} />
       )}
     </main>
