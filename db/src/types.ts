@@ -22,6 +22,17 @@ export interface FunderRow {
   harvest_count?: number;
 }
 
+/** Shape of a researcher_proposals row. */
+export interface ResearcherProposalRow {
+  id: string;
+  researcher_id: string;
+  funder_slug: string;
+  scheme_slug: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Shape of a researcher row for upsert. */
 export interface ResearcherRow {
   slug: string;

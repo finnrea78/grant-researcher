@@ -1,10 +1,11 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { resolve } from "path";
-import { mkdirSync } from "fs";
+import { mkdirSync, readFileSync } from "fs";
 import { PROPOSAL_OUTLINER_PROMPT } from "@/lib/prompts/proposal-outliner";
 import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { getOpportunityByFunderAndName } from "@/lib/opportunity-store";
 import { requireUser } from "@/lib/auth";
+import { upsertProposalBySlug } from "@/lib/proposal-store";
 
 export async function POST(
   req: Request,
@@ -44,6 +45,8 @@ export async function POST(
 
   const opportunityContext = JSON.stringify(opportunity, null, 2);
 
+  const proposalPath = resolve(dataDir, `outputs/${name}/proposals/${funder}-${schemeSlug}.md`);
+
   const stream = new ReadableStream<string>({
     async start(controller) {
       await pipeQueryToSSE(
@@ -52,7 +55,7 @@ export async function POST(
 
 Researcher profile: ${dataDir}/researchers/${name}/profile.json
 Target scheme: "${scheme}"
-Write output to: ${dataDir}/outputs/${name}/proposals/${funder}-${schemeSlug}.md
+Write output to: ${proposalPath}
 
 Opportunity details from database:
 <opportunity>
@@ -70,6 +73,14 @@ Use the opportunity data above as the authoritative source for scheme details (d
         }),
         controller
       );
+
+      // Persist to DB so proposals survive re-login and redeployment
+      try {
+        const content = readFileSync(proposalPath, "utf-8");
+        await upsertProposalBySlug(name, funder, schemeSlug, content);
+      } catch {
+        // Non-fatal: DB save failure doesn't break the streamed response
+      }
     },
   });
 
