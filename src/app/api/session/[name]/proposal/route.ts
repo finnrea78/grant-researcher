@@ -1,6 +1,5 @@
-import { existsSync, readFileSync, readdirSync } from "fs";
-import { resolve } from "path";
 import { requireUser } from "@/lib/auth";
+import { getProposalsByResearcherSlug } from "@/lib/proposal-store";
 
 export async function GET(
   _req: Request,
@@ -14,16 +13,11 @@ export async function GET(
   }
 
   const { name } = params;
-  const proposalsDir = resolve(process.cwd(), `data/outputs/${name}/proposals`);
+  const rows = await getProposalsByResearcherSlug(name);
 
-  if (!existsSync(proposalsDir)) {
-    return Response.json({ proposals: [] });
-  }
-
-  const files = readdirSync(proposalsDir).filter((f) => f.endsWith(".md"));
-  const proposals = files.map((filename) => ({
-    filename,
-    content: readFileSync(resolve(proposalsDir, filename), "utf-8"),
+  const proposals = rows.map((row) => ({
+    filename: `${row.funder_slug}-${row.scheme_slug}.md`,
+    content: row.content,
   }));
 
   return Response.json({ proposals });
