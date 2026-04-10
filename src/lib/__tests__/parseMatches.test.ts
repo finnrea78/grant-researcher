@@ -61,4 +61,19 @@ describe("parseMatches", () => {
   it("returns empty array for empty input", () => {
     expect(parseMatches("")).toEqual([]);
   });
+
+  it("excludes entries under ## Not Eligible section", () => {
+    const withNotEligible = SAMPLE_MATCHES + `
+
+## Not Eligible
+
+### 4. Ineligible Scheme — Some Funder
+- **Overall score:** 0/10
+- **Amount:** £100,000 | **Deadline:** 2027-01-01 | **Status:** open
+- **Reason:** Career stage mismatch.
+`;
+    const matches = parseMatches(withNotEligible);
+    expect(matches).toHaveLength(3);
+    expect(matches.every((m) => m.scheme !== "Ineligible Scheme")).toBe(true);
+  });
 });
