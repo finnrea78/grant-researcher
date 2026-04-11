@@ -49,13 +49,13 @@ The object must match this schema exactly:
 
 ### Per-opportunity fields
 - \`name\` — full scheme name as it appears on the page
-- \`slug\` — lowercase, hyphen-separated version of the scheme name (e.g. \`"discovery-research"\`)
+- \`slug\` — lowercase, hyphen-separated version of the scheme name (e.g. \`"discovery-research"\`); example with special chars: \`"Discovery Research (Round 2)"\` → slug \`"discovery-research-round-2"\` (strip parentheses, replace spaces and special chars with hyphens, lowercase)
 - \`status\` — one of: \`"open"\`, \`"closed"\`, \`"upcoming"\`, \`"rolling"\`, or \`null\` if not determinable
 - \`deadline_raw\` — deadline text exactly as it appears on the page, or \`null\`
 - \`deadline_date\` — ISO 8601 date (\`YYYY-MM-DD\`) if the deadline is a specific date, otherwise \`null\`
 - \`amount_raw\` — award amount text exactly as it appears on the page, or \`null\`
-- \`amount_min\` — minimum award in GBP as a number (no currency symbol, no commas), or \`null\`
-- \`amount_max\` — maximum award in GBP as a number, or \`null\`
+- \`amount_min\` — minimum award in GBP as a number (no currency symbol, no commas), or \`null\`; if the amount is stated in a currency other than GBP, set both \`amount_min\` and \`amount_max\` to \`null\`
+- \`amount_max\` — maximum award in GBP as a number, or \`null\`; if the amount is stated in a currency other than GBP, set both \`amount_min\` and \`amount_max\` to \`null\`
 - \`url\` — direct URL to the scheme page if present on the page, otherwise \`null\`
 - \`funding_type\` — e.g. \`"research grant"\`, \`"fellowship"\`, \`"travel grant"\`, or \`null\`
 - \`description\` — brief description of the scheme's purpose (1–3 sentences), or \`null\`
@@ -66,6 +66,7 @@ The object must match this schema exactly:
 
 - Use \`null\` for any field that cannot be determined from the page content — **never guess or invent values**.
 - Do not add fields beyond those in the schema.
+- Every opportunity object must include ALL fields listed in the schema, even if their value is \`null\`. Omitting a field entirely is not allowed.
 - If the page contains no funding schemes (e.g. an error page or redirect), output:
   \`{"funder_slug":"<slug>","funder_name":null,"source_url":"<url>","disciplines":[],"opportunities":[]}\`
 - Output the JSON object only — the very first character of your response must be \`{\` and the last must be \`}\`.

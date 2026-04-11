@@ -19,6 +19,7 @@ is **fresh** (harvested recently — skip it) or **stale** (needs re-scan — in
 - If a funder from this section is marked fresh: add it to the \`skipped\` list with reason "harvested N days ago".
 - If a funder from this section is marked stale: include it in \`urls\`.
 - If a funder appears in both the seed list and this section, prefer the URL from this section.
+- Funders in the seed list that do not appear in the Database-sourced funders section have never been harvested — always include them in \`urls\`.
 
 ### 3. Researcher profile (optional, in task prompt)
 If the task prompt includes researcher profile fields (disciplinary fields, research themes, geographic
