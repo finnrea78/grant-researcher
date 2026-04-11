@@ -81,13 +81,19 @@ Researcher profile for smart scan:
 URL list: ${dataDir}/funding-sources/_urls.md
 Plan output: ${dataDir}/funding-sources/_scan-plan.json${profileContext}${dbContext}`;
 
+        const phase1Tools = ["Read", "Write", "Glob"];
+        if (Object.keys(mcpServers).length > 0) {
+          // Allow the Tavily MCP search tool (exposed by tavily-mcp as "tavily-search")
+          phase1Tools.push("mcp__tavily__tavily-search");
+        }
+
         await pipeQueryToSSE(
           () => query({
             prompt: phase1Prompt,
             options: {
               cwd: dataDir,
               systemPrompt: SCAN_PLANNER_PROMPT,
-              allowedTools: ["Read", "Write", "Glob"],
+              allowedTools: phase1Tools,
               permissionMode: "acceptEdits",
               maxTurns: 10,
               ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
