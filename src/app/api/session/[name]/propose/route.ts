@@ -103,8 +103,8 @@ Use the opportunity data above as the authoritative source for scheme details (d
       try {
         const content = readFileSync(proposalPath, "utf-8");
         await upsertProposalBySlug(name, funder, schemeSlug, content);
-      } catch {
-        // Non-fatal: DB save failure doesn't break the streamed response
+      } catch (err) {
+        console.error("Failed to persist proposal to DB:", err);
       }
 
       agentQueue.release();
