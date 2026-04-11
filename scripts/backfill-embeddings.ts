@@ -4,14 +4,26 @@
  *
  * Reads SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY from .env.local
  */
-import { config } from "dotenv";
+import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
-// Load .env.local from project root
-config({ path: resolve(process.cwd(), ".env.local") });
-config({ path: resolve(process.cwd(), ".env") });
+// Minimal env loader (avoids dotenv dependency)
+function loadEnvFile(filePath: string) {
+  if (!existsSync(filePath)) return;
+  for (const line of readFileSync(filePath, "utf-8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const idx = trimmed.indexOf("=");
+    if (idx === -1) continue;
+    const key = trimmed.slice(0, idx).trim();
+    const val = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, "");
+    if (!process.env[key]) process.env[key] = val;
+  }
+}
+loadEnvFile(resolve(process.cwd(), ".env.local"));
+loadEnvFile(resolve(process.cwd(), ".env"));
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
