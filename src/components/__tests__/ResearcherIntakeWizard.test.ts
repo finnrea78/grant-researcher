@@ -1,19 +1,35 @@
 import { TOTAL_STEPS, STEP_LABELS } from "@/components/ResearcherIntakeWizard.constants";
 
-describe("ResearcherIntakeWizard step constants", () => {
-  it("has 6 total steps", () => {
-    expect(TOTAL_STEPS).toBe(6);
+describe("ResearcherIntakeWizard step constants — 3-step target", () => {
+  it("TOTAL_STEPS is 3", () => {
+    expect(TOTAL_STEPS).toBe(3);
   });
 
-  it("has 6 step labels", () => {
-    expect(STEP_LABELS).toHaveLength(6);
+  it("STEP_LABELS has length 3", () => {
+    expect(STEP_LABELS).toHaveLength(3);
   });
 
-  it("has Proposal as the 4th step (index 3)", () => {
-    expect(STEP_LABELS[3]).toBe("Proposal");
+  it('STEP_LABELS[0] is "About You"', () => {
+    expect(STEP_LABELS[0]).toBe("About You");
   });
 
-  it("has CV Upload as the final step", () => {
-    expect(STEP_LABELS[5]).toBe("CV Upload");
+  it('STEP_LABELS[1] is "Your Proposal"', () => {
+    expect(STEP_LABELS[1]).toBe("Your Proposal");
+  });
+
+  it('STEP_LABELS[2] is "CV Upload"', () => {
+    expect(STEP_LABELS[2]).toBe("CV Upload");
+  });
+
+  it('STEP_LABELS does not include "Career"', () => {
+    expect(Array.from(STEP_LABELS)).not.toContain("Career");
+  });
+
+  it('STEP_LABELS does not include "Research"', () => {
+    expect(Array.from(STEP_LABELS)).not.toContain("Research");
+  });
+
+  it('STEP_LABELS does not include "Eligibility"', () => {
+    expect(Array.from(STEP_LABELS)).not.toContain("Eligibility");
   });
 });
