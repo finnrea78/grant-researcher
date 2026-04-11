@@ -22,6 +22,7 @@ export interface CandidateOpportunity {
   funding_type: string | null;
   source: string;
   similarity?: number;
+  funder_name?: string;
 }
 
 /**
