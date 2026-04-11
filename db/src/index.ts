@@ -1,2 +1,2 @@
 export { supabase } from "./client";
-export type { FunderRow, ResearcherRow } from "./types";
+export type { FunderRow, ResearcherRow, ResearcherMatchRow, FundingSourceRow } from "./types";
