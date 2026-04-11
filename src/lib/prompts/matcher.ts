@@ -31,8 +31,9 @@ For EACH opportunity in the <opportunities> list:
 
 The JSON must match this exact schema:
 {
-  "name": "string — scheme name",
-  "funder": "string — funder name",
+  "opportunity_id": "string — use the id field from the opportunity exactly",
+  "name": "string — scheme name (use the name field from the opportunity)",
+  "funder": "string — use the funder_name field from the opportunity exactly as written",
   "url": "string or null",
   "amount": "string or null — use amount_raw",
   "deadline": "string or null — use deadline_date, fall back to deadline_raw",

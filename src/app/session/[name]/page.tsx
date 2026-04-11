@@ -158,9 +158,9 @@ export default function SessionPage({ params }: { params: { name: string } }) {
     }
   }
 
-  function handlePropose(funder: string, scheme: string) {
+  function handlePropose(funder: string, scheme: string, opportunityId?: string) {
     dispatch({ type: "SET_PROPOSING_SCHEME", scheme });
-    runStage("propose", `/api/session/${name}/propose`, { funder, scheme });
+    runStage("propose", `/api/session/${name}/propose`, { funder, scheme, opportunityId });
   }
 
   async function handleScholarConfirm() {
