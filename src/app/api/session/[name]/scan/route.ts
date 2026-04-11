@@ -1,12 +1,24 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
-import { GRANT_SCANNER_PROMPT } from "@/lib/prompts/grant-scanner";
+import { SCAN_PLANNER_PROMPT } from "@/lib/prompts/scan-planner";
+import { extractAll, ScanPlanEntry } from "@/lib/scan-extract";
 import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { persistDiscoveredManifest } from "@/lib/scan-persistence";
 import { buildScanDbContext } from "@/lib/scan-db-context";
 import { requireUser } from "@/lib/auth";
 import { agentQueue } from "@/lib/concurrency";
+
+function parseUrlsMd(content: string): ScanPlanEntry[] {
+  return content
+    .split("\n")
+    .filter(line => line.trim() && !line.trim().startsWith("#") && line.includes("|"))
+    .map(line => {
+      const [slug, url] = line.split("|").map(s => s.trim());
+      return { slug, url };
+    })
+    .filter(e => e.slug && e.url);
+}
 
 export async function POST(
   req: Request,
@@ -22,25 +34,21 @@ export async function POST(
   const { name } = params;
   const dataDir = resolve(process.cwd(), "data");
 
-  // Build profile context for smart scan + DB context for self-improvement loop
-  let profileContext = "";
-  const allowedTools = ["Read", "Write", "Glob", "WebFetch"];
-
   // Fetch DB-sourced funders to feed back into the agent (closes the loop)
   const dbContext = await buildScanDbContext();
 
   const profilePath = resolve(dataDir, `researchers/${name}/profile.json`);
-  if (existsSync(profilePath)) {
+  const hasProfile = existsSync(profilePath);
+
+  let profileContext = "";
+  if (hasProfile) {
     const profile = JSON.parse(readFileSync(profilePath, "utf-8"));
     profileContext = `
 
-Researcher profile provided for smart scan:
+Researcher profile for smart scan:
 - Disciplinary fields: ${(profile.disciplinary_fields ?? []).join(", ")}
 - Research themes: ${(profile.research_themes ?? []).join(", ")}
-- Geographic focus: ${(profile.geographic_focus ?? []).join(", ")}
-
-Use WebSearch to discover additional grant URLs relevant to these fields.`;
-    allowedTools.push("WebSearch");
+- Geographic focus: ${(profile.geographic_focus ?? []).join(", ")}`;
   }
 
   const manifestPath = resolve(dataDir, "funding-sources/_discovered.json");
@@ -56,27 +64,58 @@ Use WebSearch to discover additional grant URLs relevant to these fields.`;
       }
 
       try {
-        await pipeQueryToSSE(
-          () => query({
-            prompt: `Harvest the funding database. No flags passed.
+        // Phase 1 — Sonnet URL discovery / planning
+        const mcpServers: Record<string, { command: string; args: string[]; env: Record<string, string> }> = {};
+        if (hasProfile && process.env.TAVILY_API_KEY) {
+          mcpServers["tavily"] = {
+            command: "npx",
+            args: ["-y", "tavily-mcp"],
+            env: { TAVILY_API_KEY: process.env.TAVILY_API_KEY },
+          };
+        }
 
-Mode: HARVEST mode: full harvest of all sources
+        const phase1Prompt = `Plan the grant scan.
 
 URL list: ${dataDir}/funding-sources/_urls.md
-Template: ${dataDir}/funding-sources/_template.md
-Timestamps: ${dataDir}/funding-sources/_last-harvested.json
-Funder files directory: ${dataDir}/funding-sources/
-Manifest output: ${dataDir}/funding-sources/_discovered.json${profileContext}${dbContext}`,
+Plan output: ${dataDir}/funding-sources/_scan-plan.json${profileContext}${dbContext}`;
+
+        await pipeQueryToSSE(
+          () => query({
+            prompt: phase1Prompt,
             options: {
               cwd: dataDir,
-              systemPrompt: GRANT_SCANNER_PROMPT,
-              allowedTools,
+              systemPrompt: SCAN_PLANNER_PROMPT,
+              allowedTools: ["Read", "Write", "Glob"],
               permissionMode: "acceptEdits",
-              maxTurns: 30,
+              maxTurns: 10,
+              ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
             },
           }),
           controller
         );
+
+        // Handoff — read the plan written by Phase 1
+        const planPath = resolve(dataDir, "funding-sources/_scan-plan.json");
+        let urls: ScanPlanEntry[];
+        try {
+          const plan = JSON.parse(readFileSync(planPath, "utf-8"));
+          urls = plan.urls ?? [];
+        } catch {
+          // Fallback: parse _urls.md directly
+          const raw = readFileSync(resolve(dataDir, "funding-sources/_urls.md"), "utf-8");
+          urls = parseUrlsMd(raw);
+        }
+        if (urls.length === 0) {
+          urls = parseUrlsMd(readFileSync(resolve(dataDir, "funding-sources/_urls.md"), "utf-8"));
+        }
+
+        // Phase 2 — parallel Haiku extraction
+        controller.enqueue(formatSSEEvent({
+          type: "text",
+          text: `Phase 2: Extracting ${urls.length} funding sources...`,
+        }));
+        const results = await extractAll(urls, controller);
+        writeFileSync(manifestPath, JSON.stringify(results, null, 2));
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
       }
