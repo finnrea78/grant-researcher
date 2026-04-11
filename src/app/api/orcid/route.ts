@@ -1,4 +1,5 @@
 import { extractOrcidFields } from "@/lib/extractOrcidFields";
+import { withRetry } from "@/lib/retry";
 
 // GET /api/orcid?id=0000-0000-0000-0000
 export async function GET(req: Request): Promise<Response> {
@@ -9,9 +10,28 @@ export async function GET(req: Request): Promise<Response> {
     return Response.json({ error: "Invalid ORCID format" }, { status: 400 });
   }
 
-  const res = await fetch(`https://pub.orcid.org/v3.0/${orcid}/record`, {
-    headers: { Accept: "application/json" },
-  });
+  let res: Response;
+  try {
+    res = await withRetry(
+      async () => {
+        const r = await fetch(`https://pub.orcid.org/v3.0/${orcid}/record`, {
+          headers: { Accept: "application/json" },
+        });
+        // Throw on retryable statuses so withRetry can catch and retry
+        if (r.status === 429 || r.status >= 500) {
+          throw Object.assign(new Error(`ORCID API returned ${r.status}`), { status: r.status });
+        }
+        return r;
+      },
+      { maxRetries: 2 }
+    );
+  } catch (err) {
+    const status = (err as { status?: number }).status;
+    return Response.json(
+      { error: `ORCID API error` },
+      { status: status === 404 ? 404 : 502 }
+    );
+  }
 
   if (!res.ok) {
     return Response.json(

@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { fetchWithRetry } from "../utils/fetchWithRetry.js";
 import type { RawRoyalSocietyScheme } from "../transforms/normalise-royal-society.js";
 
 const GRANTS_URL = "https://royalsociety.org/grants/search/grant-listings/";
@@ -57,7 +58,7 @@ export async function fetchRoyalSocietySchemes(): Promise<RawRoyalSocietyScheme[
   console.log(`  Fetching Royal Society grants: ${GRANTS_URL}`);
   console.log(`  Note: fetching server-rendered items only (~12 of 28). Full pagination requires AJAX endpoint discovery.`);
 
-  const response = await fetch(GRANTS_URL, {
+  const response = await fetchWithRetry(GRANTS_URL, {
     headers: {
       "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     },

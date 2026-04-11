@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { fetchWithRetry } from "../utils/fetchWithRetry.js";
 import type { RawWellcomeScheme } from "../transforms/normalise-wellcome.js";
 
 const SCHEMES_URL = "https://wellcome.org/grant-funding/schemes";
@@ -53,7 +54,7 @@ export function parseWellcomePage(html: string): RawWellcomeScheme[] {
 export async function fetchWellcomeSchemes(): Promise<RawWellcomeScheme[]> {
   console.log(`  Fetching Wellcome schemes: ${SCHEMES_URL}`);
 
-  const response = await fetch(SCHEMES_URL);
+  const response = await fetchWithRetry(SCHEMES_URL);
   if (!response.ok) {
     throw new Error(`Wellcome error: ${response.status} ${response.statusText}`);
   }

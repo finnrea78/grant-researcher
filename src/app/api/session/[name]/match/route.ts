@@ -2,10 +2,11 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { resolve } from "path";
 import { mkdirSync } from "fs";
 import { MATCHER_PROMPT } from "@/lib/prompts/matcher";
-import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
+import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { cleanupProposalIntent } from "@/lib/proposalIntent";
 import { retrieveCandidates } from "@/lib/opportunity-retrieval";
 import { requireUser } from "@/lib/auth";
+import { agentQueue } from "@/lib/concurrency";
 
 export async function POST(
   _req: Request,
@@ -37,8 +38,16 @@ export async function POST(
   const stream = new ReadableStream<string>({
     async start(controller) {
       try {
+        await agentQueue.acquire();
+      } catch {
+        controller.enqueue(formatSSEEvent({ type: "error", message: "Server busy — too many concurrent requests. Please retry." }));
+        controller.close();
+        return;
+      }
+
+      try {
         await pipeQueryToSSE(
-          query({
+          () => query({
             prompt: `Score and rank funding opportunities for researcher "${name}".
 
 Researcher profile: ${researcherDir}/profile.json
@@ -62,8 +71,12 @@ Score each opportunity against the researcher's profile. Use the researcher-cont
           }),
           controller
         );
+      } catch (err) {
+        controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
       } finally {
         cleanupProposalIntent(researcherDir);
+        agentQueue.release();
+        controller.close();
       }
     },
   });

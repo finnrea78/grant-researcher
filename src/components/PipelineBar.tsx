@@ -108,6 +108,26 @@ export function PipelineBar({ stages, onRun, onSkip, skippable = [] }: PipelineB
                 )}
               </div>
             )}
+            {status === "complete" && stage === "scan" && (
+              <div className="mt-1">
+                <button
+                  onClick={() => onRun(stage)}
+                  className="text-xs text-slate-500 hover:text-slate-400 underline"
+                >
+                  Rescan
+                </button>
+              </div>
+            )}
+            {status === "complete" && stage === "match" && (
+              <div className="mt-1">
+                <button
+                  onClick={() => onRun(stage)}
+                  className="text-xs text-slate-500 hover:text-slate-400 underline"
+                >
+                  Rematch
+                </button>
+              </div>
+            )}
             {status === "running" && (
               <div className="mt-1 text-xs text-blue-500 animate-pulse">
                 <ElapsedTimer />

@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { sleep } from "../utils/sleep.js";
+import { fetchWithRetry } from "../utils/fetchWithRetry.js";
 
 const BASE_URL = "https://www.ukri.org/opportunity/";
 const DETAIL_DELAY_MS = 300;
@@ -105,7 +106,7 @@ function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string |
 
 /** Fetch and parse the detail page for a single opportunity. */
 async function fetchOpportunityDetails(url: string): Promise<Pick<RawUkriOpportunity, "fundingType" | "description" | "eligibility" | "scope" | "closingDate">> {
-  const response = await fetch(url);
+  const response = await fetchWithRetry(url);
   if (!response.ok) {
     return { fundingType: null, description: null, eligibility: null, scope: null, closingDate: null };
   }
@@ -154,7 +155,7 @@ export async function fetchUkriOpportunities(
   // Fetch page 1 to get total page count
   const firstUrl = buildUrl(1);
   console.log(`  Fetching UKRI Funding Finder: ${firstUrl}`);
-  const firstResponse = await fetch(firstUrl);
+  const firstResponse = await fetchWithRetry(firstUrl);
   if (!firstResponse.ok) {
     throw new Error(`UKRI Funding Finder error: ${firstResponse.status} ${firstResponse.statusText}`);
   }
@@ -168,7 +169,7 @@ export async function fetchUkriOpportunities(
   for (let page = 2; page <= totalPages; page++) {
     const pageUrl = buildUrl(page);
     console.log(`  Fetching page ${page}/${totalPages}: ${pageUrl}`);
-    const response = await fetch(pageUrl);
+    const response = await fetchWithRetry(pageUrl);
     if (!response.ok) {
       console.warn(`  Page ${page} failed: ${response.status} — skipping`);
       continue;

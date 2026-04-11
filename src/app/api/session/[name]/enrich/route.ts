@@ -5,6 +5,7 @@ import { RESEARCHER_ENRICHER_PROMPT } from "@/lib/prompts/researcher-enricher";
 import { updateProfileEmbedding, updateResearcherProfile } from "@/lib/researcher-store";
 import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { requireUser } from "@/lib/auth";
+import { agentQueue } from "@/lib/concurrency";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
 
 export async function POST(
@@ -25,8 +26,16 @@ export async function POST(
   const stream = new ReadableStream<string>({
     async start(controller) {
       try {
+        await agentQueue.acquire();
+      } catch {
+        controller.enqueue(formatSSEEvent({ type: "error", message: "Server busy — too many concurrent requests. Please retry." }));
+        controller.close();
+        return;
+      }
+
+      try {
         await pipeQueryToSSE(
-          query({
+          () => query({
             prompt: `Research and enrich the profile for researcher "${name}".
 
 Read these files:
@@ -48,25 +57,26 @@ Write outputs to:
           }),
           controller
         );
-
-        // Sync enriched profile to Supabase (best-effort, non-blocking)
-        const profilePath = resolve(researcherDir, "profile.json");
-        if (existsSync(profilePath)) {
-          try {
-            const profile = JSON.parse(readFileSync(profilePath, "utf-8")) as ResearcherProfile;
-            await updateResearcherProfile(name, profile);
-            // Compute and store profile embedding if retrieval_summary was written
-            if (profile.retrieval_summary) {
-              await updateProfileEmbedding(name, profile.retrieval_summary);
-            }
-          } catch (syncErr) {
-            console.error(`[enrich] Supabase sync failed for ${name}:`, syncErr);
-          }
-        }
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
-        controller.close();
       }
+
+      // Sync enriched profile to Supabase (best-effort, non-blocking)
+      const profilePath = resolve(researcherDir, "profile.json");
+      if (existsSync(profilePath)) {
+        try {
+          const profile = JSON.parse(readFileSync(profilePath, "utf-8")) as ResearcherProfile;
+          await updateResearcherProfile(name, profile);
+          if (profile.retrieval_summary) {
+            await updateProfileEmbedding(name, profile.retrieval_summary);
+          }
+        } catch (syncErr) {
+          console.error(`[enrich] Supabase sync failed for ${name}:`, syncErr);
+        }
+      }
+
+      agentQueue.release();
+      controller.close();
     },
   });
 

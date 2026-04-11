@@ -5,6 +5,7 @@ import { PROFILE_BUILDER_PROMPT } from "@/lib/prompts/profile-builder";
 import { updateResearcherProfile } from "@/lib/researcher-store";
 import { formatSSEEvent, sseResponse } from "@/lib/sse";
 import { requireUser } from "@/lib/auth";
+import { agentQueue } from "@/lib/concurrency";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
 
 function buildUserPrompt(
@@ -62,6 +63,13 @@ export async function POST(
   const stream = new ReadableStream<string>({
     async start(controller) {
       const startMs = Date.now();
+      try {
+        await agentQueue.acquire();
+      } catch {
+        controller.enqueue(formatSSEEvent({ type: "error", message: "Server busy — too many concurrent requests. Please retry." }));
+        controller.close();
+        return;
+      }
       try {
         // Read intake data
         const intakePath = resolve(researcherDir, "intake.json");
@@ -135,6 +143,7 @@ export async function POST(
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
       } finally {
+        agentQueue.release();
         controller.close();
       }
     },
