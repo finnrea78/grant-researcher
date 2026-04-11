@@ -5,38 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { IntakeData, FundingGoals, CollaborationProfile, EligibilityConstraints, ProposalIntent } from "@/lib/types";
+import { IntakeData, EligibilityConstraints, ProposalIntent } from "@/lib/types";
 import { TOTAL_STEPS } from "@/components/ResearcherIntakeWizard.constants";
 
 export interface ResearcherIntakeWizardProps {
   onSubmit: (formData: FormData) => void;
   loading?: boolean;
+  initialIntake?: IntakeData;
 }
 
 
-const INTENDED_USE_OPTIONS: { value: NonNullable<FundingGoals["intended_use"]>[number]; label: string }[] = [
-  { value: "phd_students", label: "PhD students" },
-  { value: "postdocs", label: "Postdocs" },
-  { value: "equipment", label: "Equipment" },
-  { value: "travel", label: "Travel" },
-  { value: "research_time", label: "Research time" },
-  { value: "collaboration", label: "Collaboration" },
-  { value: "public_engagement", label: "Public engagement" },
-];
-
-const COLLABORATION_TYPE_OPTIONS: { value: NonNullable<CollaborationProfile["collaboration_types"]>[number]; label: string }[] = [
-  { value: "industry", label: "Industry" },
-  { value: "academic", label: "Academic" },
-  { value: "international", label: "International" },
-  { value: "public_sector", label: "Public sector" },
-  { value: "ngo", label: "NGO" },
-];
-
-const PREFERRED_ROLE_OPTIONS: { value: NonNullable<CollaborationProfile["preferred_roles"]>[number]; label: string }[] = [
-  { value: "PI", label: "PI" },
-  { value: "Co-I", label: "Co-I" },
-  { value: "partner", label: "Partner" },
-];
 
 const ORCID_RE = /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/;
 
@@ -68,9 +46,9 @@ function parseCommaSeparated(value: string): string[] {
     .filter(Boolean);
 }
 
-export function ResearcherIntakeWizard({ onSubmit, loading = false }: ResearcherIntakeWizardProps) {
+export function ResearcherIntakeWizard({ onSubmit, loading = false, initialIntake }: ResearcherIntakeWizardProps) {
   const [step, setStep] = useState(1);
-  const [intake, setIntake] = useState<IntakeData>({});
+  const [intake, setIntake] = useState<IntakeData>(initialIntake ?? {});
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [orcidLoading, setOrcidLoading] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
@@ -78,17 +56,11 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastFetchedOrcid = useRef<string | null>(null);
 
-  // Local textarea strings for comma-separated fields
-  const [researchThemesText, setResearchThemesText] = useState("");
-  const [researchKeywordsText, setResearchKeywordsText] = useState("");
-  const [disciplinaryFieldsText, setDisciplinaryFieldsText] = useState("");
-  const [geographicFocusText, setGeographicFocusText] = useState("");
-
-  // Proposal intent (step 4) — ephemeral, never stored in Supabase
-  const [proposalTitle, setProposalTitle] = useState("");
-  const [proposalDescription, setProposalDescription] = useState("");
-  const [proposalDiscipline, setProposalDiscipline] = useState("");
-  const [proposalMethodology, setProposalMethodology] = useState("");
+  // Proposal intent — ephemeral, never stored in Supabase
+  const [proposalTitle, setProposalTitle] = useState(initialIntake?.proposal_intent?.project_title ?? "");
+  const [proposalDescription, setProposalDescription] = useState(initialIntake?.proposal_intent?.description ?? "");
+  const [proposalDiscipline, setProposalDiscipline] = useState(initialIntake?.proposal_intent?.target_discipline ?? "");
+  const [proposalMethodology, setProposalMethodology] = useState(initialIntake?.proposal_intent?.methodology ?? "");
 
   function mergeIntake(partial: Partial<IntakeData>, fields: string[]) {
     setIntake((prev) => ({ ...prev, ...partial }));
@@ -113,18 +85,17 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
       const partial: Partial<IntakeData> = {};
 
       if (data.name) { partial.name = data.name; filled.push("name"); }
+      // Collected for profile-builder context (intake.json); not written to DB since store was trimmed
       if (data.institution) { partial.institution = data.institution; filled.push("institution"); }
       if (data.department) { partial.department = data.department; filled.push("department"); }
       if (data.institution_country) { partial.institution_country = data.institution_country; filled.push("institution_country"); }
       if (data.career_stage) { partial.career_stage = data.career_stage; filled.push("career_stage"); }
       if (data.research_themes?.length) {
         partial.research_themes = data.research_themes;
-        setResearchThemesText(data.research_themes.join(", "));
         filled.push("research_themes");
       }
       if (data.research_keywords?.length) {
         partial.research_keywords = data.research_keywords;
-        setResearchKeywordsText(data.research_keywords.join(", "));
         filled.push("research_keywords");
       }
       if (data.eligibility) { partial.eligibility = data.eligibility; filled.push("eligibility"); }
@@ -147,11 +118,6 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
     }
   }
 
-  function toggleArrayItem<T>(arr: T[] | undefined, item: T): T[] {
-    if (!arr) return [item];
-    return arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
-  }
-
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
@@ -170,10 +136,6 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
 
     const finalIntake: IntakeData = {
       ...intake,
-      research_themes: parseCommaSeparated(researchThemesText),
-      research_keywords: parseCommaSeparated(researchKeywordsText),
-      disciplinary_fields: parseCommaSeparated(disciplinaryFieldsText),
-      geographic_focus: parseCommaSeparated(geographicFocusText),
       ...(hasProposal ? { proposal_intent: proposalIntent } : {}),
     };
 
@@ -185,7 +147,7 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
     onSubmit(formData);
   }
 
-  const canAdvance = step === 2 ? Boolean(intake.name?.trim()) : true;
+  const canAdvance = true;
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-xl">
@@ -206,10 +168,20 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
 
       {/* Step content */}
       <div className="flex flex-col gap-4">
-        {/* Step 1: Identifiers */}
+        {/* Step 1: About You */}
         {step === 1 && (
           <>
-            <h2 className="text-slate-100 font-semibold">Identifiers</h2>
+            <h2 className="text-slate-100 font-semibold">About You</h2>
+            <div>
+              <FieldLabel autoFilled={autoFilledFields.has("name")}>Name</FieldLabel>
+              <input
+                type="text"
+                placeholder="Your name"
+                value={intake.name ?? ""}
+                onChange={(e) => setIntake((prev) => ({ ...prev, name: e.target.value }))}
+                className={inputClass(autoFilledFields.has("name"))}
+              />
+            </div>
             <div>
               <FieldLabel>ORCID</FieldLabel>
               <div className="relative">
@@ -246,149 +218,97 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
                 className={inputClass()}
               />
             </div>
-          </>
-        )}
-
-        {/* Step 2: Career */}
-        {step === 2 && (
-          <>
-            <h2 className="text-slate-100 font-semibold">Career</h2>
             <div>
-              <FieldLabel autoFilled={autoFilledFields.has("name")}>
-                Name <span className="text-red-400">*</span>
+              <FieldLabel autoFilled={autoFilledFields.has("eligibility")}>
+                Employment type
               </FieldLabel>
-              <input
-                type="text"
-                placeholder="Your name"
-                value={intake.name ?? ""}
-                onChange={(e) => setIntake((prev) => ({ ...prev, name: e.target.value }))}
-                className={inputClass(autoFilledFields.has("name"))}
-              />
-            </div>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("institution")}>Institution</FieldLabel>
-              <input
-                type="text"
-                placeholder="e.g. University of Edinburgh"
-                value={intake.institution ?? ""}
-                onChange={(e) => setIntake((prev) => ({ ...prev, institution: e.target.value }))}
-                className={inputClass(autoFilledFields.has("institution"))}
-              />
-            </div>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("department")}>Department</FieldLabel>
-              <input
-                type="text"
-                placeholder="e.g. School of Informatics"
-                value={intake.department ?? ""}
-                onChange={(e) => setIntake((prev) => ({ ...prev, department: e.target.value }))}
-                className={inputClass(autoFilledFields.has("department"))}
-              />
-            </div>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("career_stage")}>Career stage</FieldLabel>
               <select
-                value={intake.career_stage ?? ""}
+                value={intake.eligibility?.employment_type ?? ""}
                 onChange={(e) =>
                   setIntake((prev) => ({
                     ...prev,
-                    career_stage: e.target.value as IntakeData["career_stage"],
+                    eligibility: {
+                      ...prev.eligibility,
+                      employment_type: e.target.value as EligibilityConstraints["employment_type"],
+                    },
                   }))
                 }
-                className={inputClass(autoFilledFields.has("career_stage"))}
+                className={inputClass(autoFilledFields.has("eligibility"))}
               >
                 <option value="">Select…</option>
-                <option value="phd_student">PhD student</option>
+                <option value="permanent">Permanent</option>
+                <option value="fixed_term">Fixed term</option>
+                <option value="independent">Independent</option>
                 <option value="postdoc">Postdoc</option>
-                <option value="early_career">Early career</option>
-                <option value="mid_career">Mid career</option>
-                <option value="senior">Senior</option>
+                <option value="phd_student">PhD student</option>
               </select>
             </div>
             <div>
-              <FieldLabel autoFilled={autoFilledFields.has("institution_country")}>
-                Institution country
-              </FieldLabel>
+              <FieldLabel>Institution type</FieldLabel>
+              <select
+                value={intake.eligibility?.institution_type ?? ""}
+                onChange={(e) =>
+                  setIntake((prev) => ({
+                    ...prev,
+                    eligibility: {
+                      ...prev.eligibility,
+                      institution_type: e.target.value as EligibilityConstraints["institution_type"],
+                    },
+                  }))
+                }
+                className={inputClass()}
+              >
+                <option value="">Select…</option>
+                <option value="university">University</option>
+                <option value="research_institute">Research institute</option>
+                <option value="hospital">Hospital</option>
+                <option value="ngo">NGO</option>
+                <option value="industry">Industry</option>
+              </select>
+            </div>
+            <div>
+              <FieldLabel>Year of PhD completion</FieldLabel>
+              <input
+                type="number"
+                placeholder="e.g. 2020"
+                value={intake.eligibility?.phd_year ?? ""}
+                onChange={(e) =>
+                  setIntake((prev) => ({
+                    ...prev,
+                    eligibility: {
+                      ...prev.eligibility,
+                      phd_year: e.target.value ? Number(e.target.value) : undefined,
+                    },
+                  }))
+                }
+                className={inputClass()}
+              />
+            </div>
+            <div>
+              <FieldLabel>Nationality</FieldLabel>
               <input
                 type="text"
-                placeholder="e.g. UK"
-                value={intake.institution_country ?? ""}
+                placeholder="e.g. British, Irish (comma-separated)"
+                value={intake.eligibility?.nationality?.join(", ") ?? ""}
                 onChange={(e) =>
-                  setIntake((prev) => ({ ...prev, institution_country: e.target.value }))
+                  setIntake((prev) => ({
+                    ...prev,
+                    eligibility: {
+                      ...prev.eligibility,
+                      nationality: parseCommaSeparated(e.target.value),
+                    },
+                  }))
                 }
-                className={inputClass(autoFilledFields.has("institution_country"))}
+                className={inputClass()}
               />
             </div>
           </>
         )}
 
-        {/* Step 3: Research */}
-        {step === 3 && (
+        {/* Step 2: Your Proposal */}
+        {step === 2 && (
           <>
-            <h2 className="text-slate-100 font-semibold">Research</h2>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("research_themes")}>
-                Research themes
-              </FieldLabel>
-              <textarea
-                placeholder="Comma-separated, e.g. machine learning, digital humanities"
-                value={researchThemesText}
-                onChange={(e) => setResearchThemesText(e.target.value)}
-                rows={2}
-                className={textareaClass(autoFilledFields.has("research_themes"))}
-              />
-            </div>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("research_keywords")}>
-                Research keywords
-              </FieldLabel>
-              <textarea
-                placeholder="Comma-separated keywords"
-                value={researchKeywordsText}
-                onChange={(e) => setResearchKeywordsText(e.target.value)}
-                rows={2}
-                className={textareaClass(autoFilledFields.has("research_keywords"))}
-              />
-            </div>
-            <div>
-              <FieldLabel>Disciplinary fields</FieldLabel>
-              <textarea
-                placeholder="Comma-separated, e.g. Computer Science, Linguistics"
-                value={disciplinaryFieldsText}
-                onChange={(e) => setDisciplinaryFieldsText(e.target.value)}
-                rows={2}
-                className={textareaClass()}
-              />
-            </div>
-            <div>
-              <FieldLabel>Geographic focus</FieldLabel>
-              <textarea
-                placeholder="Comma-separated regions, e.g. UK, Europe, Sub-Saharan Africa"
-                value={geographicFocusText}
-                onChange={(e) => setGeographicFocusText(e.target.value)}
-                rows={2}
-                className={textareaClass()}
-              />
-            </div>
-            <div>
-              <FieldLabel>Research trajectory</FieldLabel>
-              <textarea
-                placeholder="Where is your research heading? What questions do you want to explore next?"
-                value={intake.research_trajectory ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({ ...prev, research_trajectory: e.target.value }))
-                }
-                rows={4}
-                className={textareaClass()}
-              />
-            </div>
-          </>
-        )}
-
-        {/* Step 4: Proposal */}
-        {step === 4 && (
-          <>
-            <h2 className="text-slate-100 font-semibold">Project Proposal</h2>
+            <h2 className="text-slate-100 font-semibold">Your Proposal</h2>
             <p className="text-slate-500 text-sm">
               Describe the project you have in mind. This helps us match you to the most relevant funding opportunities — and is never stored after matching.
             </p>
@@ -435,315 +355,8 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
           </>
         )}
 
-        {/* Step 5: Funding */}
-        {step === 5 && (
-          <>
-            <h2 className="text-slate-100 font-semibold">Funding goals</h2>
-            <div>
-              <FieldLabel>Intended use of funding</FieldLabel>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {INTENDED_USE_OPTIONS.map(({ value, label }) => {
-                  const selected = intake.funding_goals?.intended_use?.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() =>
-                        setIntake((prev) => ({
-                          ...prev,
-                          funding_goals: {
-                            ...prev.funding_goals,
-                            intended_use: toggleArrayItem(prev.funding_goals?.intended_use, value),
-                          },
-                        }))
-                      }
-                      className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                        selected
-                          ? "bg-blue-700 border-blue-500 text-white"
-                          : "bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-400"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <FieldLabel>Budget min (GBP)</FieldLabel>
-                <input
-                  type="number"
-                  placeholder="e.g. 10000"
-                  value={intake.funding_goals?.budget_range?.min ?? ""}
-                  onChange={(e) =>
-                    setIntake((prev) => ({
-                      ...prev,
-                      funding_goals: {
-                        ...prev.funding_goals,
-                        budget_range: {
-                          ...prev.funding_goals?.budget_range,
-                          min: e.target.value ? Number(e.target.value) : undefined,
-                          currency: "GBP",
-                        },
-                      },
-                    }))
-                  }
-                  className={inputClass()}
-                />
-              </div>
-              <div className="flex-1">
-                <FieldLabel>Budget max (GBP)</FieldLabel>
-                <input
-                  type="number"
-                  placeholder="e.g. 500000"
-                  value={intake.funding_goals?.budget_range?.max ?? ""}
-                  onChange={(e) =>
-                    setIntake((prev) => ({
-                      ...prev,
-                      funding_goals: {
-                        ...prev.funding_goals,
-                        budget_range: {
-                          ...prev.funding_goals?.budget_range,
-                          max: e.target.value ? Number(e.target.value) : undefined,
-                          currency: "GBP",
-                        },
-                      },
-                    }))
-                  }
-                  className={inputClass()}
-                />
-              </div>
-            </div>
-            <div>
-              <FieldLabel>Preferred duration (months)</FieldLabel>
-              <input
-                type="number"
-                placeholder="e.g. 24"
-                value={intake.funding_goals?.preferred_duration_months ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    funding_goals: {
-                      ...prev.funding_goals,
-                      preferred_duration_months: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    },
-                  }))
-                }
-                className={inputClass()}
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="open_to_consortium"
-                checked={intake.funding_goals?.open_to_consortium ?? false}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    funding_goals: {
-                      ...prev.funding_goals,
-                      open_to_consortium: e.target.checked,
-                    },
-                  }))
-                }
-                className="w-4 h-4 accent-blue-500"
-              />
-              <label htmlFor="open_to_consortium" className="text-slate-300 text-sm">
-                Open to consortium grants
-              </label>
-            </div>
-          </>
-        )}
-
-        {/* Step 6: Collaboration */}
-        {step === 6 && (
-          <>
-            <h2 className="text-slate-100 font-semibold">Collaboration</h2>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="open_to_collaboration"
-                checked={intake.collaboration?.open_to_collaboration ?? false}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    collaboration: {
-                      ...prev.collaboration,
-                      open_to_collaboration: e.target.checked,
-                    },
-                  }))
-                }
-                className="w-4 h-4 accent-blue-500"
-              />
-              <label htmlFor="open_to_collaboration" className="text-slate-300 text-sm">
-                Open to collaboration
-              </label>
-            </div>
-            <div>
-              <FieldLabel>Collaboration types</FieldLabel>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {COLLABORATION_TYPE_OPTIONS.map(({ value, label }) => {
-                  const selected = intake.collaboration?.collaboration_types?.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() =>
-                        setIntake((prev) => ({
-                          ...prev,
-                          collaboration: {
-                            ...prev.collaboration,
-                            collaboration_types: toggleArrayItem(
-                              prev.collaboration?.collaboration_types,
-                              value
-                            ),
-                          },
-                        }))
-                      }
-                      className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                        selected
-                          ? "bg-blue-700 border-blue-500 text-white"
-                          : "bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-400"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <FieldLabel>Preferred roles</FieldLabel>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {PREFERRED_ROLE_OPTIONS.map(({ value, label }) => {
-                  const selected = intake.collaboration?.preferred_roles?.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() =>
-                        setIntake((prev) => ({
-                          ...prev,
-                          collaboration: {
-                            ...prev.collaboration,
-                            preferred_roles: toggleArrayItem(
-                              prev.collaboration?.preferred_roles,
-                              value
-                            ),
-                          },
-                        }))
-                      }
-                      className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                        selected
-                          ? "bg-blue-700 border-blue-500 text-white"
-                          : "bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-400"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Step 7: Eligibility */}
-        {step === 7 && (
-          <>
-            <h2 className="text-slate-100 font-semibold">Eligibility</h2>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("eligibility")}>
-                Employment type
-              </FieldLabel>
-              <select
-                value={intake.eligibility?.employment_type ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    eligibility: {
-                      ...prev.eligibility,
-                      employment_type: e.target.value as EligibilityConstraints["employment_type"],
-                    },
-                  }))
-                }
-                className={inputClass(autoFilledFields.has("eligibility"))}
-              >
-                <option value="">Select…</option>
-                <option value="permanent">Permanent</option>
-                <option value="fixed_term">Fixed term</option>
-                <option value="independent">Independent</option>
-                <option value="postdoc">Postdoc</option>
-                <option value="phd_student">PhD student</option>
-              </select>
-            </div>
-            <div>
-              <FieldLabel>Year of PhD completion</FieldLabel>
-              <input
-                type="number"
-                placeholder="e.g. 2020"
-                value={intake.eligibility?.phd_year ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    eligibility: {
-                      ...prev.eligibility,
-                      phd_year: e.target.value ? Number(e.target.value) : undefined,
-                    },
-                  }))
-                }
-                className={inputClass()}
-              />
-            </div>
-            <div>
-              <FieldLabel>Nationality</FieldLabel>
-              <input
-                type="text"
-                placeholder="e.g. British, Irish (comma-separated)"
-                value={intake.eligibility?.nationality?.join(", ") ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    eligibility: {
-                      ...prev.eligibility,
-                      nationality: parseCommaSeparated(e.target.value),
-                    },
-                  }))
-                }
-                className={inputClass()}
-              />
-            </div>
-            <div>
-              <FieldLabel>Institution type</FieldLabel>
-              <select
-                value={intake.eligibility?.institution_type ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    eligibility: {
-                      ...prev.eligibility,
-                      institution_type: e.target.value as EligibilityConstraints["institution_type"],
-                    },
-                  }))
-                }
-                className={inputClass()}
-              >
-                <option value="">Select…</option>
-                <option value="university">University</option>
-                <option value="research_institute">Research institute</option>
-                <option value="hospital">Hospital</option>
-                <option value="ngo">NGO</option>
-                <option value="industry">Industry</option>
-              </select>
-            </div>
-          </>
-        )}
-
-        {/* Step 8: CV Upload */}
-        {step === 8 && (
+        {/* Step 3: CV Upload */}
+        {step === 3 && (
           <>
             <h2 className="text-slate-100 font-semibold">CV Upload</h2>
             <p className="text-slate-500 text-sm">
@@ -804,7 +417,7 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
         </Button>
 
         <div className="flex items-center gap-3">
-          {step < TOTAL_STEPS && step !== 2 && (
+          {step < TOTAL_STEPS && (
             <button
               type="button"
               onClick={() => setStep((s) => s + 1)}

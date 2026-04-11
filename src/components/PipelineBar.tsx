@@ -13,6 +13,7 @@ interface PipelineBarProps {
   onRun: (stage: keyof StageState) => void;
   onSkip?: (stage: keyof StageState) => void;
   skippable?: ReadonlyArray<keyof StageState>;
+  disabled?: boolean;
 }
 
 const STAGE_LABELS: Record<keyof StageState, string> = {
@@ -42,7 +43,7 @@ function ElapsedTimer() {
   return <span>{formatElapsed(seconds)}</span>;
 }
 
-export function PipelineBar({ stages, onRun, onSkip, skippable = [] }: PipelineBarProps) {
+export function PipelineBar({ stages, onRun, onSkip, skippable = [], disabled = false }: PipelineBarProps) {
   return (
     <div className="flex w-full">
       {STAGE_ORDER.map((stage, idx) => {
@@ -94,14 +95,16 @@ export function PipelineBar({ stages, onRun, onSkip, skippable = [] }: PipelineB
               <div className="mt-1 flex items-center justify-center gap-2">
                 <button
                   onClick={() => onRun(stage)}
-                  className="text-xs text-blue-400 hover:text-blue-300 underline"
+                  disabled={disabled}
+                  className="text-xs text-blue-400 hover:text-blue-300 underline disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Run
                 </button>
                 {canSkip && (
                   <button
                     onClick={() => onSkip(stage)}
-                    className="text-xs text-slate-500 hover:text-slate-400 underline"
+                    disabled={disabled}
+                    className="text-xs text-slate-500 hover:text-slate-400 underline disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Skip
                   </button>
@@ -112,7 +115,8 @@ export function PipelineBar({ stages, onRun, onSkip, skippable = [] }: PipelineB
               <div className="mt-1">
                 <button
                   onClick={() => onRun(stage)}
-                  className="text-xs text-slate-500 hover:text-slate-400 underline"
+                  disabled={disabled}
+                  className="text-xs text-slate-500 hover:text-slate-400 underline disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Rescan
                 </button>
@@ -122,7 +126,8 @@ export function PipelineBar({ stages, onRun, onSkip, skippable = [] }: PipelineB
               <div className="mt-1">
                 <button
                   onClick={() => onRun(stage)}
-                  className="text-xs text-slate-500 hover:text-slate-400 underline"
+                  disabled={disabled}
+                  className="text-xs text-slate-500 hover:text-slate-400 underline disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Rematch
                 </button>

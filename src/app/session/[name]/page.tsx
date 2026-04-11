@@ -7,9 +7,12 @@ import type { StageState } from "@/lib/pipelineStages";
 import { StageLog } from "@/components/StageLog";
 import { MatchList } from "@/components/MatchList";
 import { ProposalViewer } from "@/components/ProposalViewer";
+import { ResearcherIntakeWizard } from "@/components/ResearcherIntakeWizard";
 import type { SSEEvent } from "@/lib/sse";
 import type { Match } from "@/lib/parseMatches";
 import { reducer, INITIAL_STATE } from "@/lib/sessionReducer";
+import { formatProfileMarkdown } from "@/lib/formatProfileMarkdown";
+import type { IntakeData, ResearcherProfile } from "@/lib/types";
 
 export default function SessionPage({ params }: { params: { name: string } }) {
   const { name } = params;
@@ -18,6 +21,13 @@ export default function SessionPage({ params }: { params: { name: string } }) {
   const [pageLoading, setPageLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
   const runningRef = useRef(false);
+
+  // Edit-intake panel state
+  const [editingIntake, setEditingIntake] = useState(false);
+  const [currentIntake, setCurrentIntake] = useState<IntakeData | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+
+  const isRunning = Object.values(state.stages).some((s) => s === "running");
 
   // Load initial state on mount
   useEffect(() => {
@@ -164,6 +174,44 @@ export default function SessionPage({ params }: { params: { name: string } }) {
     dispatch({ type: "COMPLETE", stage: "enrich" });
   }
 
+  async function handleEditClick() {
+    const res = await fetch(`/api/session/${name}/intake`);
+    if (!res.ok) return;
+    const { intake } = await res.json();
+    setCurrentIntake(intake as IntakeData);
+    setEditingIntake(true);
+  }
+
+  async function handleEditSubmit(formData: FormData) {
+    setEditLoading(true);
+    try {
+      const res = await fetch(`/api/session/${name}/intake`, {
+        method: "PATCH",
+        body: formData,
+      });
+      if (!res.ok) return;
+      dispatch({ type: "RESET" });
+      setEditingIntake(false);
+      setCurrentIntake(null);
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
+  async function handleDownloadProfile() {
+    const res = await fetch(`/api/session/${name}/profile`);
+    if (!res.ok) return;
+    const { profile } = await res.json() as { profile: ResearcherProfile };
+    const markdown = formatProfileMarkdown(profile);
+    const blob = new Blob([markdown], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name}-profile.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const scholarBannerCandidate =
     state.stages.enrich !== "complete" && state.stages.enrich !== "running"
       ? state.scholarCandidate
@@ -171,18 +219,42 @@ export default function SessionPage({ params }: { params: { name: string } }) {
 
   const showMatches = state.stages.match === "complete" || state.matches.length > 0;
   const showProposals = state.proposals.length > 0;
+  const showDownload = state.stages.profile === "complete";
+
+  const header = (
+    <div className="mb-6 flex items-start justify-between">
+      <div>
+        <Link href="/" className="text-slate-500 hover:text-slate-300 text-sm mb-3 inline-block transition-colors">
+          ← All profiles
+        </Link>
+        <h1 className="text-xl font-bold text-slate-100">Grant Scout</h1>
+        <p className="text-slate-500 text-sm mt-1">{name}</p>
+      </div>
+      <div className="flex items-center gap-3 mt-1">
+        {showDownload && !editingIntake && (
+          <button
+            onClick={handleDownloadProfile}
+            className="text-slate-500 hover:text-slate-300 text-sm transition-colors"
+          >
+            Download profile ↓
+          </button>
+        )}
+        {!isRunning && (
+          <button
+            onClick={editingIntake ? () => setEditingIntake(false) : handleEditClick}
+            className="text-slate-500 hover:text-slate-300 text-sm transition-colors"
+          >
+            {editingIntake ? "Cancel" : "Edit profile"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   if (pageLoading) {
     return (
       <main className="max-w-3xl mx-auto px-4 py-10">
-        <div className="mb-6">
-          <Link href="/" className="text-slate-500 hover:text-slate-300 text-sm mb-3 inline-block transition-colors">
-            ← All profiles
-          </Link>
-          <h1 className="text-xl font-bold text-slate-100">Grant Scout</h1>
-          <p className="text-slate-500 text-sm mt-1">{name}</p>
-        </div>
-        {/* Skeleton pipeline bar */}
+        {header}
         <div className="flex w-full animate-pulse">
           {Array.from({ length: 5 }).map((_, i) => (
             <div
@@ -194,7 +266,6 @@ export default function SessionPage({ params }: { params: { name: string } }) {
             </div>
           ))}
         </div>
-        {/* Skeleton log area */}
         <div className="mt-4 bg-slate-950 border border-slate-800 rounded-lg p-4 h-48 animate-pulse flex items-center justify-center">
           <p className="text-slate-700 text-sm">Loading session…</p>
         </div>
@@ -205,13 +276,7 @@ export default function SessionPage({ params }: { params: { name: string } }) {
   if (pageError) {
     return (
       <main className="max-w-3xl mx-auto px-4 py-10">
-        <div className="mb-6">
-          <Link href="/" className="text-slate-500 hover:text-slate-300 text-sm mb-3 inline-block transition-colors">
-            ← All profiles
-          </Link>
-          <h1 className="text-xl font-bold text-slate-100">Grant Scout</h1>
-          <p className="text-slate-500 text-sm mt-1">{name}</p>
-        </div>
+        {header}
         <div className="bg-red-950 border border-red-700 rounded-lg px-4 py-4">
           <p className="text-red-300 text-sm">{pageError}</p>
         </div>
@@ -221,83 +286,101 @@ export default function SessionPage({ params }: { params: { name: string } }) {
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-10">
-      <div className="mb-6">
-        <Link href="/" className="text-slate-500 hover:text-slate-300 text-sm mb-3 inline-block transition-colors">
-          ← All profiles
-        </Link>
-        <h1 className="text-xl font-bold text-slate-100">Grant Scout</h1>
-        <p className="text-slate-500 text-sm mt-1">{name}</p>
-      </div>
+      {header}
 
-      <PipelineBar stages={state.stages} onRun={handleRun} onSkip={handleSkip} skippable={["scan"]} />
-
-      {scholarBannerCandidate && (
-        <div className="mt-4 border border-blue-700 bg-blue-950 rounded-lg px-4 py-4">
-          <p className="text-blue-300 text-sm font-semibold mb-1">
-            Google Scholar profile found
-            {scholarBannerCandidate.candidate_confidence === "medium" && (
-              <span className="ml-2 text-yellow-400 font-normal">(medium confidence)</span>
-            )}
+      {editingIntake ? (
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
+          <p className="text-slate-400 text-sm mb-5">
+            Update your intake information. The pipeline will reset and you can re-run each stage.
           </p>
-          <a
-            href={scholarBannerCandidate.candidate_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 underline text-sm break-all"
-          >
-            {scholarBannerCandidate.candidate_url}
-          </a>
-          <p className="text-slate-400 text-xs mt-2 mb-3">Is this your Google Scholar profile?</p>
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <button
-                onClick={handleScholarConfirm}
-                className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-1.5 rounded-lg transition-colors"
-              >
-                Yes, confirm
-              </button>
-              <button
-                onClick={handleScholarSkip}
-                className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm px-4 py-1.5 rounded-lg transition-colors"
-              >
-                Skip
-              </button>
-            </div>
-            <div className="flex gap-2 items-center mt-1">
-              <input
-                type="url"
-                placeholder="Or paste the correct URL…"
-                value={scholarInput}
-                onChange={(e) => setScholarInput(e.target.value)}
-                className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-slate-200 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-400"
-              />
-              <button
-                onClick={handleScholarConfirm}
-                disabled={!scholarInput.trim()}
-                className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm px-4 py-1.5 rounded-lg transition-colors"
-              >
-                Use this
-              </button>
-            </div>
-          </div>
+          <ResearcherIntakeWizard
+            onSubmit={handleEditSubmit}
+            loading={editLoading}
+            initialIntake={currentIntake ?? undefined}
+          />
         </div>
-      )}
+      ) : (
+        <>
+          <PipelineBar
+            stages={state.stages}
+            onRun={handleRun}
+            onSkip={handleSkip}
+            skippable={["scan"]}
+            disabled={isRunning}
+          />
 
-      <div className="mt-4">
-        <StageLog entries={state.log} />
-      </div>
+          {scholarBannerCandidate && (
+            <div className="mt-4 border border-blue-700 bg-blue-950 rounded-lg px-4 py-4">
+              <p className="text-blue-300 text-sm font-semibold mb-1">
+                Google Scholar profile found
+                {scholarBannerCandidate.candidate_confidence === "medium" && (
+                  <span className="ml-2 text-yellow-400 font-normal">(medium confidence)</span>
+                )}
+              </p>
+              <a
+                href={scholarBannerCandidate.candidate_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 underline text-sm break-all"
+              >
+                {scholarBannerCandidate.candidate_url}
+              </a>
+              <p className="text-slate-400 text-xs mt-2 mb-3">Is this your Google Scholar profile?</p>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleScholarConfirm}
+                    disabled={isRunning}
+                    className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm px-4 py-1.5 rounded-lg transition-colors"
+                  >
+                    Yes, confirm
+                  </button>
+                  <button
+                    onClick={handleScholarSkip}
+                    disabled={isRunning}
+                    className="bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 text-sm px-4 py-1.5 rounded-lg transition-colors"
+                  >
+                    Skip
+                  </button>
+                </div>
+                <div className="flex gap-2 items-center mt-1">
+                  <input
+                    type="url"
+                    placeholder="Or paste the correct URL…"
+                    value={scholarInput}
+                    onChange={(e) => setScholarInput(e.target.value)}
+                    className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-slate-200 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-400"
+                  />
+                  <button
+                    onClick={handleScholarConfirm}
+                    disabled={!scholarInput.trim() || isRunning}
+                    className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm px-4 py-1.5 rounded-lg transition-colors"
+                  >
+                    Use this
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
-      {showMatches && (
-        <MatchList
-          matches={state.matches}
-          onPropose={handlePropose}
-          proposing={state.stages.propose === "running"}
-          proposingScheme={state.proposingScheme}
-        />
-      )}
+          <div className="mt-4">
+            <StageLog entries={state.log} />
+          </div>
 
-      {showProposals && (
-        <ProposalViewer proposals={state.proposals} />
+          {showMatches && (
+            <MatchList
+              matches={state.matches}
+              onPropose={handlePropose}
+              proposing={state.stages.propose === "running"}
+              proposingScheme={state.proposingScheme}
+              disabled={isRunning}
+            />
+          )}
+
+          {showProposals && (
+            <ProposalViewer proposals={state.proposals} />
+          )}
+        </>
       )}
     </main>
   );

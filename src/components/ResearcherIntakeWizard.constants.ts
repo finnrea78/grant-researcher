@@ -1,12 +1,7 @@
-export const TOTAL_STEPS = 8;
+export const TOTAL_STEPS = 3;
 
 export const STEP_LABELS = [
-  "Identifiers",
-  "Career",
-  "Research",
-  "Proposal",
-  "Funding",
-  "Collaboration",
-  "Eligibility",
+  "About You",
+  "Your Proposal",
   "CV Upload",
 ] as const;

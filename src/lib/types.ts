@@ -56,10 +56,7 @@ export interface ResearcherProfile {
   retrieval_summary?: string; // Claude-generated prose for semantic embedding
   // New intake-derived fields
   orcid?: string;
-  funding_goals?: FundingGoals;
-  collaboration?: CollaborationProfile;
   eligibility?: EligibilityConstraints;
-  research_trajectory?: string;
 }
 
 export interface ResearcherIdentifiers {
@@ -78,26 +75,6 @@ export interface EligibilityConstraints {
   institution_type?: 'university' | 'research_institute' | 'hospital' | 'ngo' | 'industry';
 }
 
-export interface FundingGoals {
-  intended_use?: (
-    | 'phd_students'
-    | 'postdocs'
-    | 'equipment'
-    | 'travel'
-    | 'research_time'
-    | 'collaboration'
-    | 'public_engagement'
-  )[];
-  budget_range?: { min?: number; max?: number; currency?: string };
-  preferred_duration_months?: number;
-  open_to_consortium?: boolean;
-}
-
-export interface CollaborationProfile {
-  open_to_collaboration?: boolean;
-  collaboration_types?: ('industry' | 'academic' | 'international' | 'public_sector' | 'ngo')[];
-  preferred_roles?: ('PI' | 'Co-I' | 'partner')[];
-}
 
 export interface ProposalIntent {
   project_title?: string;
@@ -123,14 +100,6 @@ export interface IntakeData {
   disciplinary_fields?: string[];
   geographic_focus?: string[];
   future_research?: string;
-  research_trajectory?: string;
-
-  // Funding
-  funding_goals?: FundingGoals;
-
-  // Collaboration
-  collaboration?: CollaborationProfile;
-
   // Eligibility (factual only)
   eligibility?: EligibilityConstraints;
 
