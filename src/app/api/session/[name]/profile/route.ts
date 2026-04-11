@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { PROFILE_BUILDER_PROMPT } from "@/lib/prompts/profile-builder";
 import { updateResearcherProfile } from "@/lib/researcher-store";
-import { formatSSEEvent, sseResponse } from "@/lib/sse";
+import { formatSSEEvent, sseResponse, startHeartbeat } from "@/lib/sse";
 import { requireUser } from "@/lib/auth";
 import { agentQueue } from "@/lib/concurrency";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
@@ -124,26 +124,31 @@ export async function POST(
         let resultCost = 0;
         let resultTurns = 0;
 
-        for await (const message of query({
-          prompt: userPrompt,
-          options: {
-            cwd: researcherDir,
-            systemPrompt: PROFILE_BUILDER_PROMPT,
-            allowedTools: [],
-            model: "haiku",
-            maxTurns: 1,
-          },
-        })) {
-          if (message.type === "assistant") {
-            for (const block of message.message.content) {
-              if (block.type === "text" && block.text.trim()) {
-                rawText += block.text;
+        const heartbeat = startHeartbeat(controller);
+        try {
+          for await (const message of query({
+            prompt: userPrompt,
+            options: {
+              cwd: researcherDir,
+              systemPrompt: PROFILE_BUILDER_PROMPT,
+              allowedTools: [],
+              model: "haiku",
+              maxTurns: 1,
+            },
+          })) {
+            if (message.type === "assistant") {
+              for (const block of message.message.content) {
+                if (block.type === "text" && block.text.trim()) {
+                  rawText += block.text;
+                }
               }
+            } else if (message.type === "result" && !message.is_error) {
+              if ("total_cost_usd" in message) resultCost = message.total_cost_usd;
+              if ("num_turns" in message) resultTurns = message.num_turns;
             }
-          } else if (message.type === "result" && !message.is_error) {
-            if ("total_cost_usd" in message) resultCost = message.total_cost_usd;
-            if ("num_turns" in message) resultTurns = message.num_turns;
           }
+        } finally {
+          clearInterval(heartbeat);
         }
 
         const { profile, publications_md } = parseProfileResponse(rawText);
