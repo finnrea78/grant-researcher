@@ -50,3 +50,5 @@ Read `research-docs/Codebase Index.md` at the start of any session where you nee
 - `research-docs/Grant Ingestion CLI.md` — data-pipeline CLI commands
 - `.claude/CONTEXT.md` — product vision, target user, current milestone
 - `.claude/DECISIONS.md` — why we chose this stack and architecture
+
+@.claude/skills/SKILLS.md
