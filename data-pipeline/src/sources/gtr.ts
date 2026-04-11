@@ -1,5 +1,6 @@
 import type { GtrApiResponse, GtrProject } from "../types.js";
 import { sleep } from "../utils/sleep.js";
+import { fetchWithRetry } from "../utils/fetchWithRetry.js";
 
 const BASE_URL = "https://gtr.ukri.org/gtr/api/projects";
 const DELAY_MS = 500;
@@ -44,7 +45,7 @@ export async function* fetchGtrProjects(
     const url = `${baseUrl}&page=${page}&size=${pageSize}`;
     console.log(`  Fetching GtR page ${page}: ${url}`);
 
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       headers: { Accept: "application/json" },
     });
 

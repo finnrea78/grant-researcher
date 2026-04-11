@@ -1,5 +1,6 @@
 // data-pipeline/src/lib/embedder.ts
 import OpenAI from "openai";
+import { withRetry } from "../utils/retry.js";
 
 const MAX_CHARS = 32000; // ~8000 tokens for text-embedding-3-small
 
@@ -17,9 +18,9 @@ export function buildOpportunityText(opp: {
 
 export async function embedText(text: string): Promise<number[]> {
   const client = new OpenAI(); // reads OPENAI_API_KEY from env
-  const response = await client.embeddings.create({
-    model: "text-embedding-3-small",
-    input: text,
-  });
+  const response = await withRetry(
+    () => client.embeddings.create({ model: "text-embedding-3-small", input: text }),
+    { maxRetries: 3 }
+  );
   return response.data[0].embedding;
 }

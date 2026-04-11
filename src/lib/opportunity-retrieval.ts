@@ -38,15 +38,39 @@ export function buildTsquery(themes: string[], keywords: string[]): string {
 }
 
 /**
+ * Trim a candidate for context-window efficiency: strip null fields and truncate
+ * the three large text fields to 500 chars each. Reduces match-stage token usage
+ * from ~50-100K → ~15-25K tokens per turn.
+ */
+function trimCandidate(c: CandidateOpportunity): Partial<CandidateOpportunity> {
+  const truncate = (s: string | null, max = 500): string | null =>
+    s ? s.slice(0, max) : null;
+
+  const trimmed: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(c)) {
+    if (v === null) continue; // strip null fields
+    trimmed[k] = v;
+  }
+  trimmed.description = truncate(c.description);
+  if (trimmed.description === null) delete trimmed.description;
+  trimmed.scope = truncate(c.scope);
+  if (trimmed.scope === null) delete trimmed.scope;
+  trimmed.eligibility = truncate(c.eligibility);
+  if (trimmed.eligibility === null) delete trimmed.eligibility;
+
+  return trimmed as Partial<CandidateOpportunity>;
+}
+
+/**
  * Retrieve up to `limit` candidate opportunities using hybrid retrieval:
  * 1. pgvector cosine similarity (if researcher has profile_embedding)
  * 2. tsvector full-text search (always, as belt-and-braces)
- * Results are unioned and deduplicated by id.
+ * Results are unioned, deduplicated by id, and trimmed for token efficiency.
  */
 export async function retrieveCandidates(
   researcherSlug: string,
-  limit = 150
-): Promise<CandidateOpportunity[]> {
+  limit = 75
+): Promise<Partial<CandidateOpportunity>[]> {
   const researcher = await getResearcherForMatching(researcherSlug);
   const seen = new Map<string, CandidateOpportunity>();
 
@@ -83,5 +107,5 @@ export async function retrieveCandidates(
     }
   }
 
-  return [...seen.values()].slice(0, limit);
+  return [...seen.values()].slice(0, limit).map(trimCandidate);
 }
