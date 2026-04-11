@@ -140,6 +140,7 @@ export async function getResearcherBySlug(
   slug: string,
   client?: SupabaseClient
 ): Promise<{
+  id: string;
   slug: string;
   name: string;
   enriched_profile: ResearcherProfile;
@@ -147,11 +148,11 @@ export async function getResearcherBySlug(
   const db = client ?? serviceClient;
   const { data, error } = await db
     .from("researchers")
-    .select("slug, name, enriched_profile")
+    .select("id, slug, name, enriched_profile")
     .eq("slug", slug)
     .single();
   if (error || !data?.enriched_profile) return null;
-  return { slug: data.slug, name: data.name, enriched_profile: data.enriched_profile as ResearcherProfile };
+  return { id: data.id, slug: data.slug, name: data.name, enriched_profile: data.enriched_profile as ResearcherProfile };
 }
 
 /**
