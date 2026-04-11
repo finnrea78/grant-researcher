@@ -4,7 +4,8 @@ export type SSEEvent =
   | { type: "tool"; name: string }
   | { type: "text"; text: string }
   | { type: "result"; turns: number; cost: number; duration: number }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | { type: "progress"; current: number; total: number; slug: string; status: "fetching" | "extracting" | "done" | "failed" };
 
 export function formatSSEEvent(event: SSEEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
