@@ -57,7 +57,8 @@ export async function extractAll(
         try {
           const result = await scrapeUrl(url);
           markdown = result.markdown;
-        } catch {
+        } catch (err) {
+          console.warn(`[scan-extract] Firecrawl scrape failed for ${slug} (${url}):`, err);
           completed++;
           controller.enqueue(
             formatSSEEvent({ type: "progress", current: completed, total, slug, status: "failed" })
@@ -74,7 +75,8 @@ export async function extractAll(
         let entry: DiscoveredManifestEntry;
         try {
           entry = await extractSingle(slug, url, markdown);
-        } catch {
+        } catch (err) {
+          console.warn(`[scan-extract] Haiku extraction failed for ${slug}:`, err);
           completed++;
           controller.enqueue(
             formatSSEEvent({ type: "progress", current: completed, total, slug, status: "failed" })
