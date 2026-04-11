@@ -17,6 +17,8 @@ describe("scrapeUrl", () => {
     } else {
       process.env.FIRECRAWL_API_KEY = ORIGINAL_KEY;
     }
+    // Always restore retry disable so tests remain isolated
+    process.env.DISABLE_RETRY = "true";
   });
 
   it("returns { markdown } on a successful scrape", async () => {
@@ -60,7 +62,7 @@ describe("scrapeUrl", () => {
 
     const fetchSpy = jest
       .spyOn(global, "fetch")
-      .mockRejectedValueOnce(new Error("network"))
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({ success: true, data: { markdown: "# Retried" } }),
@@ -76,6 +78,21 @@ describe("scrapeUrl", () => {
     expect(result).toEqual({ markdown: "# Retried" });
 
     jest.useRealTimers();
-    process.env.DISABLE_RETRY = "true";
+  });
+
+  it("throws FirecrawlError when response is HTTP 200 but success: false", async () => {
+    jest.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ success: false, error: "Rate limit exceeded" }),
+        { status: 200 }
+      )
+    );
+
+    await expect(scrapeUrl("https://example.com/limited")).rejects.toMatchObject({
+      name: "FirecrawlError",
+      url: "https://example.com/limited",
+      statusCode: 200,
+      message: expect.stringContaining("Rate limit exceeded"),
+    });
   });
 });

@@ -12,16 +12,11 @@ export class FirecrawlError extends Error {
 }
 
 function isRetryable(error: unknown): boolean {
-  // Retry on network-level errors (fetch throws, no statusCode)
-  if (error instanceof Error && !(error instanceof FirecrawlError)) {
-    return true;
-  }
-  // Retry on 429 and 5xx HTTP errors
   if (error instanceof FirecrawlError) {
-    const s = error.statusCode;
-    return s === 429 || s === 500 || s === 502 || s === 503 || s === 529;
+    return error.statusCode === 429 || error.statusCode >= 500;
   }
-  return false;
+  // Only retry genuine network errors (fetch connection failures)
+  return error instanceof TypeError;
 }
 
 export async function scrapeUrl(url: string): Promise<{ markdown: string }> {
@@ -45,8 +40,16 @@ export async function scrapeUrl(url: string): Promise<{ markdown: string }> {
         throw new FirecrawlError(url, response.status, await response.text());
       }
 
-      const data = await response.json();
-      return { markdown: data.data.markdown as string };
+      interface FirecrawlResponse {
+        success: boolean;
+        data?: { markdown: string };
+        error?: string;
+      }
+      const data = (await response.json()) as FirecrawlResponse;
+      if (!data.success || !data.data?.markdown) {
+        throw new FirecrawlError(url, response.status, data.error ?? "Missing markdown in response");
+      }
+      return { markdown: data.data.markdown };
     },
     { maxRetries: 2, isRetryable, baseDelayMs: 100 }
   );
