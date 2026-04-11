@@ -63,6 +63,8 @@ Researcher profile for smart scan:
         return;
       }
 
+      let ranPhase2 = false;
+
       try {
         // Phase 1 — Sonnet URL discovery / planning
         const mcpServers: Record<string, { command: string; args: string[]; env: Record<string, string> }> = {};
@@ -102,11 +104,16 @@ Plan output: ${dataDir}/funding-sources/_scan-plan.json${profileContext}${dbCont
           urls = plan.urls ?? [];
         } catch {
           // Fallback: parse _urls.md directly
-          const raw = readFileSync(resolve(dataDir, "funding-sources/_urls.md"), "utf-8");
-          urls = parseUrlsMd(raw);
+          try {
+            const raw = readFileSync(resolve(dataDir, "funding-sources/_urls.md"), "utf-8");
+            urls = parseUrlsMd(raw);
+          } catch {
+            controller.enqueue(formatSSEEvent({ type: "error", message: "Scan plan unavailable and _urls.md not found — cannot run Phase 2." }));
+            urls = [];
+          }
         }
         if (urls.length === 0) {
-          urls = parseUrlsMd(readFileSync(resolve(dataDir, "funding-sources/_urls.md"), "utf-8"));
+          controller.enqueue(formatSSEEvent({ type: "text", text: "Warning: no URLs found to scan." }));
         }
 
         // Phase 2 — parallel Haiku extraction
@@ -116,28 +123,31 @@ Plan output: ${dataDir}/funding-sources/_scan-plan.json${profileContext}${dbCont
         }));
         const results = await extractAll(urls, controller);
         writeFileSync(manifestPath, JSON.stringify(results, null, 2));
+        ranPhase2 = true;
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
       }
 
-      // Persist structured discoveries to Supabase — independent of stream success
-      // so partial results survive even if the agent errored or was rate-limited.
-      try {
-        const discoveryContext: Record<string, unknown> = { researcher: name };
-        if (existsSync(profilePath)) {
-          const profile = JSON.parse(readFileSync(profilePath, "utf-8"));
-          discoveryContext.disciplines = profile.disciplinary_fields;
-          discoveryContext.research_themes = profile.research_themes;
-        }
-        await persistDiscoveredManifest(manifestPath, discoveryContext);
+      // Only persist if this run wrote the manifest — guards against overwriting
+      // Supabase with stale data from a previous scan when Phase 1 errored.
+      if (ranPhase2) {
+        try {
+          const discoveryContext: Record<string, unknown> = { researcher: name };
+          if (existsSync(profilePath)) {
+            const profile = JSON.parse(readFileSync(profilePath, "utf-8"));
+            discoveryContext.disciplines = profile.disciplinary_fields;
+            discoveryContext.research_themes = profile.research_themes;
+          }
+          await persistDiscoveredManifest(manifestPath, discoveryContext);
 
-        // Write per-researcher marker so this session's scan is recoverable on refresh
-        writeFileSync(
-          resolve(dataDir, `researchers/${name}/_scan-complete`),
-          new Date().toISOString()
-        );
-      } catch (persistErr) {
-        console.error(`[scan] persistDiscoveredManifest failed:`, persistErr);
+          // Write per-researcher marker so this session's scan is recoverable on refresh
+          writeFileSync(
+            resolve(dataDir, `researchers/${name}/_scan-complete`),
+            new Date().toISOString()
+          );
+        } catch (persistErr) {
+          console.error(`[scan] persistDiscoveredManifest failed:`, persistErr);
+        }
       }
 
       agentQueue.release();
