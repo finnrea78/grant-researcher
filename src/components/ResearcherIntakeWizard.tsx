@@ -55,11 +55,6 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastFetchedOrcid = useRef<string | null>(null);
 
-  // Local textarea strings for comma-separated fields
-  const [researchThemesText, setResearchThemesText] = useState("");
-  const [researchKeywordsText, setResearchKeywordsText] = useState("");
-  const [disciplinaryFieldsText, setDisciplinaryFieldsText] = useState("");
-  const [geographicFocusText, setGeographicFocusText] = useState("");
 
   // Proposal intent (step 4) — ephemeral, never stored in Supabase
   const [proposalTitle, setProposalTitle] = useState("");
@@ -96,12 +91,10 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
       if (data.career_stage) { partial.career_stage = data.career_stage; filled.push("career_stage"); }
       if (data.research_themes?.length) {
         partial.research_themes = data.research_themes;
-        setResearchThemesText(data.research_themes.join(", "));
         filled.push("research_themes");
       }
       if (data.research_keywords?.length) {
         partial.research_keywords = data.research_keywords;
-        setResearchKeywordsText(data.research_keywords.join(", "));
         filled.push("research_keywords");
       }
       if (data.eligibility) { partial.eligibility = data.eligibility; filled.push("eligibility"); }
@@ -147,10 +140,6 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
 
     const finalIntake: IntakeData = {
       ...intake,
-      research_themes: parseCommaSeparated(researchThemesText),
-      research_keywords: parseCommaSeparated(researchKeywordsText),
-      disciplinary_fields: parseCommaSeparated(disciplinaryFieldsText),
-      geographic_focus: parseCommaSeparated(geographicFocusText),
       ...(hasProposal ? { proposal_intent: proposalIntent } : {}),
     };
 
@@ -162,7 +151,7 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
     onSubmit(formData);
   }
 
-  const canAdvance = step === 2 ? Boolean(intake.name?.trim()) : true;
+  const canAdvance = true;
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-xl">
@@ -183,10 +172,20 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
 
       {/* Step content */}
       <div className="flex flex-col gap-4">
-        {/* Step 1: Identifiers */}
+        {/* Step 1: About You */}
         {step === 1 && (
           <>
-            <h2 className="text-slate-100 font-semibold">Identifiers</h2>
+            <h2 className="text-slate-100 font-semibold">About You</h2>
+            <div>
+              <FieldLabel autoFilled={autoFilledFields.has("name")}>Name</FieldLabel>
+              <input
+                type="text"
+                placeholder="Your name"
+                value={intake.name ?? ""}
+                onChange={(e) => setIntake((prev) => ({ ...prev, name: e.target.value }))}
+                className={inputClass(autoFilledFields.has("name"))}
+              />
+            </div>
             <div>
               <FieldLabel>ORCID</FieldLabel>
               <div className="relative">
@@ -223,137 +222,97 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
                 className={inputClass()}
               />
             </div>
-          </>
-        )}
-
-        {/* Step 2: Career */}
-        {step === 2 && (
-          <>
-            <h2 className="text-slate-100 font-semibold">Career</h2>
             <div>
-              <FieldLabel autoFilled={autoFilledFields.has("name")}>
-                Name <span className="text-red-400">*</span>
+              <FieldLabel autoFilled={autoFilledFields.has("eligibility")}>
+                Employment type
               </FieldLabel>
-              <input
-                type="text"
-                placeholder="Your name"
-                value={intake.name ?? ""}
-                onChange={(e) => setIntake((prev) => ({ ...prev, name: e.target.value }))}
-                className={inputClass(autoFilledFields.has("name"))}
-              />
-            </div>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("institution")}>Institution</FieldLabel>
-              <input
-                type="text"
-                placeholder="e.g. University of Edinburgh"
-                value={intake.institution ?? ""}
-                onChange={(e) => setIntake((prev) => ({ ...prev, institution: e.target.value }))}
-                className={inputClass(autoFilledFields.has("institution"))}
-              />
-            </div>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("department")}>Department</FieldLabel>
-              <input
-                type="text"
-                placeholder="e.g. School of Informatics"
-                value={intake.department ?? ""}
-                onChange={(e) => setIntake((prev) => ({ ...prev, department: e.target.value }))}
-                className={inputClass(autoFilledFields.has("department"))}
-              />
-            </div>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("career_stage")}>Career stage</FieldLabel>
               <select
-                value={intake.career_stage ?? ""}
+                value={intake.eligibility?.employment_type ?? ""}
                 onChange={(e) =>
                   setIntake((prev) => ({
                     ...prev,
-                    career_stage: e.target.value as IntakeData["career_stage"],
+                    eligibility: {
+                      ...prev.eligibility,
+                      employment_type: e.target.value as EligibilityConstraints["employment_type"],
+                    },
                   }))
                 }
-                className={inputClass(autoFilledFields.has("career_stage"))}
+                className={inputClass(autoFilledFields.has("eligibility"))}
               >
                 <option value="">Select…</option>
-                <option value="phd_student">PhD student</option>
+                <option value="permanent">Permanent</option>
+                <option value="fixed_term">Fixed term</option>
+                <option value="independent">Independent</option>
                 <option value="postdoc">Postdoc</option>
-                <option value="early_career">Early career</option>
-                <option value="mid_career">Mid career</option>
-                <option value="senior">Senior</option>
+                <option value="phd_student">PhD student</option>
               </select>
             </div>
             <div>
-              <FieldLabel autoFilled={autoFilledFields.has("institution_country")}>
-                Institution country
-              </FieldLabel>
+              <FieldLabel>Institution type</FieldLabel>
+              <select
+                value={intake.eligibility?.institution_type ?? ""}
+                onChange={(e) =>
+                  setIntake((prev) => ({
+                    ...prev,
+                    eligibility: {
+                      ...prev.eligibility,
+                      institution_type: e.target.value as EligibilityConstraints["institution_type"],
+                    },
+                  }))
+                }
+                className={inputClass()}
+              >
+                <option value="">Select…</option>
+                <option value="university">University</option>
+                <option value="research_institute">Research institute</option>
+                <option value="hospital">Hospital</option>
+                <option value="ngo">NGO</option>
+                <option value="industry">Industry</option>
+              </select>
+            </div>
+            <div>
+              <FieldLabel>Year of PhD completion</FieldLabel>
+              <input
+                type="number"
+                placeholder="e.g. 2020"
+                value={intake.eligibility?.phd_year ?? ""}
+                onChange={(e) =>
+                  setIntake((prev) => ({
+                    ...prev,
+                    eligibility: {
+                      ...prev.eligibility,
+                      phd_year: e.target.value ? Number(e.target.value) : undefined,
+                    },
+                  }))
+                }
+                className={inputClass()}
+              />
+            </div>
+            <div>
+              <FieldLabel>Nationality</FieldLabel>
               <input
                 type="text"
-                placeholder="e.g. UK"
-                value={intake.institution_country ?? ""}
+                placeholder="e.g. British, Irish (comma-separated)"
+                value={intake.eligibility?.nationality?.join(", ") ?? ""}
                 onChange={(e) =>
-                  setIntake((prev) => ({ ...prev, institution_country: e.target.value }))
+                  setIntake((prev) => ({
+                    ...prev,
+                    eligibility: {
+                      ...prev.eligibility,
+                      nationality: parseCommaSeparated(e.target.value),
+                    },
+                  }))
                 }
-                className={inputClass(autoFilledFields.has("institution_country"))}
+                className={inputClass()}
               />
             </div>
           </>
         )}
 
-        {/* Step 3: Research */}
-        {step === 3 && (
+        {/* Step 2: Your Proposal */}
+        {step === 2 && (
           <>
-            <h2 className="text-slate-100 font-semibold">Research</h2>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("research_themes")}>
-                Research themes
-              </FieldLabel>
-              <textarea
-                placeholder="Comma-separated, e.g. machine learning, digital humanities"
-                value={researchThemesText}
-                onChange={(e) => setResearchThemesText(e.target.value)}
-                rows={2}
-                className={textareaClass(autoFilledFields.has("research_themes"))}
-              />
-            </div>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("research_keywords")}>
-                Research keywords
-              </FieldLabel>
-              <textarea
-                placeholder="Comma-separated keywords"
-                value={researchKeywordsText}
-                onChange={(e) => setResearchKeywordsText(e.target.value)}
-                rows={2}
-                className={textareaClass(autoFilledFields.has("research_keywords"))}
-              />
-            </div>
-            <div>
-              <FieldLabel>Disciplinary fields</FieldLabel>
-              <textarea
-                placeholder="Comma-separated, e.g. Computer Science, Linguistics"
-                value={disciplinaryFieldsText}
-                onChange={(e) => setDisciplinaryFieldsText(e.target.value)}
-                rows={2}
-                className={textareaClass()}
-              />
-            </div>
-            <div>
-              <FieldLabel>Geographic focus</FieldLabel>
-              <textarea
-                placeholder="Comma-separated regions, e.g. UK, Europe, Sub-Saharan Africa"
-                value={geographicFocusText}
-                onChange={(e) => setGeographicFocusText(e.target.value)}
-                rows={2}
-                className={textareaClass()}
-              />
-            </div>
-          </>
-        )}
-
-        {/* Step 4: Proposal */}
-        {step === 4 && (
-          <>
-            <h2 className="text-slate-100 font-semibold">Project Proposal</h2>
+            <h2 className="text-slate-100 font-semibold">Your Proposal</h2>
             <p className="text-slate-500 text-sm">
               Describe the project you have in mind. This helps us match you to the most relevant funding opportunities — and is never stored after matching.
             </p>
@@ -400,99 +359,8 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
           </>
         )}
 
-        {/* Step 5: Eligibility */}
-        {step === 5 && (
-          <>
-            <h2 className="text-slate-100 font-semibold">Eligibility</h2>
-            <div>
-              <FieldLabel autoFilled={autoFilledFields.has("eligibility")}>
-                Employment type
-              </FieldLabel>
-              <select
-                value={intake.eligibility?.employment_type ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    eligibility: {
-                      ...prev.eligibility,
-                      employment_type: e.target.value as EligibilityConstraints["employment_type"],
-                    },
-                  }))
-                }
-                className={inputClass(autoFilledFields.has("eligibility"))}
-              >
-                <option value="">Select…</option>
-                <option value="permanent">Permanent</option>
-                <option value="fixed_term">Fixed term</option>
-                <option value="independent">Independent</option>
-                <option value="postdoc">Postdoc</option>
-                <option value="phd_student">PhD student</option>
-              </select>
-            </div>
-            <div>
-              <FieldLabel>Year of PhD completion</FieldLabel>
-              <input
-                type="number"
-                placeholder="e.g. 2020"
-                value={intake.eligibility?.phd_year ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    eligibility: {
-                      ...prev.eligibility,
-                      phd_year: e.target.value ? Number(e.target.value) : undefined,
-                    },
-                  }))
-                }
-                className={inputClass()}
-              />
-            </div>
-            <div>
-              <FieldLabel>Nationality</FieldLabel>
-              <input
-                type="text"
-                placeholder="e.g. British, Irish (comma-separated)"
-                value={intake.eligibility?.nationality?.join(", ") ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    eligibility: {
-                      ...prev.eligibility,
-                      nationality: parseCommaSeparated(e.target.value),
-                    },
-                  }))
-                }
-                className={inputClass()}
-              />
-            </div>
-            <div>
-              <FieldLabel>Institution type</FieldLabel>
-              <select
-                value={intake.eligibility?.institution_type ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    eligibility: {
-                      ...prev.eligibility,
-                      institution_type: e.target.value as EligibilityConstraints["institution_type"],
-                    },
-                  }))
-                }
-                className={inputClass()}
-              >
-                <option value="">Select…</option>
-                <option value="university">University</option>
-                <option value="research_institute">Research institute</option>
-                <option value="hospital">Hospital</option>
-                <option value="ngo">NGO</option>
-                <option value="industry">Industry</option>
-              </select>
-            </div>
-          </>
-        )}
-
-        {/* Step 6: CV Upload */}
-        {step === 6 && (
+        {/* Step 3: CV Upload */}
+        {step === 3 && (
           <>
             <h2 className="text-slate-100 font-semibold">CV Upload</h2>
             <p className="text-slate-500 text-sm">
@@ -553,7 +421,7 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
         </Button>
 
         <div className="flex items-center gap-3">
-          {step < TOTAL_STEPS && step !== 2 && (
+          {step < TOTAL_STEPS && (
             <button
               type="button"
               onClick={() => setStep((s) => s + 1)}
