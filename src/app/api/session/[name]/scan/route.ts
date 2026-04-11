@@ -114,16 +114,12 @@ Plan output: ${dataDir}/funding-sources/_scan-plan.json${profileContext}${dbCont
         }
         if (urls.length === 0) {
           controller.enqueue(formatSSEEvent({ type: "text", text: "Warning: no URLs found to scan." }));
+        } else {
+          controller.enqueue(formatSSEEvent({ type: "text", text: `Phase 2: Extracting ${urls.length} funding sources...` }));
+          const results = await extractAll(urls, controller);
+          writeFileSync(manifestPath, JSON.stringify(results, null, 2));
+          ranPhase2 = true;
         }
-
-        // Phase 2 — parallel Haiku extraction
-        controller.enqueue(formatSSEEvent({
-          type: "text",
-          text: `Phase 2: Extracting ${urls.length} funding sources...`,
-        }));
-        const results = await extractAll(urls, controller);
-        writeFileSync(manifestPath, JSON.stringify(results, null, 2));
-        ranPhase2 = true;
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
       }
