@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useReducer, useRef, useState } from "react";
+import Link from "next/link";
 import { PipelineBar } from "@/components/PipelineBar";
 import type { StageState } from "@/lib/pipelineStages";
 import { StageLog } from "@/components/StageLog";
@@ -175,6 +176,9 @@ export default function SessionPage({ params }: { params: { name: string } }) {
     return (
       <main className="max-w-3xl mx-auto px-4 py-10">
         <div className="mb-6">
+          <Link href="/" className="text-slate-500 hover:text-slate-300 text-sm mb-3 inline-block transition-colors">
+            ← All profiles
+          </Link>
           <h1 className="text-xl font-bold text-slate-100">Grant Scout</h1>
           <p className="text-slate-500 text-sm mt-1">{name}</p>
         </div>
@@ -202,6 +206,9 @@ export default function SessionPage({ params }: { params: { name: string } }) {
     return (
       <main className="max-w-3xl mx-auto px-4 py-10">
         <div className="mb-6">
+          <Link href="/" className="text-slate-500 hover:text-slate-300 text-sm mb-3 inline-block transition-colors">
+            ← All profiles
+          </Link>
           <h1 className="text-xl font-bold text-slate-100">Grant Scout</h1>
           <p className="text-slate-500 text-sm mt-1">{name}</p>
         </div>
@@ -215,6 +222,9 @@ export default function SessionPage({ params }: { params: { name: string } }) {
   return (
     <main className="max-w-3xl mx-auto px-4 py-10">
       <div className="mb-6">
+        <Link href="/" className="text-slate-500 hover:text-slate-300 text-sm mb-3 inline-block transition-colors">
+          ← All profiles
+        </Link>
         <h1 className="text-xl font-bold text-slate-100">Grant Scout</h1>
         <p className="text-slate-500 text-sm mt-1">{name}</p>
       </div>
