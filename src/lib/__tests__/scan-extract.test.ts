@@ -1,33 +1,11 @@
 import { extractAll, extractJsonBlock, ScanPlanEntry } from "../scan-extract";
-import { FirecrawlError } from "../firecrawl";
-import { formatSSEEvent } from "@/lib/sse";
-
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
-
-jest.mock("../firecrawl", () => ({
-  scrapeUrl: jest.fn(),
-  FirecrawlError: class FirecrawlError extends Error {
-    constructor(
-      public url: string,
-      public statusCode: number,
-      message: string
-    ) {
-      super(message);
-      this.name = "FirecrawlError";
-    }
-  },
-}));
 
 jest.mock("@anthropic-ai/claude-agent-sdk", () => ({
   query: jest.fn(),
 }));
 
-import { scrapeUrl } from "../firecrawl";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
-const mockScrapeUrl = scrapeUrl as jest.MockedFunction<typeof scrapeUrl>;
 const mockQuery = query as jest.MockedFunction<typeof query>;
 
 // ---------------------------------------------------------------------------
@@ -44,12 +22,37 @@ function fakeEntry(slug: string) {
   };
 }
 
-async function* makeQueryIterable(entry: unknown) {
+async function* makeQueryIterable(entry: unknown, turns = 1, cost = 0.001) {
   yield {
     type: "assistant" as const,
     message: {
       content: [{ type: "text" as const, text: JSON.stringify(entry) }],
     },
+  };
+  yield {
+    type: "result" as const,
+    is_error: false,
+    result: "success",
+    num_turns: turns,
+    total_cost_usd: cost,
+    duration_ms: 500,
+  };
+}
+
+async function* makeFailingIterable() {
+  yield {
+    type: "assistant" as const,
+    message: {
+      content: [{ type: "text" as const, text: "This is not JSON at all!" }],
+    },
+  };
+  yield {
+    type: "result" as const,
+    is_error: false,
+    result: "success",
+    num_turns: 1,
+    total_cost_usd: 0,
+    duration_ms: 100,
   };
 }
 
@@ -77,133 +80,142 @@ beforeEach(() => {
 });
 
 describe("extractAll", () => {
-  it("both URLs succeed: returns 2 DiscoveredManifestEntry objects", async () => {
+  it("both URLs succeed: returns 2 results and 0 failed", async () => {
     const urls: ScanPlanEntry[] = [
       { slug: "wellcome", url: "https://wellcome.org/grants" },
       { slug: "ukri", url: "https://ukri.org/grants" },
     ];
 
-    mockScrapeUrl.mockResolvedValue({ markdown: "# Grants page" });
     mockQuery
       .mockReturnValueOnce(makeQueryIterable(fakeEntry("wellcome")) as any)
       .mockReturnValueOnce(makeQueryIterable(fakeEntry("ukri")) as any);
 
     const controller = makeMockController();
-    const results = await extractAll(urls, controller);
+    const { results, failed } = await extractAll(urls, controller);
 
     expect(results.map(r => r.funder_slug)).toEqual(expect.arrayContaining(["wellcome", "ukri"]));
     expect(results).toHaveLength(2);
+    expect(failed).toHaveLength(0);
   });
 
-  it("Firecrawl failure is skipped: 1 good URL + 1 throw → returns 1 entry", async () => {
+  it("query throws: slug appears in failed, not in results", async () => {
     const urls: ScanPlanEntry[] = [
       { slug: "wellcome", url: "https://wellcome.org/grants" },
       { slug: "broken", url: "https://broken.org/grants" },
     ];
 
-    mockScrapeUrl
-      .mockResolvedValueOnce({ markdown: "# Good page" })
-      .mockRejectedValueOnce(new (FirecrawlError as any)("https://broken.org/grants", 500, "Server Error"));
-
-    mockQuery.mockReturnValueOnce(makeQueryIterable(fakeEntry("wellcome")) as any);
+    mockQuery
+      .mockReturnValueOnce(makeQueryIterable(fakeEntry("wellcome")) as any)
+      .mockImplementationOnce(() => { throw new Error("WebFetch failed"); });
 
     const controller = makeMockController();
-    const results = await extractAll(urls, controller);
+    const { results, failed } = await extractAll(urls, controller);
 
     expect(results).toHaveLength(1);
     expect(results[0].funder_slug).toBe("wellcome");
+    expect(failed).toHaveLength(1);
+    expect(failed[0]).toEqual({ slug: "broken", url: "https://broken.org/grants" });
   });
 
-  it("Haiku parse failure is skipped: returns 1 entry for the other URL", async () => {
+  it("unparseable response: slug appears in failed, not in results", async () => {
     const urls: ScanPlanEntry[] = [
       { slug: "wellcome", url: "https://wellcome.org/grants" },
       { slug: "unparseable", url: "https://unparseable.org/grants" },
     ];
 
-    mockScrapeUrl.mockResolvedValue({ markdown: "# Grants page" });
     mockQuery
       .mockReturnValueOnce(makeQueryIterable(fakeEntry("wellcome")) as any)
-      .mockReturnValueOnce(
-        (async function* () {
-          yield {
-            type: "assistant" as const,
-            message: {
-              content: [{ type: "text" as const, text: "This is not JSON at all!" }],
-            },
-          };
-        })() as any
-      );
+      .mockReturnValueOnce(makeFailingIterable() as any);
 
     const controller = makeMockController();
-    const results = await extractAll(urls, controller);
+    const { results, failed } = await extractAll(urls, controller);
 
     expect(results).toHaveLength(1);
     expect(results[0].funder_slug).toBe("wellcome");
+    expect(failed).toHaveLength(1);
+    expect(failed[0].slug).toBe("unparseable");
   });
 
-  it("SSE progress events: fetching → extracting → done emitted per URL", async () => {
+  it("emits a result event after all extractions with aggregated cost and turns", async () => {
+    const urls: ScanPlanEntry[] = [
+      { slug: "wellcome", url: "https://wellcome.org/grants" },
+      { slug: "ukri", url: "https://ukri.org/grants" },
+    ];
+
+    mockQuery
+      .mockReturnValueOnce(makeQueryIterable(fakeEntry("wellcome"), 3, 0.002) as any)
+      .mockReturnValueOnce(makeQueryIterable(fakeEntry("ukri"), 2, 0.001) as any);
+
+    const controller = makeMockController();
+    await extractAll(urls, controller);
+
+    const events = controller.enqueue.mock.calls.map((c: [string]) =>
+      JSON.parse(c[0].replace(/^data: /, "").trim()) as Record<string, unknown>
+    );
+    const resultEvents = events.filter(e => e.type === "result");
+
+    expect(resultEvents).toHaveLength(1);
+    expect(resultEvents[0].turns).toBe(5);
+    expect((resultEvents[0].cost as number)).toBeCloseTo(0.003);
+  });
+
+  it("SSE progress events: extracting → done emitted per URL", async () => {
     const urls: ScanPlanEntry[] = [
       { slug: "wellcome", url: "https://wellcome.org/grants" },
     ];
 
-    mockScrapeUrl.mockResolvedValue({ markdown: "# Grants page" });
     mockQuery.mockReturnValueOnce(makeQueryIterable(fakeEntry("wellcome")) as any);
 
     const controller = makeMockController();
     await extractAll(urls, controller);
 
-    const enqueuedArgs = controller.enqueue.mock.calls.map((c: [string]) =>
+    const events = controller.enqueue.mock.calls.map((c: [string]) =>
       JSON.parse(c[0].replace(/^data: /, "").trim()) as Record<string, unknown>
     );
-    const progressEvents = enqueuedArgs.filter((e: Record<string, unknown>) => e.type === "progress");
+    const progressEvents = events.filter(e => e.type === "progress");
 
-    const statuses = progressEvents.map((e: Record<string, unknown>) => e.status);
-    expect(statuses).toEqual(["fetching", "extracting", "done"]);
-
+    expect(progressEvents.map(e => e.status)).toEqual(["extracting", "done"]);
     expect(progressEvents[0]).toMatchObject({ type: "progress", slug: "wellcome", total: 1 });
   });
 
-  it("failed URL emits status: 'failed' progress event", async () => {
+  it("failed URL emits 'failed' progress event and appears in failed array", async () => {
     const urls: ScanPlanEntry[] = [
       { slug: "broken", url: "https://broken.org/grants" },
     ];
 
-    mockScrapeUrl.mockRejectedValueOnce(
-      new (FirecrawlError as any)("https://broken.org/grants", 404, "Not Found")
-    );
+    mockQuery.mockReturnValueOnce(makeFailingIterable() as any);
 
     const controller = makeMockController();
-    await extractAll(urls, controller);
+    const { results, failed } = await extractAll(urls, controller);
 
-    const enqueuedArgs = controller.enqueue.mock.calls.map((c: [string]) =>
+    const events = controller.enqueue.mock.calls.map((c: [string]) =>
       JSON.parse(c[0].replace(/^data: /, "").trim()) as Record<string, unknown>
     );
-    const failedEvents = enqueuedArgs.filter(
-      (e: Record<string, unknown>) => e.type === "progress" && e.status === "failed"
-    );
+    const failedEvents = events.filter(e => e.type === "progress" && e.status === "failed");
 
     expect(failedEvents).toHaveLength(1);
     expect(failedEvents[0]).toMatchObject({ slug: "broken", status: "failed" });
+    expect(results).toHaveLength(0);
+    expect(failed[0].slug).toBe("broken");
   });
 });
 
 describe("extractJsonBlock", () => {
-  it("strips code fences: ```json\\n{...}\\n``` → parsed JSON", () => {
-    const input = "```json\n{\"foo\":\"bar\"}\n```";
-    const result = extractJsonBlock(input);
-    expect(result).toEqual({ foo: "bar" });
+  it("strips ```json fences", () => {
+    expect(extractJsonBlock("```json\n{\"foo\":\"bar\"}\n```")).toEqual({ foo: "bar" });
   });
 
-  it("strips plain code fences: ```\\n{...}\\n``` → parsed JSON", () => {
-    const input = "```\n{\"hello\":42}\n```";
-    const result = extractJsonBlock(input);
-    expect(result).toEqual({ hello: 42 });
+  it("strips plain ``` fences", () => {
+    expect(extractJsonBlock("```\n{\"hello\":42}\n```")).toEqual({ hello: 42 });
   });
 
   it("handles raw JSON without fences", () => {
-    const input = '{"a":1,"b":[2,3]}';
-    const result = extractJsonBlock(input);
-    expect(result).toEqual({ a: 1, b: [2, 3] });
+    expect(extractJsonBlock('{"a":1,"b":[2,3]}')).toEqual({ a: 1, b: [2, 3] });
+  });
+
+  it("extracts JSON from multi-turn reasoning text (Haiku thinking before final output)", () => {
+    const multiTurnText = `I'll fetch the page now.\n\nAfter checking the scheme pages, here is the extracted data:\n\n{"funder_slug":"nhmrc","funder_name":"NHMRC","source_url":"https://nhmrc.gov.au","disciplines":[],"opportunities":[]}`;
+    expect(extractJsonBlock(multiTurnText)).toMatchObject({ funder_slug: "nhmrc" });
   });
 
   it("throws on non-JSON plaintext", () => {

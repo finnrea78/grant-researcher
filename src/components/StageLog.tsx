@@ -52,6 +52,15 @@ export function StageLog({ entries }: StageLogProps) {
             <div key={id} className="text-red-400 mb-1">✗ Error: {event.message}</div>
           );
         }
+        if (event.type === "progress") {
+          const icon = event.status === "done" ? "✓" : event.status === "failed" ? "✗" : "●";
+          const color = event.status === "done" ? "text-green-400" : event.status === "failed" ? "text-red-400" : "text-blue-400";
+          return (
+            <div key={id} className={`${color} mb-0.5`}>
+              {icon} [{event.current}/{event.total}] {event.slug} — {event.status}
+            </div>
+          );
+        }
         return null;
       })}
       <div ref={bottomRef} />

@@ -122,7 +122,55 @@ Plan output: ${dataDir}/funding-sources/_scan-plan.json${profileContext}${dbCont
           controller.enqueue(formatSSEEvent({ type: "text", text: "Warning: no URLs found to scan." }));
         } else {
           controller.enqueue(formatSSEEvent({ type: "text", text: `Phase 2: Extracting ${urls.length} funding sources...` }));
-          const results = await extractAll(urls, controller);
+          const { results, failed } = await extractAll(urls, controller);
+
+          // Report blocked sites and attempt Tavily recovery
+          if (failed.length > 0) {
+            const failedList = failed.map(f => f.slug).join(", ");
+            controller.enqueue(formatSSEEvent({
+              type: "text",
+              text: `${failed.length} funder(s) blocked or unreachable: ${failedList}.${hasProfile && process.env.TAVILY_API_KEY ? " Searching for alternative opportunities..." : ""}`,
+            }));
+
+            if (hasProfile && process.env.TAVILY_API_KEY && Object.keys(mcpServers).length > 0) {
+              const recoveryPrompt = `Recovery: ${failed.length} funder URL(s) were blocked and could not be scraped: ${failedList}.
+
+URL list: ${dataDir}/funding-sources/_urls.md
+Plan output: ${dataDir}/funding-sources/_scan-plan.json${profileContext}${dbContext}
+
+Use Tavily to find ${failed.length * 2} alternative grant funding URLs relevant to the researcher profile above.
+Prefer funders not already in _urls.md. Append new discoveries to _urls.md and write a fresh _scan-plan.json containing ONLY the newly discovered URLs (not the blocked ones).`;
+
+              await pipeQueryToSSE(
+                () => query({
+                  prompt: recoveryPrompt,
+                  options: {
+                    cwd: dataDir,
+                    systemPrompt: SCAN_PLANNER_PROMPT,
+                    allowedTools: ["Read", "Write", "mcp__tavily__tavily_search"],
+                    permissionMode: "acceptEdits",
+                    maxTurns: 8,
+                    mcpServers,
+                  },
+                }),
+                controller
+              );
+
+              // Extract the newly discovered URLs
+              try {
+                const recoveryPlan = JSON.parse(readFileSync(planPath, "utf-8"));
+                const recoveryUrls: ScanPlanEntry[] = recoveryPlan.urls ?? [];
+                if (recoveryUrls.length > 0) {
+                  controller.enqueue(formatSSEEvent({ type: "text", text: `Extracting ${recoveryUrls.length} replacement sources...` }));
+                  const { results: recoveryResults } = await extractAll(recoveryUrls, controller);
+                  results.push(...recoveryResults);
+                }
+              } catch {
+                // Recovery plan unreadable — proceed with what we have
+              }
+            }
+          }
+
           writeFileSync(manifestPath, JSON.stringify(results, null, 2));
           ranPhase2 = true;
         }
