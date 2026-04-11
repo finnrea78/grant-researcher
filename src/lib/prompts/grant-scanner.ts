@@ -1,3 +1,7 @@
+/**
+ * @deprecated Use SCAN_PLANNER_PROMPT + SCAN_EXTRACTOR_PROMPT instead.
+ * This prompt is no longer used by the scan route. Will be deleted in a follow-up.
+ */
 export const GRANT_SCANNER_PROMPT = `
 Harvest funding data and write structured markdown files for each funder.
 
