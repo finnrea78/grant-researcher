@@ -6,6 +6,7 @@ import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { getOpportunityByFunderAndName } from "@/lib/opportunity-store";
 import { requireUser } from "@/lib/auth";
 import { upsertProposalBySlug } from "@/lib/proposal-store";
+import { slugify } from "@/lib/slugify";
 import { agentQueue } from "@/lib/concurrency";
 
 export async function POST(
@@ -20,17 +21,22 @@ export async function POST(
   }
 
   const { name } = params;
-  const { funder, scheme } = (await req.json()) as { funder: string; scheme: string };
+  const { funder: rawFunder, scheme } = (await req.json()) as { funder: string; scheme: string };
 
-  if (!funder || !scheme) {
+  if (!rawFunder || !scheme) {
     return Response.json({ error: "funder and scheme are required" }, { status: 400 });
   }
 
+  const funder = slugify(rawFunder);
+  if (!funder) {
+    return Response.json({ error: "Invalid funder slug" }, { status: 400 });
+  }
+
   // Fetch opportunity details from DB
-  const opportunity = await getOpportunityByFunderAndName(funder, scheme);
+  const opportunity = await getOpportunityByFunderAndName(rawFunder, scheme);
   if (!opportunity) {
     return Response.json(
-      { error: `Opportunity "${scheme}" from funder "${funder}" not found in database` },
+      { error: `Opportunity "${scheme}" from funder "${rawFunder}" not found in database` },
       { status: 404 }
     );
   }
@@ -46,7 +52,10 @@ export async function POST(
 
   const opportunityContext = JSON.stringify(opportunity, null, 2);
 
-  const proposalPath = resolve(dataDir, `outputs/${name}/proposals/${funder}-${schemeSlug}.md`);
+  const proposalPath = resolve(proposalsDir, `${funder}-${schemeSlug}.md`);
+  if (!proposalPath.startsWith(proposalsDir + "/")) {
+    return Response.json({ error: "Invalid funder slug" }, { status: 400 });
+  }
 
   const stream = new ReadableStream<string>({
     async start(controller) {
