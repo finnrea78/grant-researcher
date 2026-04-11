@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { fetchWithRetry } from "../utils/fetchWithRetry.js";
 import type { RawLeverhulmeScheme } from "../transforms/normalise-leverhulme.js";
 
 const SCHEMES_URL = "https://www.leverhulme.ac.uk/schemes-at-a-glance";
@@ -62,7 +63,7 @@ export function parseLeverhulmePage(html: string): RawLeverhulmeScheme[] {
 export async function fetchLeverhulmeSchemes(): Promise<RawLeverhulmeScheme[]> {
   console.log(`  Fetching Leverhulme schemes: ${SCHEMES_URL}`);
 
-  const response = await fetch(SCHEMES_URL);
+  const response = await fetchWithRetry(SCHEMES_URL);
   if (!response.ok) {
     throw new Error(`Leverhulme error: ${response.status} ${response.statusText}`);
   }

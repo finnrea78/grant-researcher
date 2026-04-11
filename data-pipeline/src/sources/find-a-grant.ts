@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { sleep } from "../utils/sleep.js";
+import { fetchWithRetry } from "../utils/fetchWithRetry.js";
 import type { RawFindAGrant } from "../transforms/normalise-find-a-grant.js";
 
 const BASE_URL = "https://www.find-government-grants.service.gov.uk/grants";
@@ -36,7 +37,7 @@ export async function fetchFindAGrantOpportunities(
   const firstUrl = `${BASE_URL}?page=1`;
   console.log(`  Fetching Find a Grant: ${firstUrl}`);
 
-  const firstResponse = await fetch(firstUrl);
+  const firstResponse = await fetchWithRetry(firstUrl);
   if (!firstResponse.ok) {
     throw new Error(`Find a Grant error: ${firstResponse.status} ${firstResponse.statusText}`);
   }
@@ -53,7 +54,7 @@ export async function fetchFindAGrantOpportunities(
     const url = `${BASE_URL}?page=${page}`;
     console.log(`  Fetching page ${page}/${totalPages}: ${url}`);
 
-    const response = await fetch(url);
+    const response = await fetchWithRetry(url);
     if (!response.ok) {
       console.warn(`  Page ${page} failed: ${response.status} — skipping`);
       continue;

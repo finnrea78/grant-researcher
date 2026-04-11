@@ -2,10 +2,11 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { GRANT_SCANNER_PROMPT } from "@/lib/prompts/grant-scanner";
-import { pipeQueryToSSE, sseResponse } from "@/lib/sse";
+import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { persistDiscoveredManifest } from "@/lib/scan-persistence";
 import { buildScanDbContext } from "@/lib/scan-db-context";
 import { requireUser } from "@/lib/auth";
+import { agentQueue } from "@/lib/concurrency";
 
 export async function POST(
   req: Request,
@@ -42,11 +43,22 @@ Use WebSearch to discover additional grant URLs relevant to these fields.`;
     allowedTools.push("WebSearch");
   }
 
+  const manifestPath = resolve(dataDir, "funding-sources/_discovered.json");
+
   const stream = new ReadableStream<string>({
     async start(controller) {
-      await pipeQueryToSSE(
-        query({
-          prompt: `Harvest the funding database. No flags passed.
+      try {
+        await agentQueue.acquire();
+      } catch {
+        controller.enqueue(formatSSEEvent({ type: "error", message: "Server busy — too many concurrent requests. Please retry." }));
+        controller.close();
+        return;
+      }
+
+      try {
+        await pipeQueryToSSE(
+          () => query({
+            prompt: `Harvest the funding database. No flags passed.
 
 Mode: HARVEST mode: full harvest of all sources
 
@@ -55,31 +67,42 @@ Template: ${dataDir}/funding-sources/_template.md
 Timestamps: ${dataDir}/funding-sources/_last-harvested.json
 Funder files directory: ${dataDir}/funding-sources/
 Manifest output: ${dataDir}/funding-sources/_discovered.json${profileContext}${dbContext}`,
-          options: {
-            cwd: dataDir,
-            systemPrompt: GRANT_SCANNER_PROMPT,
-            allowedTools,
-            permissionMode: "acceptEdits",
-            maxTurns: 50,
-          },
-        }),
-        controller
-      );
-      // Persist structured discoveries to Supabase
-      const manifestPath = resolve(dataDir, "funding-sources/_discovered.json");
-      const discoveryContext: Record<string, unknown> = { researcher: name };
-      if (existsSync(profilePath)) {
-        const profile = JSON.parse(readFileSync(profilePath, "utf-8"));
-        discoveryContext.disciplines = profile.disciplinary_fields;
-        discoveryContext.research_themes = profile.research_themes;
+            options: {
+              cwd: dataDir,
+              systemPrompt: GRANT_SCANNER_PROMPT,
+              allowedTools,
+              permissionMode: "acceptEdits",
+              maxTurns: 30,
+            },
+          }),
+          controller
+        );
+      } catch (err) {
+        controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
       }
-      await persistDiscoveredManifest(manifestPath, discoveryContext);
 
-      // Write per-researcher marker so this session's scan is recoverable on refresh
-      writeFileSync(
-        resolve(dataDir, `researchers/${name}/_scan-complete`),
-        new Date().toISOString()
-      );
+      // Persist structured discoveries to Supabase — independent of stream success
+      // so partial results survive even if the agent errored or was rate-limited.
+      try {
+        const discoveryContext: Record<string, unknown> = { researcher: name };
+        if (existsSync(profilePath)) {
+          const profile = JSON.parse(readFileSync(profilePath, "utf-8"));
+          discoveryContext.disciplines = profile.disciplinary_fields;
+          discoveryContext.research_themes = profile.research_themes;
+        }
+        await persistDiscoveredManifest(manifestPath, discoveryContext);
+
+        // Write per-researcher marker so this session's scan is recoverable on refresh
+        writeFileSync(
+          resolve(dataDir, `researchers/${name}/_scan-complete`),
+          new Date().toISOString()
+        );
+      } catch (persistErr) {
+        console.error(`[scan] persistDiscoveredManifest failed:`, persistErr);
+      }
+
+      agentQueue.release();
+      controller.close();
     },
   });
 
