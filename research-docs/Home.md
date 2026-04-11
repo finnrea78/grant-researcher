@@ -9,6 +9,12 @@ Notes from research sessions on grant data sources, APIs, strategy, and the tech
 
 ---
 
+## Session Start Protocol
+
+New session? Read [[Codebase Index]] first (~2 min). It gives you full orientation without re-exploring the codebase.
+
+---
+
 ## Maps of Content
 
 - [[UK Grant Landscape]] — The full picture of UK grant sources and the strategic gap we're filling
