@@ -10,6 +10,7 @@ import { agentQueue } from "@/lib/concurrency";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
 interface MatchScore {
+  opportunity_id?: string;
   name: string;
   funder: string;
   url?: string | null;
@@ -61,6 +62,7 @@ function formatMatchesMd(scores: MatchScore[], today: string): string {
     const urgentFlag = s.urgent ? " ⚠️ URGENT" : "";
     return [
       `### ${i + 1}. ${s.name} — ${s.funder}${urgentFlag}`,
+      s.opportunity_id ? `<!-- opportunity-id:${s.opportunity_id} -->` : null,
       `- **Overall score:** ${s.overall}/10`,
       `- **Amount:** ${s.amount ?? "unknown"} | **Deadline:** ${s.deadline ?? "unknown"}`,
       s.url ? `- **URL:** ${s.url}` : null,

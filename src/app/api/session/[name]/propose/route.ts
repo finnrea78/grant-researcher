@@ -3,7 +3,7 @@ import { resolve } from "path";
 import { mkdirSync, readFileSync } from "fs";
 import { PROPOSAL_OUTLINER_PROMPT } from "@/lib/prompts/proposal-outliner";
 import { formatSSEEvent, pipeQueryToSSE, sseResponse, startHeartbeat } from "@/lib/sse";
-import { getOpportunityByFunderAndName } from "@/lib/opportunity-store";
+import { getOpportunityById, getOpportunityByFunderAndName } from "@/lib/opportunity-store";
 import { requireUser } from "@/lib/auth";
 import { upsertProposalBySlug } from "@/lib/proposal-store";
 import { slugify } from "@/lib/slugify";
@@ -21,7 +21,7 @@ export async function POST(
   }
 
   const { name } = params;
-  const { funder: rawFunder, scheme } = (await req.json()) as { funder: string; scheme: string };
+  const { funder: rawFunder, scheme, opportunityId } = (await req.json()) as { funder: string; scheme: string; opportunityId?: string };
 
   if (!rawFunder || !scheme) {
     return Response.json({ error: "funder and scheme are required" }, { status: 400 });
@@ -32,8 +32,11 @@ export async function POST(
     return Response.json({ error: "Invalid funder slug" }, { status: 400 });
   }
 
-  // Fetch opportunity details from DB
-  const opportunity = await getOpportunityByFunderAndName(rawFunder, scheme);
+  // Fetch opportunity details from DB — prefer direct id lookup, fall back to name-based
+  const opportunity = opportunityId
+    ? await getOpportunityById(opportunityId)
+    : await getOpportunityByFunderAndName(rawFunder, scheme);
+
   if (!opportunity) {
     return Response.json(
       { error: `Opportunity "${scheme}" from funder "${rawFunder}" not found in database` },
