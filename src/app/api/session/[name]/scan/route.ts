@@ -83,8 +83,8 @@ Plan output: ${dataDir}/funding-sources/_scan-plan.json${profileContext}${dbCont
 
         const phase1Tools = ["Read", "Write", "Glob"];
         if (Object.keys(mcpServers).length > 0) {
-          // Allow the Tavily MCP search tool (exposed by tavily-mcp as "tavily-search")
-          phase1Tools.push("mcp__tavily__tavily-search");
+          // Allow the Tavily MCP search tool (exposed by tavily-mcp as "tavily_search")
+          phase1Tools.push("mcp__tavily__tavily_search");
         }
 
         await pipeQueryToSSE(
