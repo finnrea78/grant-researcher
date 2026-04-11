@@ -85,6 +85,7 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
       const partial: Partial<IntakeData> = {};
 
       if (data.name) { partial.name = data.name; filled.push("name"); }
+      // Collected for profile-builder context (intake.json); not written to DB since store was trimmed
       if (data.institution) { partial.institution = data.institution; filled.push("institution"); }
       if (data.department) { partial.department = data.department; filled.push("department"); }
       if (data.institution_country) { partial.institution_country = data.institution_country; filled.push("institution_country"); }
@@ -115,11 +116,6 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
     } else {
       lastFetchedOrcid.current = null;
     }
-  }
-
-  function toggleArrayItem<T>(arr: T[] | undefined, item: T): T[] {
-    if (!arr) return [item];
-    return arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
   }
 
   function handleDrop(e: React.DragEvent) {
