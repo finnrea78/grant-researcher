@@ -87,6 +87,13 @@ export async function PATCH(
   req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  try {
+    await requireUser();
+  } catch (err) {
+    if (err instanceof Response) return err;
+    throw err;
+  }
+
   const { name } = params;
   const dataDir = resolve(process.cwd(), "data");
   const researcherDir = resolve(dataDir, `researchers/${name}`);
