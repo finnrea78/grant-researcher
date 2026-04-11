@@ -3,7 +3,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { RESEARCHER_ENRICHER_PROMPT } from "@/lib/prompts/researcher-enricher";
 import { updateProfileEmbedding, updateResearcherProfile } from "@/lib/researcher-store";
-import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
+import { formatSSEEvent, pipeQueryToSSE, sseResponse, startHeartbeat } from "@/lib/sse";
 import { requireUser } from "@/lib/auth";
 import { agentQueue } from "@/lib/concurrency";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
@@ -33,6 +33,7 @@ export async function POST(
         return;
       }
 
+      const heartbeat = startHeartbeat(controller);
       try {
         await pipeQueryToSSE(
           () => query({
@@ -59,6 +60,8 @@ Write outputs to:
         );
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
+      } finally {
+        clearInterval(heartbeat);
       }
 
       // Sync enriched profile to Supabase (best-effort, non-blocking)

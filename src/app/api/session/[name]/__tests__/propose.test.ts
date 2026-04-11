@@ -22,6 +22,7 @@ const mockPipeQueryToSSE = jest.fn().mockImplementation(
 );
 jest.mock("@/lib/sse", () => ({
   pipeQueryToSSE: mockPipeQueryToSSE,
+  startHeartbeat: () => 0,
   sseResponse: (stream: ReadableStream) =>
     new Response(stream, { headers: { "Content-Type": "text/event-stream" } }),
 }));

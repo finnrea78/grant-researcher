@@ -98,6 +98,27 @@ function computeBackoff(attempt: number): number {
   return Math.floor(exp + exp * 0.25 * Math.random());
 }
 
+/**
+ * Start a heartbeat interval that sends SSE comment lines to keep Railway's
+ * proxy (and any other idle-connection-killing intermediary) from closing the
+ * connection during long agent operations. Comment lines (`: …`) are ignored
+ * by SSE clients and impose zero overhead on the consumer.
+ *
+ * Returns the interval ID — callers MUST clearInterval in their finally block.
+ */
+export function startHeartbeat(
+  controller: ReadableStreamDefaultController<string>,
+  intervalMs = 20000
+): ReturnType<typeof setInterval> {
+  return setInterval(() => {
+    try {
+      controller.enqueue(": heartbeat\n\n");
+    } catch {
+      // Controller already closed — interval will be cleared by the caller
+    }
+  }, intervalMs);
+}
+
 export function sseResponse(stream: ReadableStream<string>): Response {
   return new Response(stream, {
     headers: {

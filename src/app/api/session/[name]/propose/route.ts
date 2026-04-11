@@ -2,7 +2,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { resolve } from "path";
 import { mkdirSync, readFileSync } from "fs";
 import { PROPOSAL_OUTLINER_PROMPT } from "@/lib/prompts/proposal-outliner";
-import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
+import { formatSSEEvent, pipeQueryToSSE, sseResponse, startHeartbeat } from "@/lib/sse";
 import { getOpportunityByFunderAndName } from "@/lib/opportunity-store";
 import { requireUser } from "@/lib/auth";
 import { upsertProposalBySlug } from "@/lib/proposal-store";
@@ -67,6 +67,7 @@ export async function POST(
         return;
       }
 
+      const heartbeat = startHeartbeat(controller);
       try {
         await pipeQueryToSSE(
           () => query({
@@ -94,6 +95,8 @@ Use the opportunity data above as the authoritative source for scheme details (d
         );
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
+      } finally {
+        clearInterval(heartbeat);
       }
 
       // Persist to DB so proposals survive re-login and redeployment

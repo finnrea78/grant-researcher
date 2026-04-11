@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { SCAN_PLANNER_PROMPT } from "@/lib/prompts/scan-planner";
 import { extractAll, ScanPlanEntry } from "@/lib/scan-extract";
-import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
+import { formatSSEEvent, pipeQueryToSSE, sseResponse, startHeartbeat } from "@/lib/sse";
 import { persistDiscoveredManifest } from "@/lib/scan-persistence";
 import { buildScanDbContext } from "@/lib/scan-db-context";
 import { requireUser } from "@/lib/auth";
@@ -64,6 +64,7 @@ Researcher profile for smart scan:
       }
 
       let ranPhase2 = false;
+      const heartbeat = startHeartbeat(controller);
 
       try {
         // Phase 1 — Sonnet URL discovery / planning
@@ -176,6 +177,8 @@ Prefer funders not already in _urls.md. Append new discoveries to _urls.md and w
         }
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
+      } finally {
+        clearInterval(heartbeat);
       }
 
       // Only persist if this run wrote the manifest — guards against overwriting

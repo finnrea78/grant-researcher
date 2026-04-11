@@ -2,7 +2,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { resolve } from "path";
 import { mkdirSync } from "fs";
 import { MATCHER_PROMPT } from "@/lib/prompts/matcher";
-import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
+import { formatSSEEvent, pipeQueryToSSE, sseResponse, startHeartbeat } from "@/lib/sse";
 import { cleanupProposalIntent } from "@/lib/proposalIntent";
 import { retrieveCandidates } from "@/lib/opportunity-retrieval";
 import { requireUser } from "@/lib/auth";
@@ -45,6 +45,7 @@ export async function POST(
         return;
       }
 
+      const heartbeat = startHeartbeat(controller);
       try {
         await pipeQueryToSSE(
           () => query({
@@ -74,6 +75,7 @@ Score each opportunity against the researcher's profile. Use the researcher-cont
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
       } finally {
+        clearInterval(heartbeat);
         cleanupProposalIntent(researcherDir);
         agentQueue.release();
         controller.close();
