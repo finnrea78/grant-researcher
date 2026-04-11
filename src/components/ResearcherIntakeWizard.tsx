@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { IntakeData, FundingGoals, CollaborationProfile, EligibilityConstraints, ProposalIntent } from "@/lib/types";
+import { IntakeData, EligibilityConstraints, ProposalIntent } from "@/lib/types";
 import { TOTAL_STEPS } from "@/components/ResearcherIntakeWizard.constants";
 
 export interface ResearcherIntakeWizardProps {
@@ -14,29 +14,6 @@ export interface ResearcherIntakeWizardProps {
 }
 
 
-const INTENDED_USE_OPTIONS: { value: NonNullable<FundingGoals["intended_use"]>[number]; label: string }[] = [
-  { value: "phd_students", label: "PhD students" },
-  { value: "postdocs", label: "Postdocs" },
-  { value: "equipment", label: "Equipment" },
-  { value: "travel", label: "Travel" },
-  { value: "research_time", label: "Research time" },
-  { value: "collaboration", label: "Collaboration" },
-  { value: "public_engagement", label: "Public engagement" },
-];
-
-const COLLABORATION_TYPE_OPTIONS: { value: NonNullable<CollaborationProfile["collaboration_types"]>[number]; label: string }[] = [
-  { value: "industry", label: "Industry" },
-  { value: "academic", label: "Academic" },
-  { value: "international", label: "International" },
-  { value: "public_sector", label: "Public sector" },
-  { value: "ngo", label: "NGO" },
-];
-
-const PREFERRED_ROLE_OPTIONS: { value: NonNullable<CollaborationProfile["preferred_roles"]>[number]; label: string }[] = [
-  { value: "PI", label: "PI" },
-  { value: "Co-I", label: "Co-I" },
-  { value: "partner", label: "Partner" },
-];
 
 const ORCID_RE = /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/;
 
@@ -370,18 +347,6 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
                 className={textareaClass()}
               />
             </div>
-            <div>
-              <FieldLabel>Research trajectory</FieldLabel>
-              <textarea
-                placeholder="Where is your research heading? What questions do you want to explore next?"
-                value={intake.research_trajectory ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({ ...prev, research_trajectory: e.target.value }))
-                }
-                rows={4}
-                className={textareaClass()}
-              />
-            </div>
           </>
         )}
 
@@ -435,224 +400,8 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
           </>
         )}
 
-        {/* Step 5: Funding */}
+        {/* Step 5: Eligibility */}
         {step === 5 && (
-          <>
-            <h2 className="text-slate-100 font-semibold">Funding goals</h2>
-            <div>
-              <FieldLabel>Intended use of funding</FieldLabel>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {INTENDED_USE_OPTIONS.map(({ value, label }) => {
-                  const selected = intake.funding_goals?.intended_use?.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() =>
-                        setIntake((prev) => ({
-                          ...prev,
-                          funding_goals: {
-                            ...prev.funding_goals,
-                            intended_use: toggleArrayItem(prev.funding_goals?.intended_use, value),
-                          },
-                        }))
-                      }
-                      className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                        selected
-                          ? "bg-blue-700 border-blue-500 text-white"
-                          : "bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-400"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <FieldLabel>Budget min (GBP)</FieldLabel>
-                <input
-                  type="number"
-                  placeholder="e.g. 10000"
-                  value={intake.funding_goals?.budget_range?.min ?? ""}
-                  onChange={(e) =>
-                    setIntake((prev) => ({
-                      ...prev,
-                      funding_goals: {
-                        ...prev.funding_goals,
-                        budget_range: {
-                          ...prev.funding_goals?.budget_range,
-                          min: e.target.value ? Number(e.target.value) : undefined,
-                          currency: "GBP",
-                        },
-                      },
-                    }))
-                  }
-                  className={inputClass()}
-                />
-              </div>
-              <div className="flex-1">
-                <FieldLabel>Budget max (GBP)</FieldLabel>
-                <input
-                  type="number"
-                  placeholder="e.g. 500000"
-                  value={intake.funding_goals?.budget_range?.max ?? ""}
-                  onChange={(e) =>
-                    setIntake((prev) => ({
-                      ...prev,
-                      funding_goals: {
-                        ...prev.funding_goals,
-                        budget_range: {
-                          ...prev.funding_goals?.budget_range,
-                          max: e.target.value ? Number(e.target.value) : undefined,
-                          currency: "GBP",
-                        },
-                      },
-                    }))
-                  }
-                  className={inputClass()}
-                />
-              </div>
-            </div>
-            <div>
-              <FieldLabel>Preferred duration (months)</FieldLabel>
-              <input
-                type="number"
-                placeholder="e.g. 24"
-                value={intake.funding_goals?.preferred_duration_months ?? ""}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    funding_goals: {
-                      ...prev.funding_goals,
-                      preferred_duration_months: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    },
-                  }))
-                }
-                className={inputClass()}
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="open_to_consortium"
-                checked={intake.funding_goals?.open_to_consortium ?? false}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    funding_goals: {
-                      ...prev.funding_goals,
-                      open_to_consortium: e.target.checked,
-                    },
-                  }))
-                }
-                className="w-4 h-4 accent-blue-500"
-              />
-              <label htmlFor="open_to_consortium" className="text-slate-300 text-sm">
-                Open to consortium grants
-              </label>
-            </div>
-          </>
-        )}
-
-        {/* Step 6: Collaboration */}
-        {step === 6 && (
-          <>
-            <h2 className="text-slate-100 font-semibold">Collaboration</h2>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="open_to_collaboration"
-                checked={intake.collaboration?.open_to_collaboration ?? false}
-                onChange={(e) =>
-                  setIntake((prev) => ({
-                    ...prev,
-                    collaboration: {
-                      ...prev.collaboration,
-                      open_to_collaboration: e.target.checked,
-                    },
-                  }))
-                }
-                className="w-4 h-4 accent-blue-500"
-              />
-              <label htmlFor="open_to_collaboration" className="text-slate-300 text-sm">
-                Open to collaboration
-              </label>
-            </div>
-            <div>
-              <FieldLabel>Collaboration types</FieldLabel>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {COLLABORATION_TYPE_OPTIONS.map(({ value, label }) => {
-                  const selected = intake.collaboration?.collaboration_types?.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() =>
-                        setIntake((prev) => ({
-                          ...prev,
-                          collaboration: {
-                            ...prev.collaboration,
-                            collaboration_types: toggleArrayItem(
-                              prev.collaboration?.collaboration_types,
-                              value
-                            ),
-                          },
-                        }))
-                      }
-                      className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                        selected
-                          ? "bg-blue-700 border-blue-500 text-white"
-                          : "bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-400"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <FieldLabel>Preferred roles</FieldLabel>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {PREFERRED_ROLE_OPTIONS.map(({ value, label }) => {
-                  const selected = intake.collaboration?.preferred_roles?.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() =>
-                        setIntake((prev) => ({
-                          ...prev,
-                          collaboration: {
-                            ...prev.collaboration,
-                            preferred_roles: toggleArrayItem(
-                              prev.collaboration?.preferred_roles,
-                              value
-                            ),
-                          },
-                        }))
-                      }
-                      className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                        selected
-                          ? "bg-blue-700 border-blue-500 text-white"
-                          : "bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-400"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Step 7: Eligibility */}
-        {step === 7 && (
           <>
             <h2 className="text-slate-100 font-semibold">Eligibility</h2>
             <div>
@@ -742,8 +491,8 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
           </>
         )}
 
-        {/* Step 8: CV Upload */}
-        {step === 8 && (
+        {/* Step 6: CV Upload */}
+        {step === 6 && (
           <>
             <h2 className="text-slate-100 font-semibold">CV Upload</h2>
             <p className="text-slate-500 text-sm">

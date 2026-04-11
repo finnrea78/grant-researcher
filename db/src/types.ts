@@ -1,6 +1,4 @@
 import type {
-  FundingGoals,
-  CollaborationProfile,
   EligibilityConstraints,
   ResearcherProfile,
 } from "../../src/lib/types";
@@ -50,12 +48,6 @@ export interface ResearcherRow {
   career_stage?: string;
   research_themes?: string[];
   research_keywords?: string[];
-  disciplinary_fields?: string[];
-  geographic_focus?: string[];
-  future_research?: string;
-  research_trajectory?: string;
-  funding_goals?: FundingGoals;
-  collaboration?: CollaborationProfile;
   eligibility?: EligibilityConstraints;
   cv_text?: string;
   orcid_data?: Record<string, unknown>;
