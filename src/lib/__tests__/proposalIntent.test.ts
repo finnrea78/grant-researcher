@@ -180,7 +180,9 @@ describe("Agent prompts include proposal-intent.json", () => {
     expect(PROFILE_BUILDER_PROMPT).toContain("Proposal intent");
   });
 
-  it("MATCHER_PROMPT mentions proposal-intent.json", () => {
-    expect(MATCHER_PROMPT).toContain("proposal-intent.json");
+  it("MATCHER_PROMPT references the proposal-intent block", () => {
+    // Matcher now receives proposal intent pre-injected as a <proposal-intent> XML block
+    // in the user prompt — no file reads needed. The prompt references the block name.
+    expect(MATCHER_PROMPT).toContain("proposal-intent");
   });
 });
