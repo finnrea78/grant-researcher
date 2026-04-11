@@ -37,6 +37,8 @@ export async function extractAll(
   urls: ScanPlanEntry[],
   controller: ReadableStreamDefaultController<string>
 ): Promise<DiscoveredManifestEntry[]> {
+  // Local semaphore for Haiku extraction parallelism — intentionally separate from agentQueue
+  // (which caps full-agent SDK sessions). Haiku calls are lightweight and fast.
   const semaphore = new AgentSemaphore(5);
   const total = urls.length;
   let completed = 0;
@@ -47,7 +49,7 @@ export async function extractAll(
       try {
         // 1. Emit fetching
         controller.enqueue(
-          formatSSEEvent({ type: "progress", current: ++completed, total, slug, status: "fetching" })
+          formatSSEEvent({ type: "progress", current: completed, total, slug, status: "fetching" })
         );
 
         // 2. Fetch page content
@@ -56,6 +58,7 @@ export async function extractAll(
           const result = await scrapeUrl(url);
           markdown = result.markdown;
         } catch {
+          completed++;
           controller.enqueue(
             formatSSEEvent({ type: "progress", current: completed, total, slug, status: "failed" })
           );
@@ -72,6 +75,7 @@ export async function extractAll(
         try {
           entry = await extractSingle(slug, url, markdown);
         } catch {
+          completed++;
           controller.enqueue(
             formatSSEEvent({ type: "progress", current: completed, total, slug, status: "failed" })
           );
@@ -79,6 +83,7 @@ export async function extractAll(
         }
 
         // 5. Emit done
+        completed++;
         controller.enqueue(
           formatSSEEvent({ type: "progress", current: completed, total, slug, status: "done" })
         );
@@ -123,7 +128,11 @@ async function extractSingle(
     }
   }
 
-  return extractJsonBlock(rawText) as DiscoveredManifestEntry;
+  const parsed = extractJsonBlock(rawText);
+  if (typeof parsed !== "object" || parsed === null || !("funder_slug" in parsed)) {
+    throw new Error(`Haiku returned unexpected shape for ${slug}: missing funder_slug`);
+  }
+  return parsed as DiscoveredManifestEntry;
 }
 
 export function extractJsonBlock(text: string): unknown {

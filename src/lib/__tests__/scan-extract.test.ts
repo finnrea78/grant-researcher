@@ -91,9 +91,8 @@ describe("extractAll", () => {
     const controller = makeMockController();
     const results = await extractAll(urls, controller);
 
+    expect(results.map(r => r.funder_slug)).toEqual(expect.arrayContaining(["wellcome", "ukri"]));
     expect(results).toHaveLength(2);
-    expect(results[0].funder_slug).toBe("wellcome");
-    expect(results[1].funder_slug).toBe("ukri");
   });
 
   it("Firecrawl failure is skipped: 1 good URL + 1 throw → returns 1 entry", async () => {
