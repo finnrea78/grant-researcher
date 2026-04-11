@@ -45,6 +45,28 @@ function parseProfileResponse(text: string): { profile: ResearcherProfile; publi
   return JSON.parse(cleaned);
 }
 
+export async function GET(
+  _req: Request,
+  { params }: { params: { name: string } }
+): Promise<Response> {
+  try {
+    await requireUser();
+  } catch (err) {
+    if (err instanceof Response) return err;
+    throw err;
+  }
+
+  const { name } = params;
+  const profilePath = resolve(process.cwd(), "data", `researchers/${name}/profile.json`);
+
+  if (!existsSync(profilePath)) {
+    return Response.json({ error: "Profile not found" }, { status: 404 });
+  }
+
+  const profile = JSON.parse(readFileSync(profilePath, "utf-8")) as ResearcherProfile;
+  return Response.json({ profile });
+}
+
 export async function POST(
   _req: Request,
   { params }: { params: { name: string } }

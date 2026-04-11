@@ -27,7 +27,8 @@ export type Action =
   | { type: "CLEAR_SCHOLAR_CANDIDATE" }
   | { type: "SET_SCHOLAR_CANDIDATE"; candidate: ScholarCandidate }
   | { type: "SET_PROPOSING_SCHEME"; scheme: string }
-  | { type: "CLEAR_PROPOSING_SCHEME" };
+  | { type: "CLEAR_PROPOSING_SCHEME" }
+  | { type: "RESET" };
 
 export function reducer(state: PageState, action: Action): PageState {
   switch (action.type) {
@@ -77,6 +78,8 @@ export function reducer(state: PageState, action: Action): PageState {
       return { ...state, proposingScheme: action.scheme };
     case "CLEAR_PROPOSING_SCHEME":
       return { ...state, proposingScheme: null };
+    case "RESET":
+      return { ...INITIAL_STATE };
     default:
       return state;
   }

@@ -11,6 +11,7 @@ import { TOTAL_STEPS } from "@/components/ResearcherIntakeWizard.constants";
 export interface ResearcherIntakeWizardProps {
   onSubmit: (formData: FormData) => void;
   loading?: boolean;
+  initialIntake?: IntakeData;
 }
 
 
@@ -45,9 +46,9 @@ function parseCommaSeparated(value: string): string[] {
     .filter(Boolean);
 }
 
-export function ResearcherIntakeWizard({ onSubmit, loading = false }: ResearcherIntakeWizardProps) {
+export function ResearcherIntakeWizard({ onSubmit, loading = false, initialIntake }: ResearcherIntakeWizardProps) {
   const [step, setStep] = useState(1);
-  const [intake, setIntake] = useState<IntakeData>({});
+  const [intake, setIntake] = useState<IntakeData>(initialIntake ?? {});
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [orcidLoading, setOrcidLoading] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
@@ -55,12 +56,11 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false }: Researcher
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastFetchedOrcid = useRef<string | null>(null);
 
-
-  // Proposal intent (step 4) — ephemeral, never stored in Supabase
-  const [proposalTitle, setProposalTitle] = useState("");
-  const [proposalDescription, setProposalDescription] = useState("");
-  const [proposalDiscipline, setProposalDiscipline] = useState("");
-  const [proposalMethodology, setProposalMethodology] = useState("");
+  // Proposal intent — ephemeral, never stored in Supabase
+  const [proposalTitle, setProposalTitle] = useState(initialIntake?.proposal_intent?.project_title ?? "");
+  const [proposalDescription, setProposalDescription] = useState(initialIntake?.proposal_intent?.description ?? "");
+  const [proposalDiscipline, setProposalDiscipline] = useState(initialIntake?.proposal_intent?.target_discipline ?? "");
+  const [proposalMethodology, setProposalMethodology] = useState(initialIntake?.proposal_intent?.methodology ?? "");
 
   function mergeIntake(partial: Partial<IntakeData>, fields: string[]) {
     setIntake((prev) => ({ ...prev, ...partial }));

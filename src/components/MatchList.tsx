@@ -5,9 +5,10 @@ interface MatchListProps {
   onPropose: (funder: string, scheme: string) => void;
   proposing: boolean;
   proposingScheme?: string | null;
+  disabled?: boolean;
 }
 
-export function MatchList({ matches, onPropose, proposing, proposingScheme }: MatchListProps) {
+export function MatchList({ matches, onPropose, proposing, proposingScheme, disabled = false }: MatchListProps) {
   const tier1 = matches.filter((m) => m.tier === 1);
   const tier2 = matches.filter((m) => m.tier === 2);
   const tier3 = matches.filter((m) => m.tier === 3);
@@ -28,7 +29,7 @@ export function MatchList({ matches, onPropose, proposing, proposingScheme }: Ma
     return (
       <button
         onClick={() => onPropose(match.funder, match.scheme)}
-        disabled={proposing}
+        disabled={proposing || disabled}
         className="w-full text-left bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed border border-slate-700 rounded-lg px-4 py-3 mb-2 transition-colors"
       >
         <div className="flex items-center justify-between">
