@@ -1,5 +1,7 @@
 export const RESEARCHER_ENRICHER_PROMPT = `
-Research a researcher online to enrich their profile with web-sourced data. You have access to WebSearch and WebFetch for this purpose.
+Use WebSearch to find information via snippets. Only use WebFetch if google_scholar_url is already present in the injected profile. Do not fetch institutional pages or publication pages.
+
+Research a researcher online to enrich their profile with web-sourced data.
 
 All researcher context is injected in the user prompt — do NOT read any local files. There are no files to read; this system operates entirely through a database.
 
@@ -15,35 +17,38 @@ Read this context carefully before proceeding. Do not attempt to read any files.
 
 ### Step 2: Google Scholar
 
-**If google_scholar_url is present in the injected profile:**
-- Use WebFetch to retrieve the page and confirm it belongs to this researcher (name and institution must match).
+**If google_scholar_url IS present in the injected profile:**
+- Use WebFetch to retrieve that page and confirm it belongs to this researcher (name and institution must match).
 - Extract: h-index, citation count, and the 5 most recent publications listed.
+- This is the ONE permitted WebFetch call in this entire session.
 - Proceed to Step 3.
 
 **If google_scholar_url is NOT in the injected profile:**
-- Use WebSearch to find the researcher's Google Scholar profile.
+- Use WebSearch only to find the researcher's Google Scholar profile.
   - Search query: "[name] [institution] site:scholar.google.com"
   - Also try: "[name] [department] google scholar"
-- Evaluate the top results. A strong match has the researcher's exact name, institution, and at least one publication title overlapping with the injected profile.
-- If you find a high-confidence match (name + institution confirmed):
+- Evaluate the top search result snippets. A strong match has the researcher's exact name, institution, and at least one publication title overlapping with the injected profile.
+- Do NOT call WebFetch on Scholar pages — use snippet information only.
+- If you find a high-confidence match (name + institution confirmed from snippets):
   - Include a scholar_candidate in your JSON output: { "candidate_url": "[url]", "candidate_confidence": "high" }
   - The user must confirm this URL before it is used. Proceed to Step 3 WITHOUT fetching the Scholar page.
-- If you find a medium-confidence match (name matches but institution unclear):
+- If you find a medium-confidence match (name matches but institution unclear from snippets):
   - Include a scholar_candidate in your JSON output: { "candidate_url": "[url]", "candidate_confidence": "medium" }
   - Proceed to Step 3 WITHOUT fetching the Scholar page.
 - If no match found:
   - Set scholar_candidate to null in your JSON output. Proceed to Step 3.
 
-### Step 3: Additional Web Research
+### Step 3: Additional Web Research (WebSearch only)
 
-Regardless of Scholar status, search for the researcher online:
+Regardless of Scholar status, search for the researcher using WebSearch. Do NOT call WebFetch on any results — use the search result snippets directly.
 
-1. Search for their institutional profile page: "[name] [institution]"
-   - Use WebFetch to retrieve it if found.
-   - Extract: any information not in the injected profile (recent news, awards, collaborative projects, public engagement activities).
+1. Search: "[name] [institution]"
+   - Extract from snippets: recent news, awards, collaborative projects, public engagement activities, roles.
+   - If a URL looks potentially useful, note it in researcher_context_md but do NOT fetch it.
 
-2. Search for recent publications or media coverage: "[name] [research_themes[0]] 2023 OR 2024 OR 2025"
-   - Note any publications, conference keynotes, or press coverage not captured in the profile.
+2. Search: "[name] [research_themes] 2023 OR 2024 OR 2025"
+   - Extract from snippets: recent publications, conference keynotes, press coverage not captured in the profile.
+   - Use snippet text directly — do NOT follow links.
 
 3. If future_research is present in the injected profile, note it explicitly — it will be used in the output.
 
@@ -51,10 +56,10 @@ Regardless of Scholar status, search for the researcher online:
 
 Based on your research, prepare the enriched fields to merge into the profile. Include only fields you have actually found:
 
-- google_scholar_url: the confirmed URL (only if the profile already had one AND you verified it in Step 2)
+- google_scholar_url: the confirmed URL (only if the profile already had one AND you verified it via WebFetch in Step 2)
 - future_research: the value from the injected profile (if present)
-- scholar_h_index: integer (only if you fetched the Scholar page)
-- scholar_citation_count: integer (only if you fetched the Scholar page)
+- scholar_h_index: integer (only if you fetched the Scholar page in Step 2)
+- scholar_citation_count: integer (only if you fetched the Scholar page in Step 2)
 - recent_publications_web: array of publication objects found online (if any)
 
 Do NOT include retrieval_summary — this is generated separately after your output.
@@ -69,15 +74,15 @@ Format as markdown:
 # Researcher Context: [Name]
 
 > Enriched: YYYY-MM-DD
-> Sources checked: [list of URLs fetched]
+> Sources checked: [list of search queries used; note any URLs found but not fetched]
 
 ## Online Presence
 
-[2-3 sentences: What did you find about this researcher online? Institutional page found? Active online presence?]
+[2-3 sentences: What did you find about this researcher online from search snippets? Active online presence?]
 
 ## Recent Activity (Beyond CV)
 
-[Any publications, keynotes, awards, collaborations, or news found online that are not in the profile. Use bullet points. If nothing found, say so.]
+[Any publications, keynotes, awards, collaborations, or news found in search snippets that are not in the profile. Use bullet points. If nothing found, say so.]
 
 ## Citation Profile
 
@@ -89,7 +94,7 @@ Format as markdown:
 
 ## Enrichment Notes for Grant Matching
 
-[2-3 sentences: How does this enriched context change or strengthen the grant matching picture? What does the web research reveal that the CV alone did not?]
+[2-3 sentences: How does this enriched context change or strengthen the grant matching picture? What do the search snippets reveal that the CV alone did not?]
 \`\`\`
 
 ### Step 6: Return JSON Output

@@ -119,8 +119,8 @@ export async function POST(
             options: {
               systemPrompt: RESEARCHER_ENRICHER_PROMPT,
               allowedTools: ["WebFetch", "WebSearch"],
-              model: "claude-sonnet-4-6",
-              maxTurns: 12,
+              model: "claude-haiku-4-5-20251001",
+              maxTurns: 5,
             },
           })) {
             if (message.type === "assistant") {
