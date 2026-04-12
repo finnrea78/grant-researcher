@@ -36,13 +36,17 @@ export function parseMatches(text: string): Match[] {
     const scheme = headingMatch[1].trim();
     const funder = headingMatch[2].trim();
 
-    // Scan following lines for score/amount/deadline (within next 10 lines)
+    // Scan following lines for id/score/amount/deadline (within next 10 lines)
+    let id: string | undefined;
     let score = 0;
     let amount = "";
     let deadline = "";
 
     for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
       const detail = lines[j];
+
+      const idMatch = detail.match(/^<!-- opportunity-id:([a-f0-9-]+) -->$/);
+      if (idMatch) { id = idMatch[1]; continue; }
 
       const scoreMatch = detail.match(/\*\*Overall score:\*\*\s*([\d.]+)\/10/);
       if (scoreMatch) score = parseFloat(scoreMatch[1]);
@@ -57,7 +61,7 @@ export function parseMatches(text: string): Match[] {
       if (/^###/.test(detail) && j !== i + 1) break;
     }
 
-    matches.push({ scheme, funder, score, amount, deadline, tier: currentTier });
+    matches.push({ id, scheme, funder, score, amount, deadline, tier: currentTier });
   }
 
   return matches;
