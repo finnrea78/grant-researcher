@@ -1,8 +1,12 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { resolve } from "path";
 import { PROFILE_BUILDER_PROMPT } from "@/lib/prompts/profile-builder";
-import { updateResearcherProfile } from "@/lib/researcher-store";
+import {
+  getResearcherFull,
+  updateResearcherProfile,
+  updatePublicationsMd,
+  updatePipelineState,
+  updateProfileEmbedding,
+} from "@/lib/researcher-store";
 import { formatSSEEvent, sseResponse } from "@/lib/sse";
 import { requireUser } from "@/lib/auth";
 import { agentQueue } from "@/lib/concurrency";
@@ -57,14 +61,12 @@ export async function GET(
   }
 
   const { name } = params;
-  const profilePath = resolve(process.cwd(), "data", `researchers/${name}/profile.json`);
-
-  if (!existsSync(profilePath)) {
+  const researcher = await getResearcherFull(name);
+  if (!researcher?.enriched_profile) {
     return Response.json({ error: "Profile not found" }, { status: 404 });
   }
 
-  const profile = JSON.parse(readFileSync(profilePath, "utf-8")) as ResearcherProfile;
-  return Response.json({ profile });
+  return Response.json({ profile: researcher.enriched_profile });
 }
 
 export async function POST(
@@ -79,8 +81,6 @@ export async function POST(
   }
 
   const { name } = params;
-  const dataDir = resolve(process.cwd(), "data");
-  const researcherDir = resolve(dataDir, `researchers/${name}`);
 
   const stream = new ReadableStream<string>({
     async start(controller) {
@@ -93,27 +93,13 @@ export async function POST(
         return;
       }
       try {
-        // Read intake data
-        const intakePath = resolve(researcherDir, "intake.json");
-        const intake: IntakeData | null = existsSync(intakePath)
-          ? (JSON.parse(readFileSync(intakePath, "utf-8")) as IntakeData)
+        // Read all context from DB
+        const researcher = await getResearcherFull(name);
+        const intake: IntakeData | null = researcher
+          ? { name: researcher.name }
           : null;
-
-        // Find CV text
-        let cvText: string | null = null;
-        for (const ext of [".md", ".txt"]) {
-          const cvPath = resolve(researcherDir, `raw/cv${ext}`);
-          if (existsSync(cvPath)) {
-            cvText = readFileSync(cvPath, "utf-8");
-            break;
-          }
-        }
-
-        // Read proposal intent if present
-        const intentPath = resolve(researcherDir, "proposal-intent.json");
-        const proposalIntent: Record<string, unknown> | null = existsSync(intentPath)
-          ? (JSON.parse(readFileSync(intentPath, "utf-8")) as Record<string, unknown>)
-          : null;
+        const cvText = researcher?.cv_text ?? null;
+        const proposalIntent = (researcher?.pipeline_state?.proposal_intent as Record<string, unknown>) ?? null;
 
         const userPrompt = buildUserPrompt(name, intake, cvText, proposalIntent);
 
@@ -127,7 +113,6 @@ export async function POST(
         for await (const message of query({
           prompt: userPrompt,
           options: {
-            cwd: researcherDir,
             systemPrompt: PROFILE_BUILDER_PROMPT,
             allowedTools: [],
             model: "haiku",
@@ -148,16 +133,13 @@ export async function POST(
 
         const { profile, publications_md } = parseProfileResponse(rawText);
 
-        // Write outputs
-        writeFileSync(resolve(researcherDir, "profile.json"), JSON.stringify(profile, null, 2));
-        writeFileSync(resolve(researcherDir, "publications.md"), publications_md);
-
-        // Sync to Supabase (best-effort)
-        try {
-          await updateResearcherProfile(name, profile);
-        } catch (syncErr) {
-          console.error(`[profile] Supabase sync failed for ${name}:`, syncErr);
+        // Write all outputs to DB
+        await updateResearcherProfile(name, profile);
+        await updatePublicationsMd(name, publications_md);
+        if (profile.retrieval_summary) {
+          await updateProfileEmbedding(name, profile.retrieval_summary);
         }
+        await updatePipelineState(name, { profile: true });
 
         controller.enqueue(
           formatSSEEvent({ type: "result", turns: resultTurns, cost: resultCost, duration: Date.now() - startMs })

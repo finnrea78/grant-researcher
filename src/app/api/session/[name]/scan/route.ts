@@ -6,6 +6,7 @@ import { extractAll, ScanPlanEntry } from "@/lib/scan-extract";
 import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
 import { persistDiscoveredManifest } from "@/lib/scan-persistence";
 import { buildScanDbContext } from "@/lib/scan-db-context";
+import { getResearcherFull, updatePipelineState } from "@/lib/researcher-store";
 import { requireUser } from "@/lib/auth";
 import { agentQueue } from "@/lib/concurrency";
 
@@ -35,14 +36,16 @@ export async function POST(
   const dataDir = resolve(process.cwd(), "data");
 
   // Fetch DB-sourced funders to feed back into the agent (closes the loop)
-  const dbContext = await buildScanDbContext();
+  const [dbContext, researcher] = await Promise.all([
+    buildScanDbContext(),
+    getResearcherFull(name),
+  ]);
 
-  const profilePath = resolve(dataDir, `researchers/${name}/profile.json`);
-  const hasProfile = existsSync(profilePath);
+  const hasProfile = !!researcher?.enriched_profile;
 
   let profileContext = "";
-  if (hasProfile) {
-    const profile = JSON.parse(readFileSync(profilePath, "utf-8"));
+  if (hasProfile && researcher?.enriched_profile) {
+    const profile = researcher.enriched_profile;
     profileContext = `
 
 Researcher profile for smart scan:
@@ -183,18 +186,14 @@ Prefer funders not already in _urls.md. Append new discoveries to _urls.md and w
       if (ranPhase2) {
         try {
           const discoveryContext: Record<string, unknown> = { researcher: name };
-          if (existsSync(profilePath)) {
-            const profile = JSON.parse(readFileSync(profilePath, "utf-8"));
-            discoveryContext.disciplines = profile.disciplinary_fields;
-            discoveryContext.research_themes = profile.research_themes;
+          if (researcher?.enriched_profile) {
+            discoveryContext.disciplines = researcher.enriched_profile.disciplinary_fields;
+            discoveryContext.research_themes = researcher.enriched_profile.research_themes;
           }
           await persistDiscoveredManifest(manifestPath, discoveryContext);
 
-          // Write per-researcher marker so this session's scan is recoverable on refresh
-          writeFileSync(
-            resolve(dataDir, `researchers/${name}/_scan-complete`),
-            new Date().toISOString()
-          );
+          // Mark scan complete in DB (replaces per-researcher _scan-complete file)
+          await updatePipelineState(name, { scan: true });
         } catch (persistErr) {
           console.error(`[scan] persistDiscoveredManifest failed:`, persistErr);
         }
@@ -224,10 +223,6 @@ export async function PATCH(
   }
 
   const { name } = params;
-  const dataDir = resolve(process.cwd(), "data");
-  writeFileSync(
-    resolve(dataDir, `researchers/${name}/_scan-complete`),
-    new Date().toISOString()
-  );
+  await updatePipelineState(name, { scan: true });
   return Response.json({ ok: true });
 }
