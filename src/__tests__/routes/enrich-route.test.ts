@@ -22,17 +22,26 @@ jest.mock("@/lib/concurrency", () => ({
   agentQueue: { acquire: jest.fn().mockResolvedValue(undefined), release: jest.fn() },
 }));
 
+const mockHaikuCreate = jest.fn();
+jest.mock("@anthropic-ai/sdk", () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    messages: { create: mockHaikuCreate },
+  })),
+}));
+
 // Agent returns enriched profile + optional scholar candidate as JSON text
+// retrieval_summary is NOT in enriched_fields — Haiku generates it separately
 const enrichedOutput = {
   enriched_fields: {
     google_scholar_url: null,
     scholar_h_index: null,
-    retrieval_summary: "Dr Jane Smith researches climate adaptation...",
   },
   scholar_candidate: {
     candidate_url: "https://scholar.google.com/citations?user=abc123",
     candidate_confidence: "high",
   },
+  researcher_context_md: "# Researcher Context: Jane Smith\n\nActive researcher at UCL.",
 };
 
 jest.mock("@anthropic-ai/claude-agent-sdk", () => ({
@@ -62,6 +71,7 @@ import {
   updateScholarCandidate,
   updatePipelineState,
   updateResearcherProfile,
+  updateProfileEmbedding,
 } from "@/lib/researcher-store";
 import * as fs from "fs";
 
@@ -69,6 +79,7 @@ const mockGetResearcherFull = getResearcherFull as jest.Mock;
 const mockUpdateScholarCandidate = updateScholarCandidate as jest.Mock;
 const mockUpdatePipelineState = updatePipelineState as jest.Mock;
 const mockUpdateResearcherProfile = updateResearcherProfile as jest.Mock;
+const mockUpdateProfileEmbedding = updateProfileEmbedding as jest.Mock;
 const mockWriteFileSync = fs.writeFileSync as jest.Mock;
 const mockExistsSync = fs.existsSync as jest.Mock;
 const mockUnlinkSync = fs.unlinkSync as jest.Mock;
@@ -101,16 +112,38 @@ function makePatchRequest(body: object): Request {
   });
 }
 
+async function drainStream(stream: Response): Promise<string> {
+  const reader = stream.body!.getReader();
+  let text = "";
+  let done = false;
+  while (!done) {
+    const result = await reader.read();
+    done = result.done;
+    if (result.value) {
+      // The route uses ReadableStream<string>, so chunks may be strings or Uint8Array
+      if (typeof result.value === "string") {
+        text += result.value;
+      } else {
+        text += new TextDecoder().decode(result.value as Uint8Array);
+      }
+    }
+  }
+  return text;
+}
+
 describe("POST /api/session/[name]/enrich (DB-first)", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHaikuCreate.mockResolvedValue({
+      content: [{ type: "text", text: "Dr Jane Smith is a climate adaptation researcher at UCL." }],
+    });
+  });
 
   it("stores scholar_candidate from agent output in DB", async () => {
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
 
     const stream = await POST(makePostRequest(), { params: { name: "jane-smith" } });
-    const reader = stream.body!.getReader();
-    let done = false;
-    while (!done) done = (await reader.read()).done;
+    await drainStream(stream);
 
     expect(mockUpdateScholarCandidate).toHaveBeenCalledWith(
       "jane-smith",
@@ -122,9 +155,7 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
 
     const stream = await POST(makePostRequest(), { params: { name: "jane-smith" } });
-    const reader = stream.body!.getReader();
-    let done = false;
-    while (!done) done = (await reader.read()).done;
+    await drainStream(stream);
 
     expect(mockUpdatePipelineState).toHaveBeenCalledWith(
       "jane-smith",
@@ -136,11 +167,87 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
 
     const stream = await POST(makePostRequest(), { params: { name: "jane-smith" } });
-    const reader = stream.body!.getReader();
-    let done = false;
-    while (!done) done = (await reader.read()).done;
+    await drainStream(stream);
 
     expect(mockWriteFileSync).not.toHaveBeenCalled();
+  });
+
+  it("generates retrieval_summary via Haiku and persists it with the profile", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    const stream = await POST(makePostRequest(), { params: { name: "jane-smith" } });
+    await drainStream(stream);
+
+    expect(mockUpdateResearcherProfile).toHaveBeenCalledWith(
+      "jane-smith",
+      expect.objectContaining({
+        retrieval_summary: "Dr Jane Smith is a climate adaptation researcher at UCL.",
+      })
+    );
+  });
+
+  it("calls updateProfileEmbedding with the Haiku-generated retrieval_summary", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    const stream = await POST(makePostRequest(), { params: { name: "jane-smith" } });
+    await drainStream(stream);
+
+    expect(mockUpdateProfileEmbedding).toHaveBeenCalledWith(
+      "jane-smith",
+      "Dr Jane Smith is a climate adaptation researcher at UCL."
+    );
+  });
+
+  it("emits generating-retrieval-summary tool event before Haiku call", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    const stream = await POST(makePostRequest(), { params: { name: "jane-smith" } });
+    const sseText = await drainStream(stream);
+
+    expect(sseText).toContain('"name":"generating-retrieval-summary"');
+  });
+
+  it("retries Haiku once on first failure then succeeds", async () => {
+    jest.useFakeTimers();
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    mockHaikuCreate
+      .mockRejectedValueOnce(new Error("Haiku timeout"))
+      .mockResolvedValueOnce({
+        content: [{ type: "text", text: "Dr Jane Smith is a climate adaptation researcher at UCL." }],
+      });
+
+    const streamPromise = POST(makePostRequest(), { params: { name: "jane-smith" } }).then(drainStream);
+    await jest.runAllTimersAsync();
+    await streamPromise;
+
+    expect(mockHaikuCreate).toHaveBeenCalledTimes(2);
+    expect(mockUpdateResearcherProfile).toHaveBeenCalledWith(
+      "jane-smith",
+      expect.objectContaining({
+        retrieval_summary: "Dr Jane Smith is a climate adaptation researcher at UCL.",
+      })
+    );
+
+    jest.useRealTimers();
+  });
+
+  it("emits SSE error and skips profile write if Haiku fails after retry", async () => {
+    jest.useFakeTimers();
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    mockHaikuCreate
+      .mockRejectedValueOnce(new Error("Haiku timeout"))
+      .mockRejectedValueOnce(new Error("Haiku timeout again"));
+
+    const streamPromise = POST(makePostRequest(), { params: { name: "jane-smith" } }).then(drainStream);
+    await jest.runAllTimersAsync();
+    const sseText = await streamPromise;
+
+    expect(sseText).toContain('"type":"error"');
+    expect(mockUpdateResearcherProfile).not.toHaveBeenCalled();
+
+    jest.useRealTimers();
   });
 });
 

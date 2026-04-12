@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { RESEARCHER_ENRICHER_PROMPT } from "@/lib/prompts/researcher-enricher";
 import {
@@ -11,6 +12,8 @@ import { formatSSEEvent, sseResponse, startHeartbeat } from "@/lib/sse";
 import { requireUser } from "@/lib/auth";
 import { agentQueue } from "@/lib/concurrency";
 import type { ResearcherProfile } from "@/lib/types";
+
+const anthropic = new Anthropic();
 
 function buildEnrichPrompt(name: string, profile: ResearcherProfile | null, publicationsMd: string | null): string {
   return [
@@ -132,12 +135,47 @@ export async function POST(
 
         const output = parseEnrichOutput(rawText);
 
-        if (output.enriched_fields) {
-          const updatedProfile = { ...(profile ?? {}), ...output.enriched_fields } as ResearcherProfile;
-          await updateResearcherProfile(name, updatedProfile);
-          if (updatedProfile.retrieval_summary) {
-            await updateProfileEmbedding(name, updatedProfile.retrieval_summary);
+        // Generate retrieval_summary via Haiku (cost-optimised)
+        controller.enqueue(formatSSEEvent({ type: "tool", name: "generating-retrieval-summary" }));
+
+        const mergedProfile = { ...(profile ?? {}), ...(output.enriched_fields ?? {}) };
+        const haikuInput = [
+          `Generate a retrieval_summary for this researcher — ~400 words, third-person present tense, natural prose surfacing implicit research affinities for semantic grant matching.\n\nProfile:\n${JSON.stringify(mergedProfile, null, 2)}`,
+          output.researcher_context_md ? `\nResearcher Context:\n${output.researcher_context_md}` : "",
+        ].join("");
+
+        let retrievalSummary: string | null = null;
+        try {
+          const msg = await anthropic.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 800,
+            messages: [{ role: "user", content: haikuInput }],
+          });
+          retrievalSummary = msg.content[0].type === "text" ? msg.content[0].text : null;
+        } catch {
+          await new Promise(r => setTimeout(r, 1000));
+          try {
+            const msg = await anthropic.messages.create({
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 800,
+              messages: [{ role: "user", content: haikuInput }],
+            });
+            retrievalSummary = msg.content[0].type === "text" ? msg.content[0].text : null;
+          } catch (err) {
+            controller.enqueue(formatSSEEvent({ type: "error", message: `retrieval_summary generation failed: ${String(err)}` }));
+            agentQueue.release();
+            controller.close();
+            return;
           }
+        }
+
+        const updatedProfile = {
+          ...mergedProfile,
+          ...(retrievalSummary ? { retrieval_summary: retrievalSummary } : {}),
+        } as ResearcherProfile;
+        await updateResearcherProfile(name, updatedProfile);
+        if (updatedProfile.retrieval_summary) {
+          await updateProfileEmbedding(name, updatedProfile.retrieval_summary);
         }
 
         if (output.scholar_candidate) {
