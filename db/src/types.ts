@@ -31,6 +31,44 @@ export interface ResearcherProposalRow {
   updated_at: string;
 }
 
+/** Shape of a researcher_matches row. */
+export interface ResearcherMatchRow {
+  id: string;
+  researcher_id: string;
+  opportunity_id: string | null;
+  funder_slug: string;
+  scheme_slug: string;
+  score_overall: number;
+  score_thematic: number | null;
+  score_track_record: number | null;
+  score_strategic: number | null;
+  score_practical: number | null;
+  eligible: boolean;
+  tier: string | null;
+  why: string | null;
+  strengths: string[];
+  weaknesses: string[];
+  action: string | null;
+  urgent: boolean;
+  amount_raw: string | null;
+  deadline_raw: string | null;
+  url: string | null;
+  created_at: string;
+}
+
+/** Shape of a funding_sources row. */
+export interface FundingSourceRow {
+  id: string;
+  slug: string;
+  name: string;
+  content_md: string;
+  source_url: string | null;
+  discovered_at: string;
+  last_harvested: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Shape of a researcher row for upsert. */
 export interface ResearcherRow {
   slug: string;

@@ -1,10 +1,8 @@
-import { mkdirSync, writeFileSync } from "fs";
-import { resolve } from "path";
 import { slugify } from "@/lib/slugify";
-import { upsertResearcher, updateOrcidData } from "@/lib/researcher-store";
-import { stripEphemeralFields } from "@/lib/stripEphemeral";
-import { writeProposalIntent } from "@/lib/proposalIntent";
+import { upsertResearcher, updateOrcidData, updatePipelineState } from "@/lib/researcher-store";
+import { uploadCv } from "@/lib/cv-store";
 import { extractCvText } from "@/lib/extractCvText";
+import { stripEphemeralFields } from "@/lib/stripEphemeral";
 import { requireUser } from "@/lib/auth";
 import type { IntakeData } from "@/lib/types";
 
@@ -23,7 +21,6 @@ export async function POST(req: Request): Promise<Response> {
   const rawName = formData.get("name") as string | null;
   const intakeJson = formData.get("intake") as string | null;
 
-  // Parse intake JSON if provided, fall back to empty object
   let intake: IntakeData = {};
   if (intakeJson) {
     try {
@@ -33,7 +30,6 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
-  // Name can come from FormData or intake object
   const nameSource = rawName?.trim() || intake.name?.trim();
   if (!nameSource) {
     return Response.json({ error: "name is required (in FormData or intake.name)" }, { status: 400 });
@@ -44,55 +40,53 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "name must contain alphanumeric characters" }, { status: 400 });
   }
 
-  // Ensure intake.name is set to the slugified display name
   intake = { ...intake, name: nameSource };
 
-  const dataDir = resolve(process.cwd(), "data");
-  const rawDir = resolve(dataDir, `researchers/${name}/raw`);
-  const researcherDir = resolve(dataDir, `researchers/${name}`);
+  const proposalIntent = intake.proposal_intent;
+  const intakeForDb = stripEphemeralFields(intake);
 
-  mkdirSync(rawDir, { recursive: true });
-
-  // Write CV file if provided
-  let bytes: ArrayBuffer | null = null;
-  let cvExt = "md";
+  let cvExt = "pdf";
+  let bytes: Buffer | null = null;
   if (file && file.size > 0) {
     const originalName = file.name;
     cvExt = originalName.includes(".")
-      ? originalName.split(".").pop() ?? "md"
-      : "md";
-    const cvPath = resolve(rawDir, `cv.${cvExt}`);
-    bytes = await file.arrayBuffer();
-    writeFileSync(cvPath, Buffer.from(bytes));
-  }
-
-  // Extract CV text for Supabase storage and downstream agents
-  if (file && file.size > 0 && bytes !== null) {
-    const cvText = await extractCvText(Buffer.from(bytes), file.name);
+      ? originalName.split(".").pop() ?? "pdf"
+      : "pdf";
+    bytes = Buffer.from(await file.arrayBuffer());
+    const cvText = await extractCvText(bytes, file.name);
     if (cvText) {
-      intake = { ...intake, cv_text: cvText };
-      // Profile builder reads raw/cv.md — write extracted text so non-text uploads work
-      if (cvExt !== "md" && cvExt !== "txt") {
-        writeFileSync(resolve(rawDir, "cv.md"), cvText);
-      }
+      intakeForDb.cv_text = cvText;
     }
   }
 
-  // Write intake.json to disk (Claude agents read this)
-  writeFileSync(resolve(researcherDir, "intake.json"), JSON.stringify(intake, null, 2));
-
-  // Write proposal-intent.json separately (ephemeral — deleted after matching)
-  writeProposalIntent(researcherDir, intake.proposal_intent);
-
-  // Supabase sync — non-critical, pipeline reads from disk
-  // Strip proposal_intent: sensitive IP, never persisted to Supabase
+  let researcherId: string;
   try {
-    await upsertResearcher(stripEphemeralFields(intake), name, userId);
+    researcherId = await upsertResearcher(intakeForDb, name, userId);
   } catch (err) {
-    console.error(`[session] Supabase upsert failed for ${name}:`, err);
+    console.error("[session] upsertResearcher failed:", err);
+    return Response.json({ error: "Failed to save researcher profile" }, { status: 500 });
   }
 
-  // Server-side ORCID fetch if identifier provided
+  if (bytes && file) {
+    try {
+      await uploadCv(researcherId, bytes, file.type || "application/octet-stream", cvExt);
+    } catch (err) {
+      // Storage upload failure is non-fatal — researcher is created, CV text already stored in DB
+      console.error("[session] uploadCv failed:", err);
+    }
+  }
+
+  const pipelinePatch: Record<string, unknown> = { intake: true };
+  if (proposalIntent) {
+    pipelinePatch.proposal_intent = proposalIntent;
+  }
+  try {
+    await updatePipelineState(name, pipelinePatch);
+  } catch (err) {
+    console.error("[session] updatePipelineState failed:", err);
+    return Response.json({ error: "Failed to update pipeline state" }, { status: 500 });
+  }
+
   if (intake.identifiers?.orcid) {
     try {
       const orcidRes = await fetch(
@@ -101,11 +95,7 @@ export async function POST(req: Request): Promise<Response> {
       );
       if (orcidRes.ok) {
         const orcidData = await orcidRes.json() as Record<string, unknown>;
-        // Store raw ORCID data in Supabase
         await updateOrcidData(name, orcidData);
-        // Merge into intake.json for the profile-builder agent to use
-        const intakeWithOrcid = { ...intake, orcid_raw: orcidData };
-        writeFileSync(resolve(researcherDir, "intake.json"), JSON.stringify(intakeWithOrcid, null, 2));
       }
     } catch (err) {
       console.error(`[session] ORCID fetch failed:`, err);

@@ -1,9 +1,8 @@
-import { existsSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "fs";
-import { resolve } from "path";
 import { requireUser } from "@/lib/auth";
-import { upsertResearcher } from "@/lib/researcher-store";
+import { getResearcherFull, upsertResearcher, updatePipelineState } from "@/lib/researcher-store";
 import { stripEphemeralFields } from "@/lib/stripEphemeral";
-import { writeProposalIntent } from "@/lib/proposalIntent";
+import { deleteMatchesForResearcher } from "@/lib/match-store";
+import { uploadCv } from "@/lib/cv-store";
 import { extractCvText } from "@/lib/extractCvText";
 import type { IntakeData } from "@/lib/types";
 
@@ -19,21 +18,16 @@ export async function GET(
   }
 
   const { name } = params;
-  const intakePath = resolve(process.cwd(), "data", `researchers/${name}/intake.json`);
+  const researcher = await getResearcherFull(name);
 
-  if (!existsSync(intakePath)) {
+  if (!researcher) {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
-  const raw = JSON.parse(readFileSync(intakePath, "utf-8")) as IntakeData & {
-    cv_text?: unknown;
-    orcid_raw?: unknown;
+  const intake = {
+    name: researcher.name,
+    ...((researcher.enriched_profile ?? {}) as Record<string, unknown>),
   };
-
-  // Strip large/internal fields before sending to the client
-  const { cv_text: _cv, orcid_raw: _orcid, ...intake } = raw;
-  void _cv;
-  void _orcid;
 
   return Response.json({ intake });
 }
@@ -52,10 +46,6 @@ export async function PATCH(
   }
 
   const { name } = params;
-  const dataDir = resolve(process.cwd(), "data");
-  const researcherDir = resolve(dataDir, `researchers/${name}`);
-  const rawDir = resolve(researcherDir, "raw");
-  const outputDir = resolve(dataDir, `outputs/${name}`);
 
   const formData = await req.formData();
   const file = formData.get("cv") as File | null;
@@ -70,72 +60,45 @@ export async function PATCH(
     }
   }
 
-  // Preserve existing cv_text and orcid_raw unless a new CV is uploaded
-  const intakePath = resolve(researcherDir, "intake.json");
-  let preserved: { cv_text?: string; orcid_raw?: unknown } = {};
-  if (existsSync(intakePath)) {
-    try {
-      const existing = JSON.parse(readFileSync(intakePath, "utf-8")) as Record<string, unknown>;
-      if (typeof existing.cv_text === "string") preserved.cv_text = existing.cv_text;
-      if (existing.orcid_raw) preserved.orcid_raw = existing.orcid_raw;
-    } catch {
-      // Ignore parse errors — will proceed without preserved fields
-    }
-  }
+  let cvText: string | undefined;
+  let cvExt = "pdf";
+  let bytes: Buffer | null = null;
 
-  // Handle new CV upload
   if (file && file.size > 0) {
     const originalName = file.name;
-    const cvExt = originalName.includes(".")
-      ? originalName.split(".").pop() ?? "md"
-      : "md";
-    const cvPath = resolve(rawDir, `cv.${cvExt}`);
-    const bytes = await file.arrayBuffer();
-    writeFileSync(cvPath, Buffer.from(bytes));
-
-    const cvText = await extractCvText(Buffer.from(bytes), file.name);
-    if (cvText) {
-      preserved.cv_text = cvText;
-      if (cvExt !== "md" && cvExt !== "txt") {
-        writeFileSync(resolve(rawDir, "cv.md"), cvText);
-      }
-    } else {
-      preserved.cv_text = undefined;
-    }
-    // New CV means stale orcid_raw is still valid — keep it
+    cvExt = originalName.includes(".")
+      ? originalName.split(".").pop() ?? "pdf"
+      : "pdf";
+    bytes = Buffer.from(await file.arrayBuffer());
+    cvText = (await extractCvText(bytes, file.name)) ?? undefined;
+  } else {
+    // No new CV — preserve existing cv_text from DB
+    const existing = await getResearcherFull(name);
+    cvText = existing?.cv_text ?? undefined;
   }
 
-  // Merge and write intake.json
-  const merged = { ...intake, ...preserved };
-  writeFileSync(intakePath, JSON.stringify(merged, null, 2));
+  const proposalIntent = intake.proposal_intent;
+  const intakeForDb = stripEphemeralFields({ ...intake, name: intake.name || name });
+  if (cvText) intakeForDb.cv_text = cvText;
 
-  // Write proposal-intent.json
-  writeProposalIntent(researcherDir, intake.proposal_intent);
+  const researcherId = await upsertResearcher(intakeForDb, name, userId);
 
-  // Reset pipeline: delete all derived output files
-  const filesToDelete = [
-    resolve(researcherDir, "profile.json"),
-    resolve(researcherDir, "publications.md"),
-    resolve(researcherDir, "researcher-context.md"),
-    resolve(researcherDir, "_scholar-skip"),
-    resolve(researcherDir, "enrich-pending.json"),
-    resolve(researcherDir, "_scan-complete"),
-    resolve(outputDir, "matches.md"),
-  ];
-  for (const f of filesToDelete) {
-    if (existsSync(f)) unlinkSync(f);
-  }
-  const proposalsDir = resolve(outputDir, "proposals");
-  if (existsSync(proposalsDir)) {
-    rmSync(proposalsDir, { recursive: true });
+  if (bytes && file) {
+    await uploadCv(researcherId, bytes, file.type || "application/octet-stream", cvExt);
   }
 
-  // Supabase sync (best-effort)
-  try {
-    await upsertResearcher(stripEphemeralFields(intake), name, userId);
-  } catch (err) {
-    console.error(`[intake] Supabase upsert failed for ${name}:`, err);
-  }
+  // Reset pipeline state — null clears derived stage flags so re-intake triggers re-run
+  const pipelinePatch: Record<string, unknown> = {
+    intake: true,
+    profile: null,
+    enrich: null,
+    scan: null,
+    match: null,
+    proposal_intent: proposalIntent ?? null,
+  };
+  await updatePipelineState(name, pipelinePatch);
+
+  await deleteMatchesForResearcher(researcherId);
 
   return Response.json({ ok: true });
 }

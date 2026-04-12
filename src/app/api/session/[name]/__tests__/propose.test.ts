@@ -11,20 +11,23 @@ jest.mock("@/lib/opportunity-store", () => ({
   getOpportunityByFunderAndName: mockGetOpportunity,
 }));
 
-const mockQuery = jest.fn();
-jest.mock("@anthropic-ai/claude-agent-sdk", () => ({ query: mockQuery }));
+const mockGetResearcherFull = jest.fn();
+jest.mock("@/lib/researcher-store", () => ({
+  getResearcherFull: mockGetResearcherFull,
+  updatePipelineState: jest.fn().mockResolvedValue(undefined),
+}));
 
-// pipeQueryToSSE resolves immediately and closes the controller
-const mockPipeQueryToSSE = jest.fn().mockImplementation(
-  async (_messages: unknown, controller: ReadableStreamDefaultController<string>) => {
-    controller.close();
-  }
-);
+const proposalText = "## Strategic Alignment\n\nProposal content here.";
+const mockQuery = jest.fn();
+jest.mock("@anthropic-ai/claude-agent-sdk", () => ({
+  query: mockQuery,
+}));
+
 jest.mock("@/lib/sse", () => ({
-  pipeQueryToSSE: mockPipeQueryToSSE,
-  startHeartbeat: () => 0,
+  formatSSEEvent: (event: unknown) => `data: ${JSON.stringify(event)}\n\n`,
   sseResponse: (stream: ReadableStream) =>
     new Response(stream, { headers: { "Content-Type": "text/event-stream" } }),
+  startHeartbeat: () => 0,
 }));
 
 const mockUpsertProposalBySlug = jest.fn().mockResolvedValue(undefined);
@@ -34,14 +37,8 @@ jest.mock("@/lib/proposal-store", () => ({
   getProposalsByResearcherSlug: jest.fn(),
 }));
 
-// Stub filesystem
-jest.mock("fs", () => ({
-  mkdirSync: jest.fn(),
-  readFileSync: jest.fn().mockReturnValue("## Strategic Alignment\n\nProposal content here."),
-}));
-
-jest.mock("path", () => ({
-  resolve: (...parts: string[]) => parts.join("/"),
+jest.mock("@/lib/concurrency", () => ({
+  agentQueue: { acquire: jest.fn().mockResolvedValue(undefined), release: jest.fn() },
 }));
 
 const fakeOpportunity = {
@@ -51,11 +48,30 @@ const fakeOpportunity = {
   slug: "discovery-projects",
 };
 
+const fakeResearcher = {
+  id: "uuid-123",
+  slug: "jane-smith",
+  name: "Jane Smith",
+  cv_text: null,
+  enriched_profile: { name: "Jane Smith", institution: "UCL" },
+  pipeline_state: {},
+  publications_md: null,
+  match_results_md: null,
+  scholar_candidate: null,
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockRequireUser.mockResolvedValue({ user: { id: "user-1" } });
   mockGetOpportunity.mockResolvedValue(fakeOpportunity);
-  mockQuery.mockReturnValue((async function* () {})());
+  mockGetResearcherFull.mockResolvedValue(fakeResearcher);
+  // Agent emits the proposal text then a result message
+  mockQuery.mockReturnValue({
+    [Symbol.asyncIterator]: async function* () {
+      yield { type: "assistant", message: { content: [{ type: "text", text: proposalText }] } };
+      yield { type: "result", is_error: false, total_cost_usd: 0.001, num_turns: 2 };
+    },
+  });
 });
 
 describe("POST /api/session/[name]/propose", () => {
@@ -70,13 +86,15 @@ describe("POST /api/session/[name]/propose", () => {
     const res = await POST(req, { params: { name: "jane-smith" } });
 
     // Drain the stream to trigger the post-stream DB write
-    await res.text();
+    const reader = res.body!.getReader();
+    let done = false;
+    while (!done) done = (await reader.read()).done;
 
     expect(mockUpsertProposalBySlug).toHaveBeenCalledWith(
       "jane-smith",
       "ukri",
       "discovery-projects",
-      "## Strategic Alignment\n\nProposal content here."
+      expect.stringContaining("Strategic Alignment")
     );
   });
 

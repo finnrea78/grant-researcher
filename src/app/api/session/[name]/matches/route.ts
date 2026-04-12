@@ -1,8 +1,6 @@
-import { existsSync, readFileSync } from "fs";
-import { resolve } from "path";
 import { requireUser } from "@/lib/auth";
-import { parseMatches } from "@/lib/parseMatches";
-import { validateMatches } from "@/lib/validateMatches";
+import { getResearcherBySlug } from "@/lib/researcher-store";
+import { getMatches } from "@/lib/match-store";
 
 export async function GET(
   _req: Request,
@@ -16,12 +14,12 @@ export async function GET(
   }
 
   const { name } = params;
-  const matchesPath = resolve(process.cwd(), `data/outputs/${name}/matches.md`);
+  const researcher = await getResearcherBySlug(name);
 
-  if (!existsSync(matchesPath)) {
-    return Response.json({ matches: [] });
+  if (!researcher) {
+    return Response.json({ error: "Researcher not found" }, { status: 404 });
   }
 
-  const text = readFileSync(matchesPath, "utf-8");
-  return Response.json({ matches: validateMatches(parseMatches(text)) });
+  const matches = await getMatches(researcher.id);
+  return Response.json({ matches });
 }

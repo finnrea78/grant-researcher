@@ -140,6 +140,7 @@ export async function getResearcherBySlug(
   slug: string,
   client?: SupabaseClient
 ): Promise<{
+  id: string;
   slug: string;
   name: string;
   enriched_profile: ResearcherProfile;
@@ -147,11 +148,127 @@ export async function getResearcherBySlug(
   const db = client ?? serviceClient;
   const { data, error } = await db
     .from("researchers")
-    .select("slug, name, enriched_profile")
+    .select("id, slug, name, enriched_profile")
     .eq("slug", slug)
     .single();
   if (error || !data?.enriched_profile) return null;
-  return { slug: data.slug, name: data.name, enriched_profile: data.enriched_profile as ResearcherProfile };
+  return { id: data.id, slug: data.slug, name: data.name, enriched_profile: data.enriched_profile as ResearcherProfile };
+}
+
+/**
+ * Merge a partial state patch into the researcher's pipeline_state JSONB.
+ * Uses the Postgres || operator semantics — existing keys not in patch are preserved.
+ * Implemented as a read-modify-write since Supabase JS doesn't expose raw SQL update.
+ */
+export async function updatePipelineState(
+  slug: string,
+  patch: Record<string, unknown>
+): Promise<void> {
+  // Read current state, merge patch, write back
+  const current = await getPipelineState(slug).catch(() => ({}));
+  const { error } = await serviceClient
+    .from("researchers")
+    .update({ pipeline_state: { ...current, ...patch } })
+    .eq("slug", slug);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Read the pipeline_state JSONB for a researcher.
+ */
+export async function getPipelineState(
+  slug: string
+): Promise<Record<string, unknown>> {
+  const { data, error } = await serviceClient
+    .from("researchers")
+    .select("pipeline_state")
+    .eq("slug", slug)
+    .single();
+  if (error) throw new Error(error.message);
+  return (data?.pipeline_state as Record<string, unknown>) ?? {};
+}
+
+/**
+ * Set or clear the scholar_candidate JSONB column.
+ * Pass null to clear after disambiguation is resolved.
+ */
+export async function updateScholarCandidate(
+  slug: string,
+  candidate: Record<string, unknown> | null
+): Promise<void> {
+  const { error } = await serviceClient
+    .from("researchers")
+    .update({ scholar_candidate: candidate })
+    .eq("slug", slug);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Write publications markdown (researcher context from the enrich agent).
+ */
+export async function updatePublicationsMd(
+  slug: string,
+  md: string
+): Promise<void> {
+  const { error } = await serviceClient
+    .from("researchers")
+    .update({ publications_md: md })
+    .eq("slug", slug);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Write the formatted match results markdown summary.
+ */
+export async function updateMatchResultsMd(
+  slug: string,
+  markdown: string
+): Promise<void> {
+  const { error } = await serviceClient
+    .from("researchers")
+    .update({ match_results_md: markdown })
+    .eq("slug", slug);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Fetch all columns needed by pipeline routes in a single query.
+ * Returns null if the researcher is not found.
+ */
+export async function getResearcherFull(
+  slug: string,
+  client?: SupabaseClient
+): Promise<{
+  id: string;
+  slug: string;
+  name: string;
+  cv_text: string | null;
+  enriched_profile: ResearcherProfile | null;
+  pipeline_state: Record<string, unknown>;
+  publications_md: string | null;
+  match_results_md: string | null;
+  scholar_candidate: Record<string, unknown> | null;
+} | null> {
+  const db = client ?? serviceClient;
+  const { data, error } = await db
+    .from("researchers")
+    .select(
+      "id, slug, name, cv_text, enriched_profile, pipeline_state, publications_md, match_results_md, scholar_candidate"
+    )
+    .eq("slug", slug)
+    .single();
+  if (error || !data) return null;
+  return {
+    id: data.id,
+    slug: data.slug,
+    name: data.name,
+    cv_text: data.cv_text ?? null,
+    enriched_profile: (data.enriched_profile as ResearcherProfile) ?? null,
+    pipeline_state: (data.pipeline_state as Record<string, unknown>) ?? {},
+    publications_md: data.publications_md ?? null,
+    match_results_md: data.match_results_md ?? null,
+    scholar_candidate: (data.scholar_candidate as Record<string, unknown>) ?? null,
+  };
 }
 
 /**
