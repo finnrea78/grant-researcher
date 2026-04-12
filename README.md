@@ -26,7 +26,7 @@ CV upload → Profile → Enrich → Scan → Match → Propose
 
 1. **Profile** — Claude reads the CV and extracts a structured researcher profile (themes, track record, career stage, gaps)
 2. **Enrich** — web research to fill gaps (Google Scholar, institutional pages, ORCID)
-3. **Scan** — harvests funding source data from known URLs and stores it locally as markdown
+3. **Scan** — harvests funding source data from known URLs; persists funders and opportunities to Supabase (source of truth) and stores markdown locally for agent access
 4. **Match** — scores every funding scheme against the researcher profile across five dimensions, producing a tiered ranked list
 5. **Propose** — drafts a strategic alignment document for a selected grant
 
@@ -230,7 +230,7 @@ The scan stage uses `data/funding-sources/_urls.md` as its seed list. This shoul
 - [x] Researcher profile embedding computed from Claude-generated prose summary during enrich step
 - [x] Opportunity embeddings computed at ingest time via OpenAI `text-embedding-3-small`
 - [ ] Support filtering by funder, discipline, deadline window, and career stage
-- [ ] Surface deadline proximity in scoring (urgent opportunities ranked higher)
+- [x] Surface deadline proximity in scoring (urgent flag — ⚠️ URGENT on matches within 30 days)
 - [ ] Add pagination / lazy loading for large result sets
 
 ### Build the opportunities database
