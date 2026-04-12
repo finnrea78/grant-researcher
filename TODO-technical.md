@@ -6,16 +6,16 @@ Key technical tasks. Fill in as you go.
 
 ## Pipeline / Backend
 
-- [ ] Simplify intake wizard — reduce friction for first-time users (see GitHub issue)
+- [x] Simplify intake wizard — reduce friction for first-time users (#60)
 - [ ] Scheduled ingestion — cron/Railway job to keep UKRI opportunities fresh
 - [ ] Add non-UKRI funders to data pipeline: Wellcome, Leverhulme, British Academy, Royal Society
-- [ ] Enrich retrieval with `funder_name` in FTS RPC (`search_opportunities_fts`)
+- [x] Enrich retrieval with `funder_name` in FTS RPC (`search_opportunities_fts`) (#64)
 
 ---
 
 ## Frontend
 
-- [ ] Simplify intake wizard — fewer fields, smarter defaults, better mobile layout
+- [x] Simplify intake wizard — fewer fields, smarter defaults, better mobile layout (#60)
 - [ ] Add pagination / lazy loading for large match result sets
 - [ ] Support filtering matches by funder, discipline, deadline window, career stage
 
