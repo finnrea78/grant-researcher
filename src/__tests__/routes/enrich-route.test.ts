@@ -22,16 +22,8 @@ jest.mock("@/lib/concurrency", () => ({
   agentQueue: { acquire: jest.fn().mockResolvedValue(undefined), release: jest.fn() },
 }));
 
-const mockHaikuCreate = jest.fn();
-jest.mock("@anthropic-ai/sdk", () => ({
-  __esModule: true,
-  default: jest.fn().mockImplementation(() => ({
-    messages: { create: mockHaikuCreate },
-  })),
-}));
-
-// Agent returns enriched profile + optional scholar candidate as JSON text
-// retrieval_summary is NOT in enriched_fields — Haiku generates it separately
+// Agent returns enriched fields + optional scholar candidate as JSON text.
+// retrieval_summary is NOT in enriched_fields — Haiku generates it separately via a second query() call.
 const enrichedOutput = {
   enriched_fields: {
     google_scholar_url: null,
@@ -44,19 +36,35 @@ const enrichedOutput = {
   researcher_context_md: "# Researcher Context: Jane Smith\n\nActive researcher at UCL.",
 };
 
-jest.mock("@anthropic-ai/claude-agent-sdk", () => ({
-  query: jest.fn().mockReturnValue({
+const DEFAULT_HAIKU_SUMMARY = "Dr Jane Smith is a climate adaptation researcher at UCL.";
+
+function sonnetIterator() {
+  return {
     [Symbol.asyncIterator]: async function* () {
-      yield {
-        type: "assistant",
-        message: {
-          content: [{ type: "text", text: JSON.stringify(enrichedOutput) }],
-        },
-      };
+      yield { type: "assistant", message: { content: [{ type: "text", text: JSON.stringify(enrichedOutput) }] } };
       yield { type: "result", is_error: false, total_cost_usd: 0.002, num_turns: 5 };
     },
-  }),
-}));
+  };
+}
+
+function haikuIterator(text = DEFAULT_HAIKU_SUMMARY) {
+  return {
+    [Symbol.asyncIterator]: async function* () {
+      yield { type: "assistant", message: { content: [{ type: "text", text }] } };
+    },
+  };
+}
+
+function failingIterator(msg = "service unavailable") {
+  return {
+    // eslint-disable-next-line require-yield
+    [Symbol.asyncIterator]: async function* (): AsyncGenerator<never> {
+      throw new Error(msg);
+    },
+  };
+}
+
+jest.mock("@anthropic-ai/claude-agent-sdk", () => ({ query: jest.fn() }));
 
 jest.mock("fs", () => ({
   existsSync: jest.fn(),
@@ -73,7 +81,10 @@ import {
   updateResearcherProfile,
   updateProfileEmbedding,
 } from "@/lib/researcher-store";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 import * as fs from "fs";
+
+const mockQuery = query as jest.Mock;
 
 const mockGetResearcherFull = getResearcherFull as jest.Mock;
 const mockUpdateScholarCandidate = updateScholarCandidate as jest.Mock;
@@ -134,9 +145,8 @@ async function drainStream(stream: Response): Promise<string> {
 describe("POST /api/session/[name]/enrich (DB-first)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockHaikuCreate.mockResolvedValue({
-      content: [{ type: "text", text: "Dr Jane Smith is a climate adaptation researcher at UCL." }],
-    });
+    // First query() call = Sonnet enrichment; second = Haiku retrieval_summary
+    mockQuery.mockReturnValueOnce(sonnetIterator()).mockReturnValue(haikuIterator());
   });
 
   it("stores scholar_candidate from agent output in DB", async () => {
@@ -210,35 +220,35 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
   it("retries Haiku once on first failure then succeeds", async () => {
     jest.useFakeTimers();
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
-
-    mockHaikuCreate
-      .mockRejectedValueOnce(new Error("Haiku timeout"))
-      .mockResolvedValueOnce({
-        content: [{ type: "text", text: "Dr Jane Smith is a climate adaptation researcher at UCL." }],
-      });
+    // Reset to clear beforeEach's queued mockReturnValueOnce, then set full chain
+    mockQuery.mockReset();
+    mockQuery
+      .mockReturnValueOnce(sonnetIterator())
+      .mockReturnValueOnce(failingIterator("Haiku timeout"))
+      .mockReturnValueOnce(haikuIterator());
 
     const streamPromise = POST(makePostRequest(), { params: { name: "jane-smith" } }).then(drainStream);
     await jest.runAllTimersAsync();
     await streamPromise;
 
-    expect(mockHaikuCreate).toHaveBeenCalledTimes(2);
+    // query called 3 times: Sonnet + 2 Haiku attempts
+    expect(mockQuery).toHaveBeenCalledTimes(3);
     expect(mockUpdateResearcherProfile).toHaveBeenCalledWith(
       "jane-smith",
-      expect.objectContaining({
-        retrieval_summary: "Dr Jane Smith is a climate adaptation researcher at UCL.",
-      })
+      expect.objectContaining({ retrieval_summary: DEFAULT_HAIKU_SUMMARY })
     );
-
     jest.useRealTimers();
   });
 
   it("emits SSE error and skips profile write if Haiku fails after retry", async () => {
     jest.useFakeTimers();
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
-
-    mockHaikuCreate
-      .mockRejectedValueOnce(new Error("Haiku timeout"))
-      .mockRejectedValueOnce(new Error("Haiku timeout again"));
+    // Reset to clear beforeEach's queued mockReturnValueOnce, then set full chain
+    mockQuery.mockReset();
+    mockQuery
+      .mockReturnValueOnce(sonnetIterator())
+      .mockReturnValueOnce(failingIterator())
+      .mockReturnValueOnce(failingIterator());
 
     const streamPromise = POST(makePostRequest(), { params: { name: "jane-smith" } }).then(drainStream);
     await jest.runAllTimersAsync();
@@ -246,7 +256,6 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
 
     expect(sseText).toContain('"type":"error"');
     expect(mockUpdateResearcherProfile).not.toHaveBeenCalled();
-
     jest.useRealTimers();
   });
 });

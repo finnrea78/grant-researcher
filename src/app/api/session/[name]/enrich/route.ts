@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { RESEARCHER_ENRICHER_PROMPT } from "@/lib/prompts/researcher-enricher";
 import {
@@ -13,7 +12,24 @@ import { requireUser } from "@/lib/auth";
 import { agentQueue } from "@/lib/concurrency";
 import type { ResearcherProfile } from "@/lib/types";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+async function callHaiku(prompt: string): Promise<string> {
+  let text = "";
+  for await (const message of query({
+    prompt,
+    options: {
+      model: "claude-haiku-4-5-20251001",
+      maxTurns: 1,
+      allowedTools: [],
+    },
+  })) {
+    if (message.type === "assistant") {
+      for (const block of message.message.content) {
+        if (block.type === "text") text += block.text;
+      }
+    }
+  }
+  return text;
+}
 
 function buildEnrichPrompt(name: string, profile: ResearcherProfile | null, publicationsMd: string | null): string {
   return [
@@ -27,7 +43,7 @@ function buildEnrichPrompt(name: string, profile: ResearcherProfile | null, publ
     ``,
     `All context is provided above — do NOT read any local files.`,
     `Output a single JSON object (no markdown fences) with these keys:`,
-    `- "enriched_fields": object with fields to merge into the profile (e.g. retrieval_summary, google_scholar_url, scholar_h_index, scholar_citation_count, recent_publications_web)`,
+    `- "enriched_fields": object with fields to merge into the profile (e.g. google_scholar_url, scholar_h_index, scholar_citation_count, recent_publications_web). Do NOT include retrieval_summary — it is generated separately.`,
     `- "scholar_candidate": object { candidate_url, candidate_confidence } if a candidate Scholar profile was found but not yet confirmed, or null if confirmed/not found`,
     `- "researcher_context_md": the researcher-context.md content as a string`,
     ``,
@@ -146,21 +162,11 @@ export async function POST(
 
         let retrievalSummary: string | null = null;
         try {
-          const msg = await anthropic.messages.create({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 800,
-            messages: [{ role: "user", content: haikuInput }],
-          });
-          retrievalSummary = msg.content[0].type === "text" ? msg.content[0].text : null;
+          retrievalSummary = await callHaiku(haikuInput);
         } catch {
           await new Promise(r => setTimeout(r, 1000));
           try {
-            const msg = await anthropic.messages.create({
-              model: "claude-haiku-4-5-20251001",
-              max_tokens: 800,
-              messages: [{ role: "user", content: haikuInput }],
-            });
-            retrievalSummary = msg.content[0].type === "text" ? msg.content[0].text : null;
+            retrievalSummary = await callHaiku(haikuInput);
           } catch (err) {
             controller.enqueue(formatSSEEvent({ type: "error", message: `retrieval_summary generation failed: ${String(err)}` }));
             agentQueue.release();
