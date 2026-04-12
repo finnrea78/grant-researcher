@@ -15,11 +15,13 @@ export default function NewResearcherPage() {
     setError(null);
     try {
       const res = await fetch("/api/session", { method: "POST", body: formData });
-      const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Failed to create session");
+        let msg = "Failed to create session";
+        try { const data = await res.json(); msg = data.error ?? msg; } catch {}
+        setError(msg);
         return;
       }
+      const data = await res.json();
       router.push(`/session/${data.name}`);
     } catch {
       setError("Network error — is the server running?");

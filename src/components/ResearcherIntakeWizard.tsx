@@ -84,7 +84,7 @@ export function ResearcherIntakeWizard({ onSubmit, loading = false, initialIntak
 
       const partial: Partial<IntakeData> = {};
 
-      if (data.name) { partial.name = data.name; filled.push("name"); }
+      if (data.name && !intake.name) { partial.name = data.name; filled.push("name"); }
       // Collected for profile-builder context (intake.json); not written to DB since store was trimmed
       if (data.institution) { partial.institution = data.institution; filled.push("institution"); }
       if (data.department) { partial.department = data.department; filled.push("department"); }

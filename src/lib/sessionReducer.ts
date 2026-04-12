@@ -23,6 +23,7 @@ export type Action =
   | { type: "ERROR"; stage: keyof StageState }
   | { type: "LOG"; event: SSEEvent }
   | { type: "SET_MATCHES"; matches: Match[] }
+  | { type: "APPEND_MATCH"; match: Match }
   | { type: "SET_PROPOSALS"; proposals: Proposal[] }
   | { type: "CLEAR_SCHOLAR_CANDIDATE" }
   | { type: "SET_SCHOLAR_CANDIDATE"; candidate: ScholarCandidate }
@@ -68,6 +69,16 @@ export function reducer(state: PageState, action: Action): PageState {
       };
     case "SET_MATCHES":
       return { ...state, matches: action.matches };
+    case "APPEND_MATCH": {
+      // Avoid duplicates — replace if same scheme+funder already streamed
+      const existing = state.matches.findIndex(
+        (m) => m.scheme === action.match.scheme && m.funder === action.match.funder
+      );
+      const matches = existing >= 0
+        ? state.matches.map((m, i) => (i === existing ? action.match : m))
+        : [...state.matches, action.match];
+      return { ...state, matches };
+    }
     case "SET_PROPOSALS":
       return { ...state, proposals: action.proposals };
     case "CLEAR_SCHOLAR_CANDIDATE":

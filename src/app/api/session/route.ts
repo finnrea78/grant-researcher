@@ -59,17 +59,33 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
-  const researcherId = await upsertResearcher(intakeForDb, name, userId);
+  let researcherId: string;
+  try {
+    researcherId = await upsertResearcher(intakeForDb, name, userId);
+  } catch (err) {
+    console.error("[session] upsertResearcher failed:", err);
+    return Response.json({ error: "Failed to save researcher profile" }, { status: 500 });
+  }
 
   if (bytes && file) {
-    await uploadCv(researcherId, bytes, file.type || "application/octet-stream", cvExt);
+    try {
+      await uploadCv(researcherId, bytes, file.type || "application/octet-stream", cvExt);
+    } catch (err) {
+      // Storage upload failure is non-fatal — researcher is created, CV text already stored in DB
+      console.error("[session] uploadCv failed:", err);
+    }
   }
 
   const pipelinePatch: Record<string, unknown> = { intake: true };
   if (proposalIntent) {
     pipelinePatch.proposal_intent = proposalIntent;
   }
-  await updatePipelineState(name, pipelinePatch);
+  try {
+    await updatePipelineState(name, pipelinePatch);
+  } catch (err) {
+    console.error("[session] updatePipelineState failed:", err);
+    return Response.json({ error: "Failed to update pipeline state" }, { status: 500 });
+  }
 
   if (intake.identifiers?.orcid) {
     try {

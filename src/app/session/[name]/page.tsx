@@ -10,6 +10,27 @@ import { ProposalViewer } from "@/components/ProposalViewer";
 import { ResearcherIntakeWizard } from "@/components/ResearcherIntakeWizard";
 import type { SSEEvent } from "@/lib/sse";
 import type { Match } from "@/lib/parseMatches";
+
+const TIER_MAP: Record<string, 1 | 2 | 3> = { strong: 1, exploring: 2, longshot: 3, ineligible: 3 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToMatch(r: any): Match | null {
+  if (r.tier === "ineligible") return null;
+  return {
+    id: r.id as string | undefined,
+    funder: (r.funder_slug ?? r.funder) as string,
+    scheme: (r.scheme_slug ?? r.scheme) as string,
+    score: (r.score_overall ?? r.score) as number,
+    amount: (r.amount_raw ?? r.amount ?? "") as string,
+    deadline: (r.deadline_raw ?? r.deadline ?? "") as string,
+    tier: (TIER_MAP[r.tier] ?? 3) as 1 | 2 | 3,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowsToMatches(rows: any[]): Match[] {
+  return rows.flatMap((r) => { const m = rowToMatch(r); return m ? [m] : []; });
+}
 import { reducer, INITIAL_STATE } from "@/lib/sessionReducer";
 import { formatProfileMarkdown } from "@/lib/formatProfileMarkdown";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
@@ -48,7 +69,7 @@ export default function SessionPage({ params }: { params: { name: string } }) {
         if (status.match) {
           const matchesRes = await fetch(`/api/session/${name}/matches`);
           const data = await matchesRes.json();
-          matches = data.matches ?? [];
+          matches = rowsToMatches(data.matches ?? []);
         }
 
         dispatch({ type: "INIT", ...status, proposals, matches });
@@ -99,11 +120,16 @@ export default function SessionPage({ params }: { params: { name: string } }) {
           if (!line.startsWith("data: ")) continue;
           try {
             const event: SSEEvent = JSON.parse(line.slice(6));
-            dispatch({ type: "LOG", event });
-            if (event.type === "error") {
-              dispatch({ type: "ERROR", stage });
-              runningRef.current = false;
-              return;
+            if (event.type === "match") {
+              const m = rowToMatch(event.match);
+              if (m) dispatch({ type: "APPEND_MATCH", match: m });
+            } else {
+              dispatch({ type: "LOG", event });
+              if (event.type === "error") {
+                dispatch({ type: "ERROR", stage });
+                runningRef.current = false;
+                return;
+              }
             }
           } catch {
             // Ignore malformed SSE lines
@@ -116,8 +142,8 @@ export default function SessionPage({ params }: { params: { name: string } }) {
       // After stage completes, load any new data
       if (stage === "match") {
         const matchesRes = await fetch(`/api/session/${name}/matches`);
-        const { matches } = await matchesRes.json();
-        dispatch({ type: "SET_MATCHES", matches });
+        const data = await matchesRes.json();
+        dispatch({ type: "SET_MATCHES", matches: rowsToMatches(data.matches ?? []) });
       }
       if (stage === "propose") {
         const proposalRes = await fetch(`/api/session/${name}/proposal`);

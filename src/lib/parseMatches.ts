@@ -1,4 +1,5 @@
 export interface Match {
+  id?: string;
   scheme: string;
   funder: string;
   score: number;

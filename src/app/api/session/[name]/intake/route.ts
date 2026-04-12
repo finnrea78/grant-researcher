@@ -26,7 +26,7 @@ export async function GET(
 
   const intake = {
     name: researcher.name,
-    ...(researcher.enriched_profile as Record<string, unknown> ?? {}),
+    ...((researcher.enriched_profile ?? {}) as Record<string, unknown>),
   };
 
   return Response.json({ intake });
