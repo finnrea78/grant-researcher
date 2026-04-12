@@ -26,9 +26,9 @@ CV upload → Profile → Enrich → Scan → Match → Propose
 
 1. **Profile** — Claude reads the CV and extracts a structured researcher profile (themes, track record, career stage, gaps)
 2. **Enrich** — web research to fill gaps (Google Scholar, institutional pages, ORCID)
-3. **Scan** — harvests funding source data from known URLs; persists funders and opportunities to Supabase (source of truth) and stores markdown locally for agent access
-4. **Match** — scores every funding scheme against the researcher profile across five dimensions, producing a tiered ranked list
-5. **Propose** — drafts a strategic alignment document for a selected grant
+3. **Scan** — harvests funding source data from known URLs; persists funders and opportunities to Supabase
+4. **Match** — scores every funding scheme against the researcher profile across five dimensions, producing a tiered ranked list; results persisted to `researcher_matches` table
+5. **Propose** — drafts a strategic alignment document for a selected grant; content persisted to `researcher_proposals` table
 
 Each stage streams its output live to the browser via Server-Sent Events (SSE).
 
@@ -68,7 +68,10 @@ grant-researcher/
 │       ├── prompts/                 # Claude prompt templates (5 agents)
 │       ├── types.ts                 # Core interfaces
 │       ├── sse.ts                   # SSE streaming helper
-│       └── researcher-store.ts      # Supabase sync
+│       ├── researcher-store.ts      # Supabase CRUD for researcher rows
+│       ├── match-store.ts           # researcher_matches CRUD
+│       ├── funding-source-store.ts  # funding_sources CRUD
+│       └── cv-store.ts             # Supabase Storage for CV upload/read
 │
 ├── data-pipeline/                   # Grant ingestion CLI (UKRI GtR + Finder)
 │   └── src/
@@ -80,10 +83,8 @@ grant-researcher/
 ├── db/                              # Supabase schema & client (@grant-researcher/db)
 │   └── src/
 │
-├── data/                            # Local filesystem storage
-│   ├── funding-sources/             # Harvested grant data (markdown per funder)
-│   ├── researchers/                 # Researcher profiles and CVs
-│   └── outputs/                     # Match results and proposals
+├── data/                            # Scan agent working directory (not persistent state)
+│   └── funding-sources/             # _urls.md seed list + intermediate scan files
 │
 ├── .claude/                         # Claude Code project context
 │   ├── CONTEXT.md                   # Product vision and current state
@@ -179,34 +180,15 @@ npm run db:diff -w db
 
 ---
 
-## CLI usage (file-based pipeline)
-
-The core pipeline can also be run directly against local files (no database required):
-
-```bash
-# Build a researcher profile from their CV
-grant-researcher profile <name>
-
-# Harvest / refresh the funding database
-grant-researcher scan
-grant-researcher scan --check    # only re-fetch sources older than 7 days
-grant-researcher scan --force    # re-harvest everything
-
-# Score all grants against a researcher profile
-grant-researcher match <name>
-
-# Draft a proposal alignment document
-grant-researcher propose <funder> <scheme>
-grant-researcher propose <name> <funder> <scheme>
-```
-
-Researcher data lives in `data/researchers/<name>/`. Place a CV at `data/researchers/<name>/raw/cv.md` (or `.pdf` / `.docx`) before running `profile`.
-
----
-
 ## Adding grant sources
 
-Add a new markdown file to `data/funding-sources/` following the template at `_template.md`. Run the scan stage to harvest it.
+To add a new funding source, add a line to `data/funding-sources/_urls.md`:
+
+```
+funder-slug | https://funder-website.example/open-calls
+```
+
+Run the Scan stage from the web UI to harvest it. Discovered opportunities are persisted to Supabase and are immediately available to the Match stage.
 
 ### Awarded grants vs open opportunities
 

@@ -5,7 +5,7 @@
 ## Architecture at a glance
 
 Next.js 14 monorepo → 3 workspaces: **src** (app + API), **data-pipeline** (CLI), **db** (schema + types).  
-5 Claude agents stream via SSE. Supabase + pgvector for storage + semantic search.
+5 Claude agents stream via SSE. All pipeline state persists to Supabase — no filesystem writes for researcher data.
 
 ## Core notes
 
@@ -22,10 +22,14 @@ Next.js 14 monorepo → 3 workspaces: **src** (app + API), **data-pipeline** (CL
 | Agent API routes | `src/app/api/session/[name]/` |
 | Core types | `src/lib/types.ts` |
 | SSE streaming | `src/lib/sse.ts` |
-| Researcher CRUD | `src/lib/researcher-store.ts` |
+| Researcher CRUD | `src/lib/researcher-store.ts` — profile, publications, pipeline_state, scholar candidate |
+| Match CRUD | `src/lib/match-store.ts` — `upsertMatchBatch`, `getMatches`, `deleteMatchesForResearcher` |
+| Funding source CRUD | `src/lib/funding-source-store.ts` — `upsertFundingSource`, `listFundingSources` |
+| CV storage | `src/lib/cv-store.ts` — `uploadCv`, `getCvText` (Supabase Storage) |
 | Opportunity CRUD | `src/lib/opportunity-store.ts` — `getOpportunityById`, `getOpportunityByFunderAndName`, upsert fns |
 | Hybrid retrieval | `src/lib/opportunity-retrieval.ts` — returns `CandidateOpportunity` with `funder_name` |
-| Scan persistence | `src/lib/scan-persistence.ts` |
+| Match scoring utils | `src/lib/match-utils.ts` — `parseAgentScores`, `formatMatchesMd` |
+| Scan persistence | `src/lib/scan-persistence.ts` — `persistDiscoveredManifest` → funding_sources table |
 | Embedder | `src/lib/embedder.ts` |
 | UI components | `src/components/` |
 | Pipeline CLI entry | `data-pipeline/src/cli.ts` |
