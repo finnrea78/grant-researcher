@@ -1,6 +1,6 @@
 # Grant Researcher — Research Vault
 
-> Last updated: 2026-04-06
+> Last updated: 2026-04-12
 > Purpose: Research and strategy notes for the grant-researcher app — a free AI-powered grant matching tool for UK researchers.
 
 ## What this vault is
@@ -59,3 +59,5 @@ Researcher data     →  OpenAlex authors (ORCID linkable, publications, topics)
 |------|-------|
 | 2026-04-02 | Initial grant database catalogue ([[Grant Databases — Full Catalogue]]) |
 | 2026-04-06 | Landscape deep-dive: free APIs, paid DBs, OpenAlex, UK strategy |
+| 2026-04-11 | DB-first pipeline design: opportunities/funders as Supabase source of truth, retrieval RPCs |
+| 2026-04-12 | Fix "Opportunity not found" bug — thread UUID through match → propose pipeline via HTML comments |

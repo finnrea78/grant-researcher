@@ -21,6 +21,8 @@ export interface CandidateOpportunity {
   url: string | null;
   funding_type: string | null;
   source: string;
+  similarity?: number;
+  funder_name?: string;
 }
 
 /**
@@ -57,6 +59,7 @@ function trimCandidate(c: CandidateOpportunity): Partial<CandidateOpportunity> {
   if (trimmed.scope === null) delete trimmed.scope;
   trimmed.eligibility = truncate(c.eligibility);
   if (trimmed.eligibility === null) delete trimmed.eligibility;
+  // Keep similarity score — used for pre-ranking visibility in matches.md
 
   return trimmed as Partial<CandidateOpportunity>;
 }
@@ -65,11 +68,16 @@ function trimCandidate(c: CandidateOpportunity): Partial<CandidateOpportunity> {
  * Retrieve up to `limit` candidate opportunities using hybrid retrieval:
  * 1. pgvector cosine similarity (if researcher has profile_embedding)
  * 2. tsvector full-text search (always, as belt-and-braces)
- * Results are unioned, deduplicated by id, and trimmed for token efficiency.
+ * Results are unioned, deduplicated by id, sorted by similarity descending,
+ * and trimmed for token efficiency.
+ *
+ * Limit is intentionally low (10) — the agent writes one JSON file per
+ * opportunity, so fewer candidates = fewer tool calls = faster completion.
+ * pgvector pre-ranks so the top 10 are the most relevant.
  */
 export async function retrieveCandidates(
   researcherSlug: string,
-  limit = 75
+  limit = 10
 ): Promise<Partial<CandidateOpportunity>[]> {
   const researcher = await getResearcherForMatching(researcherSlug);
   const seen = new Map<string, CandidateOpportunity>();
@@ -79,7 +87,7 @@ export async function retrieveCandidates(
     const { data, error } = await supabase.rpc("match_opportunities", {
       query_embedding: researcher.profile_embedding,
       match_threshold: 0.2,
-      match_count: 100,
+      match_count: 50,
     });
     if (error) console.warn("[retrieval] pgvector error:", error.message);
     if (data) {
@@ -97,15 +105,22 @@ export async function retrieveCandidates(
   if (searchQuery) {
     const { data, error } = await supabase.rpc("search_opportunities_fts", {
       search_query: searchQuery,
-      match_count: 100,
+      match_count: 50,
     });
     if (error) console.warn("[retrieval] tsvector error:", error.message);
     if (data) {
-      for (const row of data as CandidateOpportunity[]) {
-        if (!seen.has(row.id)) seen.set(row.id, row);
+      for (const row of data as (CandidateOpportunity & { rank?: number })[]) {
+        if (!seen.has(row.id)) {
+          // Normalise FTS rank to a rough similarity score so we can sort uniformly
+          seen.set(row.id, { ...row, similarity: row.similarity ?? (row.rank ? Math.min(row.rank / 10, 1) : 0) });
+        }
       }
     }
   }
 
-  return [...seen.values()].slice(0, limit).map(trimCandidate);
+  // Sort by similarity descending so the matcher sees the strongest candidates first
+  return [...seen.values()]
+    .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0))
+    .slice(0, limit)
+    .map(trimCandidate);
 }

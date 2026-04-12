@@ -7,7 +7,7 @@ import {
   updatePipelineState,
   updateProfileEmbedding,
 } from "@/lib/researcher-store";
-import { formatSSEEvent, sseResponse } from "@/lib/sse";
+import { formatSSEEvent, sseResponse, startHeartbeat } from "@/lib/sse";
 import { requireUser } from "@/lib/auth";
 import { agentQueue } from "@/lib/concurrency";
 import type { IntakeData, ResearcherProfile } from "@/lib/types";
@@ -62,6 +62,7 @@ export async function GET(
 
   const { name } = params;
   const researcher = await getResearcherFull(name);
+
   if (!researcher?.enriched_profile) {
     return Response.json({ error: "Profile not found" }, { status: 404 });
   }
@@ -93,10 +94,9 @@ export async function POST(
         return;
       }
       try {
-        // Read all context from DB
         const researcher = await getResearcherFull(name);
         const intake: IntakeData | null = researcher
-          ? { name: researcher.name }
+          ? { name: researcher.name, ...(researcher.enriched_profile as IntakeData ?? {}) }
           : null;
         const cvText = researcher?.cv_text ?? null;
         const proposalIntent = (researcher?.pipeline_state?.proposal_intent as Record<string, unknown>) ?? null;
@@ -105,41 +105,46 @@ export async function POST(
 
         controller.enqueue(formatSSEEvent({ type: "text", text: "Building researcher profile…" }));
 
-        // Collect the full text response from the agent query
         let rawText = "";
         let resultCost = 0;
         let resultTurns = 0;
 
-        for await (const message of query({
-          prompt: userPrompt,
-          options: {
-            systemPrompt: PROFILE_BUILDER_PROMPT,
-            allowedTools: [],
-            model: "haiku",
-            maxTurns: 1,
-          },
-        })) {
-          if (message.type === "assistant") {
-            for (const block of message.message.content) {
-              if (block.type === "text" && block.text.trim()) {
-                rawText += block.text;
+        const heartbeat = startHeartbeat(controller);
+        try {
+          for await (const message of query({
+            prompt: userPrompt,
+            options: {
+              systemPrompt: PROFILE_BUILDER_PROMPT,
+              allowedTools: [],
+              model: "haiku",
+              maxTurns: 1,
+            },
+          })) {
+            if (message.type === "assistant") {
+              for (const block of message.message.content) {
+                if (block.type === "text" && block.text.trim()) {
+                  rawText += block.text;
+                }
               }
+            } else if (message.type === "result" && !message.is_error) {
+              if ("total_cost_usd" in message) resultCost = message.total_cost_usd;
+              if ("num_turns" in message) resultTurns = message.num_turns;
             }
-          } else if (message.type === "result" && !message.is_error) {
-            if ("total_cost_usd" in message) resultCost = message.total_cost_usd;
-            if ("num_turns" in message) resultTurns = message.num_turns;
           }
+        } finally {
+          clearInterval(heartbeat);
         }
 
         const { profile, publications_md } = parseProfileResponse(rawText);
 
-        // Write all outputs to DB
-        await updateResearcherProfile(name, profile);
-        await updatePublicationsMd(name, publications_md);
+        await Promise.all([
+          updateResearcherProfile(name, profile),
+          updatePublicationsMd(name, publications_md),
+          updatePipelineState(name, { profile: true }),
+        ]);
         if (profile.retrieval_summary) {
           await updateProfileEmbedding(name, profile.retrieval_summary);
         }
-        await updatePipelineState(name, { profile: true });
 
         controller.enqueue(
           formatSSEEvent({ type: "result", turns: resultTurns, cost: resultCost, duration: Date.now() - startMs })

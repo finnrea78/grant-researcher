@@ -153,6 +153,52 @@ export async function upsertOpportunityFromDiscovery(
 }
 
 /**
+ * Fetch a single opportunity by its UUID.
+ * Preferred over getOpportunityByFunderAndName when the id is known.
+ */
+export async function getOpportunityById(id: string): Promise<{
+  name: string;
+  description: string | null;
+  scope: string | null;
+  eligibility: string | null;
+  url: string | null;
+  funding_type: string | null;
+  deadline_date: string | null;
+  deadline_raw: string | null;
+  amount_raw: string | null;
+  status: string | null;
+  funder_name: string;
+  funder_website: string | null;
+  funder_source_url: string | null;
+} | null> {
+  const { data, error } = await supabase
+    .from("opportunities")
+    .select("name, description, scope, eligibility, url, funding_type, deadline_date, deadline_raw, amount_raw, status, funder:funders(name, website, source_url)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const funderRaw = data.funder as { name: string; website: string | null; source_url: string | null } | Array<{ name: string; website: string | null; source_url: string | null }> | null;
+  const funder = Array.isArray(funderRaw) ? (funderRaw[0] ?? null) : funderRaw;
+  return {
+    name: data.name,
+    description: data.description,
+    scope: data.scope,
+    eligibility: data.eligibility,
+    url: data.url,
+    funding_type: data.funding_type,
+    deadline_date: data.deadline_date,
+    deadline_raw: data.deadline_raw,
+    amount_raw: data.amount_raw,
+    status: data.status,
+    funder_name: funder?.name ?? "",
+    funder_website: funder?.website ?? null,
+    funder_source_url: funder?.source_url ?? null,
+  };
+}
+
+/**
  * Fetch a single opportunity by funder slug and opportunity name.
  * Used by the propose route to pull scheme details from the DB.
  */

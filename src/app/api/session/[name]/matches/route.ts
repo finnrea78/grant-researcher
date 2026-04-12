@@ -14,8 +14,8 @@ export async function GET(
   }
 
   const { name } = params;
-
   const researcher = await getResearcherBySlug(name);
+
   if (!researcher) {
     return Response.json({ error: "Researcher not found" }, { status: 404 });
   }

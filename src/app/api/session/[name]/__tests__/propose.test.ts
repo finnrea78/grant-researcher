@@ -27,6 +27,7 @@ jest.mock("@/lib/sse", () => ({
   formatSSEEvent: (event: unknown) => `data: ${JSON.stringify(event)}\n\n`,
   sseResponse: (stream: ReadableStream) =>
     new Response(stream, { headers: { "Content-Type": "text/event-stream" } }),
+  startHeartbeat: () => 0,
 }));
 
 const mockUpsertProposalBySlug = jest.fn().mockResolvedValue(undefined);

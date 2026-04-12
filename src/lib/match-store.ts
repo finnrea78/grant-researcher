@@ -18,10 +18,16 @@ export async function upsertMatch(match: MatchInput): Promise<void> {
 
 /**
  * Upsert multiple match scores in one round-trip.
+ * Accepts a researcherId and an array of scores without researcher_id so the
+ * caller (match route) doesn't have to map it onto every element.
  * No-ops if given an empty array.
  */
-export async function upsertMatchBatch(matches: MatchInput[]): Promise<void> {
-  if (matches.length === 0) return;
+export async function upsertMatchBatch(
+  researcherId: string,
+  scores: Omit<MatchInput, "researcher_id">[]
+): Promise<void> {
+  if (scores.length === 0) return;
+  const matches: MatchInput[] = scores.map((s) => ({ ...s, researcher_id: researcherId }));
   const { error } = await supabase
     .from("researcher_matches")
     .upsert(matches, { onConflict: "researcher_id,funder_slug,scheme_slug" });

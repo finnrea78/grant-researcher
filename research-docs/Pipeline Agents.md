@@ -31,18 +31,20 @@ All use `@anthropic-ai/claude-agent-sdk`. Data persisted to Supabase and local `
 ## Agent 4 — Matcher
 
 - **Route**: `POST /api/session/[name]/match`
-- **Prompt**: `src/lib/prompts/matcher.ts` (`MATCHER_PROMPT`)
-- **Tools**: NONE (no WebFetch/WebSearch — hard constraint)
-- **Retrieval**: `src/lib/opportunity-retrieval.ts` → 150 pre-filtered candidates
+- **Prompt**: `src/lib/prompts/matcher.ts` (`MATCHER_SCORE_PROMPT`)
+- **Tools**: `["Write"]` only — hard constraint: NO WebFetch/WebSearch
+- **Retrieval**: `src/lib/opportunity-retrieval.ts` → 150 pre-filtered candidates (includes `funder_name` via funders JOIN)
 - **Scoring**: 5 dimensions (eligibility, thematic, track record, strategic, practical)
-- **Output**: `data/outputs/[name]/matches.md` → parsed by `src/lib/parseMatches.ts` → `Match[]`
+- **Approach**: Write-tool based — agent writes one JSON score file per opportunity to `data/outputs/[name]/scores/`. Route reads and formats into `matches.md`.
+- **Output**: `data/outputs/[name]/matches.md` with `<!-- opportunity-id:UUID -->` comments embedded per entry → parsed by `src/lib/parseMatches.ts` → `Match[]` (with `id?: string`)
+- **UUID threading**: `opportunity_id` from score JSON → HTML comment in matches.md → `Match.id` → propose route direct lookup
 
 ## Agent 5 — Proposal Outliner
 
 - **Route**: `POST /api/session/[name]/propose`
 - **Prompt**: `src/lib/prompts/proposal-outliner.ts` (`PROPOSAL_OUTLINER_PROMPT`)
-- **Input**: chosen scheme slug + researcher profile + intent from `src/lib/proposalIntent.ts`
-- **Output**: 8-section alignment doc → `data/outputs/[name]/[scheme-slug].md` + `researcher_proposals` table
+- **Input**: `{ funder, scheme, opportunityId? }` — when `opportunityId` is present, uses `getOpportunityById` (direct UUID lookup); falls back to `getOpportunityByFunderAndName`
+- **Output**: 8-section alignment doc → `data/outputs/[name]/proposals/[funder]-[scheme-slug].md` + `researcher_proposals` table
 
 ## Session state
 

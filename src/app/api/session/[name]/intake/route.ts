@@ -1,8 +1,8 @@
 import { requireUser } from "@/lib/auth";
 import { getResearcherFull, upsertResearcher, updatePipelineState } from "@/lib/researcher-store";
+import { stripEphemeralFields } from "@/lib/stripEphemeral";
 import { deleteMatchesForResearcher } from "@/lib/match-store";
 import { uploadCv } from "@/lib/cv-store";
-import { stripEphemeralFields } from "@/lib/stripEphemeral";
 import { extractCvText } from "@/lib/extractCvText";
 import type { IntakeData } from "@/lib/types";
 
@@ -19,14 +19,14 @@ export async function GET(
 
   const { name } = params;
   const researcher = await getResearcherFull(name);
+
   if (!researcher) {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Build intake object from DB columns, stripping large/internal fields
-  const intake: IntakeData = {
+  const intake = {
     name: researcher.name,
-    ...(researcher.enriched_profile ?? {}),
+    ...(researcher.enriched_profile as Record<string, unknown> ?? {}),
   };
 
   return Response.json({ intake });
@@ -60,53 +60,45 @@ export async function PATCH(
     }
   }
 
-  // Get existing researcher to preserve cv_text if no new CV uploaded
-  const existing = await getResearcherFull(name);
+  let cvText: string | undefined;
+  let cvExt = "pdf";
+  let bytes: Buffer | null = null;
 
-  // Handle new CV upload
-  let cvBuffer: Buffer | null = null;
-  let cvExt = "md";
   if (file && file.size > 0) {
     const originalName = file.name;
     cvExt = originalName.includes(".")
-      ? originalName.split(".").pop() ?? "md"
-      : "md";
-    const bytes = await file.arrayBuffer();
-    cvBuffer = Buffer.from(bytes);
-    const cvText = await extractCvText(cvBuffer, file.name);
-    if (cvText) {
-      intake = { ...intake, cv_text: cvText };
-    }
-  } else if (existing?.cv_text) {
-    // Preserve existing cv_text when no new file uploaded
-    intake = { ...intake, cv_text: existing.cv_text };
+      ? originalName.split(".").pop() ?? "pdf"
+      : "pdf";
+    bytes = Buffer.from(await file.arrayBuffer());
+    cvText = (await extractCvText(bytes, file.name)) ?? undefined;
+  } else {
+    // No new CV — preserve existing cv_text from DB
+    const existing = await getResearcherFull(name);
+    cvText = existing?.cv_text ?? undefined;
   }
 
-  // Upsert researcher with updated intake data (strips proposal_intent)
-  const researcherId = await upsertResearcher(stripEphemeralFields(intake), name, userId);
+  const proposalIntent = intake.proposal_intent;
+  const intakeForDb = stripEphemeralFields({ ...intake, name: intake.name || name });
+  if (cvText) intakeForDb.cv_text = cvText;
 
-  // Upload new CV to storage if provided
-  if (cvBuffer && file && existing) {
-    await uploadCv(researcherId, cvBuffer, file.type || "application/octet-stream", cvExt);
+  const researcherId = await upsertResearcher(intakeForDb, name, userId);
+
+  if (bytes && file) {
+    await uploadCv(researcherId, bytes, file.type || "application/octet-stream", cvExt);
   }
 
-  // Reset pipeline state — re-intake invalidates all downstream stages
-  const pipelineStatePatch: Record<string, unknown> = {
+  // Reset pipeline state — null clears derived stage flags so re-intake triggers re-run
+  const pipelinePatch: Record<string, unknown> = {
     intake: true,
-    profile: false,
-    enrich: false,
-    scan: false,
-    match: false,
+    profile: null,
+    enrich: null,
+    scan: null,
+    match: null,
+    proposal_intent: proposalIntent ?? null,
   };
-  if (intake.proposal_intent) {
-    pipelineStatePatch.proposal_intent = intake.proposal_intent;
-  }
-  await updatePipelineState(name, pipelineStatePatch);
+  await updatePipelineState(name, pipelinePatch);
 
-  // Delete existing match scores (stale after re-intake)
-  if (existing) {
-    await deleteMatchesForResearcher(existing.id);
-  }
+  await deleteMatchesForResearcher(researcherId);
 
   return Response.json({ ok: true });
 }

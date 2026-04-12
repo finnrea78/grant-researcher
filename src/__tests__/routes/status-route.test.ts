@@ -11,7 +11,6 @@ jest.mock("@/lib/auth", () => ({
 
 // Mock the store functions
 jest.mock("@/lib/researcher-store", () => ({
-  getPipelineState: jest.fn(),
   getResearcherFull: jest.fn(),
 }));
 
@@ -20,10 +19,9 @@ jest.mock("@/lib/proposal-store", () => ({
 }));
 
 import { GET } from "@/app/api/session/[name]/status/route";
-import { getPipelineState, getResearcherFull } from "@/lib/researcher-store";
+import { getResearcherFull } from "@/lib/researcher-store";
 import { getProposalsByResearcherSlug } from "@/lib/proposal-store";
 
-const mockGetPipelineState = getPipelineState as jest.Mock;
 const mockGetResearcherFull = getResearcherFull as jest.Mock;
 const mockListProposals = getProposalsByResearcherSlug as jest.Mock;
 
@@ -35,8 +33,7 @@ describe("GET /api/session/[name]/status (DB-first)", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("returns all false with no proposals for a fresh researcher", async () => {
-    mockGetPipelineState.mockResolvedValue({});
-    mockGetResearcherFull.mockResolvedValue({ scholar_candidate: null });
+    mockGetResearcherFull.mockResolvedValue({ pipeline_state: {}, scholar_candidate: null });
     mockListProposals.mockResolvedValue([]);
 
     const res = await GET(makeRequest(), { params: { name: "jane-smith" } });
@@ -54,8 +51,7 @@ describe("GET /api/session/[name]/status (DB-first)", () => {
   });
 
   it("returns correct flags from pipeline_state", async () => {
-    mockGetPipelineState.mockResolvedValue({ profile: true, enrich: true, scan: true, match: false });
-    mockGetResearcherFull.mockResolvedValue({ scholar_candidate: null });
+    mockGetResearcherFull.mockResolvedValue({ pipeline_state: { profile: true, enrich: true, scan: true, match: false }, scholar_candidate: null });
     mockListProposals.mockResolvedValue([]);
 
     const res = await GET(makeRequest(), { params: { name: "jane-smith" } });
@@ -69,8 +65,7 @@ describe("GET /api/session/[name]/status (DB-first)", () => {
 
   it("includes scholar_candidate from DB when disambiguation is pending", async () => {
     const candidate = { name: "Jane Smith", orcid: "0000-0001-2345-6789", confidence: 0.95 };
-    mockGetPipelineState.mockResolvedValue({ profile: true, enrich: "pending" });
-    mockGetResearcherFull.mockResolvedValue({ scholar_candidate: candidate });
+    mockGetResearcherFull.mockResolvedValue({ pipeline_state: { profile: true, enrich: "pending" }, scholar_candidate: candidate });
     mockListProposals.mockResolvedValue([]);
 
     const res = await GET(makeRequest(), { params: { name: "jane-smith" } });
@@ -80,8 +75,7 @@ describe("GET /api/session/[name]/status (DB-first)", () => {
   });
 
   it("lists proposal filenames from DB", async () => {
-    mockGetPipelineState.mockResolvedValue({ profile: true, enrich: true, scan: true, match: true });
-    mockGetResearcherFull.mockResolvedValue({ scholar_candidate: null });
+    mockGetResearcherFull.mockResolvedValue({ pipeline_state: { profile: true, enrich: true, scan: true, match: true }, scholar_candidate: null });
     mockListProposals.mockResolvedValue([
       { funder_slug: "ahrc", scheme_slug: "responsive-mode" },
       { funder_slug: "wellcome", scheme_slug: "discovery" },
@@ -96,17 +90,13 @@ describe("GET /api/session/[name]/status (DB-first)", () => {
     ]);
   });
 
-  it("does not use filesystem at all", async () => {
-    mockGetPipelineState.mockResolvedValue({});
-    mockGetResearcherFull.mockResolvedValue({ scholar_candidate: null });
+  it("does not use filesystem at all — all state comes from getResearcherFull", async () => {
+    mockGetResearcherFull.mockResolvedValue({ pipeline_state: {}, scholar_candidate: null });
     mockListProposals.mockResolvedValue([]);
 
     await GET(makeRequest(), { params: { name: "jane-smith" } });
 
-    // If fs were imported, these would be called. Verify route source has no fs imports.
-    const routeSource = require("fs");
-    // The route file itself should not use fs functions
-    expect(mockGetPipelineState).toHaveBeenCalledWith("jane-smith");
+    expect(mockGetResearcherFull).toHaveBeenCalledWith("jane-smith");
   });
 
   it("returns 401 when not authenticated", async () => {

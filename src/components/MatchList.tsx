@@ -2,7 +2,7 @@ import type { Match } from "@/lib/parseMatches";
 
 interface MatchListProps {
   matches: Match[];
-  onPropose: (funder: string, scheme: string) => void;
+  onPropose: (funder: string, scheme: string, opportunityId?: string) => void;
   proposing: boolean;
   proposingScheme?: string | null;
   disabled?: boolean;
@@ -28,7 +28,7 @@ export function MatchList({ matches, onPropose, proposing, proposingScheme, disa
     const isProposing = proposing && proposingScheme === match.scheme;
     return (
       <button
-        onClick={() => onPropose(match.funder, match.scheme)}
+        onClick={() => onPropose(match.funder, match.scheme, match.id)}
         disabled={proposing || disabled}
         className="w-full text-left bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed border border-slate-700 rounded-lg px-4 py-3 mb-2 transition-colors"
       >

@@ -73,6 +73,18 @@ export default function SessionPage({ params }: { params: { name: string } }) {
         body: body ? JSON.stringify(body) : undefined,
       });
 
+      if (!res.ok) {
+        let msg = `Server error (${res.status})`;
+        try {
+          const body = await res.json();
+          if (body.error) msg = body.error;
+        } catch {}
+        dispatch({ type: "LOG", event: { type: "error", message: msg } });
+        dispatch({ type: "ERROR", stage });
+        runningRef.current = false;
+        return;
+      }
+
       if (!res.body) throw new Error("No response body");
 
       const reader = res.body.getReader();
@@ -146,9 +158,9 @@ export default function SessionPage({ params }: { params: { name: string } }) {
     }
   }
 
-  function handlePropose(funder: string, scheme: string) {
+  function handlePropose(funder: string, scheme: string, opportunityId?: string) {
     dispatch({ type: "SET_PROPOSING_SCHEME", scheme });
-    runStage("propose", `/api/session/${name}/propose`, { funder, scheme });
+    runStage("propose", `/api/session/${name}/propose`, { funder, scheme, opportunityId });
   }
 
   async function handleScholarConfirm() {

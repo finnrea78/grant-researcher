@@ -1,14 +1,79 @@
+/**
+ * MATCHER_SCORE_PROMPT — single-pass, Write-tool-based scoring.
+ * Agent writes one JSON score file per opportunity. Route formats the markdown.
+ */
+export const MATCHER_SCORE_PROMPT = `
+Score each funding opportunity against the researcher's profile. Write one JSON file per opportunity. All context is provided inline.
+
+## Scoring dimensions (0-10 each)
+
+**Eligibility (gate):** Check career stage, institution type, nationality, prior grant restrictions, deadline. If ineligible, set eligible=false and fill ineligible_reason. Set all scores to 0.
+
+**Thematic Alignment (weight 3x):** Match researcher themes/keywords/geographic focus vs funder scope/description.
+9-10: Direct match on primary themes. 7-8: Strong overlap. 5-6: Moderate. 3-4: Tangential. 1-2: Minimal. 0: None.
+
+**Track Record Fit (weight 2x):** Publications and prior grants vs scheme expectations.
+9-10: Top-tier pubs + prior grant from this/peer funder. 7-8: Good. 5-6: Adequate. 3-4: Thin. 1-2: Weak. 0: Insufficient.
+
+**Strategic Fit (weight 1x):** Does this grant fill a CV gap or support current work?
+9-10: Perfect fit. 7-8: Clear value. 5-6: Useful. 3-4: Low. 1-2: Unlikely to help.
+
+**Practical Factors (weight 1x):** Deadline timing, complexity, amount.
+9-10: Rolling/imminent, straightforward. 7-8: Within 6 months. 5-6: 6-12 months. 3-4: Complex. 0: Unclear/inactive.
+
+Formula: overall = round((thematic×3 + track_record×2 + strategic + practical) / 7, 1)
+
+## Instructions
+
+For EACH opportunity in the <opportunities> list:
+1. Score it using the framework above.
+2. Write a JSON file to the path shown in the prompt.
+
+The JSON must match this exact schema:
+{
+  "opportunity_id": "string — use the id field from the opportunity exactly",
+  "name": "string — scheme name (use the name field from the opportunity)",
+  "funder": "string — use the funder_name field from the opportunity exactly as written",
+  "url": "string or null",
+  "amount": "string or null — use amount_raw",
+  "deadline": "string or null — use deadline_date, fall back to deadline_raw",
+  "eligible": true | false,
+  "ineligible_reason": "string or null",
+  "thematic": 0-10,
+  "track_record": 0-10,
+  "strategic": 0-10,
+  "practical": 0-10,
+  "overall": 0.0-10.0,
+  "why": "2-3 sentences explaining fit or lack of fit",
+  "strengths": "one line — what makes this researcher competitive",
+  "weaknesses": "one line — honest gaps",
+  "action": "apply now | prepare for next round | monitor | not applicable",
+  "urgent": true | false
+}
+
+Set urgent=true if deadline is within 30 days of today.
+
+## Constraints
+- Write ONLY the JSON files. No other output.
+- Use the Write tool once per opportunity.
+- Do NOT read any files — all context is in the prompt.
+`.trim();
+
+/**
+ * MATCHER_PROMPT — legacy single-pass text prompt (no tools).
+ * Kept for the proposalIntent test which checks the prompt references proposal-intent.
+ */
 export const MATCHER_PROMPT = `
-Score a researcher's profile against the provided funding opportunities. Produce a ranked, tiered list of matches with transparent reasoning. Opportunities are passed directly as JSON — do NOT search for files.
+Score a researcher's profile against the provided funding opportunities. Produce a ranked, tiered list of matches with transparent reasoning. All context is provided inline — do NOT read or write any files.
 
 ## Instructions
 
 ### Step 1: Read Inputs
 
-1. Read the researcher's profile.json in full.
-2. If a file named \`researcher-context.md\` exists alongside profile.json, read it for enriched context (citations, online presence, future research direction).
-3. If a file named \`proposal-intent.json\` exists alongside profile.json, read it. Use it to sharpen Thematic Alignment and Strategic Fit scoring.
-4. Read the list of funding opportunities from the \`<opportunities>\` JSON block in your input prompt. Do NOT read any files from funding-sources/.
+1. The researcher's profile is provided in the \`<researcher-profile>\` block in your input prompt.
+2. If a \`<researcher-context>\` block is provided, read it for enriched context (citations, online presence, future research direction).
+3. If a \`<proposal-intent>\` block is provided, read it. Use it to sharpen Thematic Alignment and Strategic Fit scoring.
+4. Read the list of funding opportunities from the \`<opportunities>\` JSON block in your input prompt.
 5. Note the current date — this determines whether deadlines are still open.
 
 ### Step 2: Score Each Opportunity
@@ -99,9 +164,9 @@ Round to 1 decimal place. Eligibility-failed schemes score 0 overall.
 
 ---
 
-### Step 4: Write Output
+### Step 4: Output
 
-Write the matches.md file following this format exactly:
+Output your matches as markdown following this format exactly (do not write any files — just output the text):
 
 \`\`\`markdown
 # Grant Matches for [Researcher Name]
@@ -141,6 +206,7 @@ Write the matches.md file following this format exactly:
 
 ### Step 5: Constraints
 
+- Do NOT use any tools. Output the markdown directly as text.
 - Make ZERO web calls.
 - Never stretch a match. Be honest about weak fits.
 - Flag schemes with deadlines within 30 days with ⚠️ URGENT.

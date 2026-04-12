@@ -1,6 +1,6 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { MATCHER_PROMPT } from "@/lib/prompts/matcher";
-import { formatSSEEvent, sseResponse } from "@/lib/sse";
+import { formatSSEEvent, sseResponse, startHeartbeat } from "@/lib/sse";
 import { getResearcherFull, updateMatchResultsMd, updatePipelineState } from "@/lib/researcher-store";
 import { upsertMatchBatch } from "@/lib/match-store";
 import { retrieveCandidates } from "@/lib/opportunity-retrieval";
@@ -132,6 +132,8 @@ export async function POST(
         return;
       }
 
+      const heartbeat = startHeartbeat(controller);
+
       try {
         // Read researcher context from DB
         const researcher = await getResearcherFull(name);
@@ -158,35 +160,39 @@ export async function POST(
         ].filter(Boolean).join("\n");
 
         let rawText = "";
-        for await (const message of query({
-          prompt,
-          options: {
-            systemPrompt: MATCHER_PROMPT,
-            // NO WebFetch, WebSearch, Read, or Write — all context is injected
-            allowedTools: [],
-            model: "claude-sonnet-4-6",
-            maxTurns: 5,
-          },
-        })) {
-          if (message.type === "assistant") {
-            for (const block of message.message.content) {
-              if (block.type === "text" && block.text.trim()) {
-                controller.enqueue(formatSSEEvent({ type: "text", text: block.text.trim() }));
-                rawText += block.text;
+        try {
+          for await (const message of query({
+            prompt,
+            options: {
+              systemPrompt: MATCHER_PROMPT,
+              // NO WebFetch, WebSearch, Read, or Write — all context is injected
+              allowedTools: [],
+              model: "claude-sonnet-4-6",
+              maxTurns: 5,
+            },
+          })) {
+            if (message.type === "assistant") {
+              for (const block of message.message.content) {
+                if (block.type === "text" && block.text.trim()) {
+                  controller.enqueue(formatSSEEvent({ type: "text", text: block.text.trim() }));
+                  rawText += block.text;
+                }
+              }
+            } else if (message.type === "result" && !message.is_error) {
+              if ("total_cost_usd" in message) {
+                controller.enqueue(
+                  formatSSEEvent({
+                    type: "result",
+                    turns: message.num_turns,
+                    cost: message.total_cost_usd,
+                    duration: "duration_ms" in message ? message.duration_ms : 0,
+                  })
+                );
               }
             }
-          } else if (message.type === "result" && !message.is_error) {
-            if ("total_cost_usd" in message) {
-              controller.enqueue(
-                formatSSEEvent({
-                  type: "result",
-                  turns: message.num_turns,
-                  cost: message.total_cost_usd,
-                  duration: "duration_ms" in message ? message.duration_ms : 0,
-                })
-              );
-            }
           }
+        } finally {
+          clearInterval(heartbeat);
         }
 
         // Parse scores and persist to DB

@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { SCAN_PLANNER_PROMPT } from "@/lib/prompts/scan-planner";
 import { extractAll, ScanPlanEntry } from "@/lib/scan-extract";
-import { formatSSEEvent, pipeQueryToSSE, sseResponse } from "@/lib/sse";
+import { formatSSEEvent, pipeQueryToSSE, sseResponse, startHeartbeat } from "@/lib/sse";
 import { persistDiscoveredManifest } from "@/lib/scan-persistence";
 import { buildScanDbContext } from "@/lib/scan-db-context";
 import { getResearcherFull, updatePipelineState } from "@/lib/researcher-store";
@@ -36,22 +36,20 @@ export async function POST(
   const dataDir = resolve(process.cwd(), "data");
 
   // Fetch DB-sourced funders to feed back into the agent (closes the loop)
-  const [dbContext, researcher] = await Promise.all([
-    buildScanDbContext(),
-    getResearcherFull(name),
-  ]);
+  const dbContext = await buildScanDbContext();
 
-  const hasProfile = !!researcher?.enriched_profile;
+  // Read researcher profile from DB for smart scan context injection
+  const researcher = await getResearcherFull(name);
+  const profile = researcher?.enriched_profile as Record<string, unknown> | null ?? null;
 
   let profileContext = "";
-  if (hasProfile && researcher?.enriched_profile) {
-    const profile = researcher.enriched_profile;
+  if (profile) {
     profileContext = `
 
 Researcher profile for smart scan:
-- Disciplinary fields: ${(profile.disciplinary_fields ?? []).join(", ")}
-- Research themes: ${(profile.research_themes ?? []).join(", ")}
-- Geographic focus: ${(profile.geographic_focus ?? []).join(", ")}`;
+- Disciplinary fields: ${((profile.disciplinary_fields as string[]) ?? []).join(", ")}
+- Research themes: ${((profile.research_themes as string[]) ?? []).join(", ")}
+- Geographic focus: ${((profile.geographic_focus as string[]) ?? []).join(", ")}`;
   }
 
   const manifestPath = resolve(dataDir, "funding-sources/_discovered.json");
@@ -67,11 +65,12 @@ Researcher profile for smart scan:
       }
 
       let ranPhase2 = false;
+      const heartbeat = startHeartbeat(controller);
 
       try {
         // Phase 1 — Sonnet URL discovery / planning
         const mcpServers: Record<string, { command: string; args: string[]; env: Record<string, string> }> = {};
-        if (hasProfile && process.env.TAVILY_API_KEY) {
+        if (profile && process.env.TAVILY_API_KEY) {
           mcpServers["tavily"] = {
             command: "npx",
             args: ["-y", "tavily-mcp"],
@@ -132,10 +131,10 @@ Plan output: ${dataDir}/funding-sources/_scan-plan.json${profileContext}${dbCont
             const failedList = failed.map(f => f.slug).join(", ");
             controller.enqueue(formatSSEEvent({
               type: "text",
-              text: `${failed.length} funder(s) blocked or unreachable: ${failedList}.${hasProfile && process.env.TAVILY_API_KEY ? " Searching for alternative opportunities..." : ""}`,
+              text: `${failed.length} funder(s) blocked or unreachable: ${failedList}.${profile && process.env.TAVILY_API_KEY ? " Searching for alternative opportunities..." : ""}`,
             }));
 
-            if (hasProfile && process.env.TAVILY_API_KEY && Object.keys(mcpServers).length > 0) {
+            if (profile && process.env.TAVILY_API_KEY && Object.keys(mcpServers).length > 0) {
               const recoveryPrompt = `Recovery: ${failed.length} funder URL(s) were blocked and could not be scraped: ${failedList}.
 
 URL list: ${dataDir}/funding-sources/_urls.md
@@ -179,6 +178,8 @@ Prefer funders not already in _urls.md. Append new discoveries to _urls.md and w
         }
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
+      } finally {
+        clearInterval(heartbeat);
       }
 
       // Only persist if this run wrote the manifest — guards against overwriting
@@ -186,13 +187,13 @@ Prefer funders not already in _urls.md. Append new discoveries to _urls.md and w
       if (ranPhase2) {
         try {
           const discoveryContext: Record<string, unknown> = { researcher: name };
-          if (researcher?.enriched_profile) {
-            discoveryContext.disciplines = researcher.enriched_profile.disciplinary_fields;
-            discoveryContext.research_themes = researcher.enriched_profile.research_themes;
+          if (profile) {
+            discoveryContext.disciplines = profile.disciplinary_fields;
+            discoveryContext.research_themes = profile.research_themes;
           }
           await persistDiscoveredManifest(manifestPath, discoveryContext);
 
-          // Mark scan complete in DB (replaces per-researcher _scan-complete file)
+          // Mark scan complete in DB (replaces _scan-complete file marker)
           await updatePipelineState(name, { scan: true });
         } catch (persistErr) {
           console.error(`[scan] persistDiscoveredManifest failed:`, persistErr);

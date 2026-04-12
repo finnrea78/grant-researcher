@@ -23,8 +23,8 @@ Next.js 14 monorepo → 3 workspaces: **src** (app + API), **data-pipeline** (CL
 | Core types | `src/lib/types.ts` |
 | SSE streaming | `src/lib/sse.ts` |
 | Researcher CRUD | `src/lib/researcher-store.ts` |
-| Opportunity CRUD | `src/lib/opportunity-store.ts` |
-| Hybrid retrieval | `src/lib/opportunity-retrieval.ts` |
+| Opportunity CRUD | `src/lib/opportunity-store.ts` — `getOpportunityById`, `getOpportunityByFunderAndName`, upsert fns |
+| Hybrid retrieval | `src/lib/opportunity-retrieval.ts` — returns `CandidateOpportunity` with `funder_name` |
 | Scan persistence | `src/lib/scan-persistence.ts` |
 | Embedder | `src/lib/embedder.ts` |
 | UI components | `src/components/` |
@@ -42,6 +42,7 @@ Next.js 14 monorepo → 3 workspaces: **src** (app + API), **data-pipeline** (CL
 - `match` route: NO `WebFetch` or `WebSearch` in allowedTools
 - `params` is NOT a Promise in Next.js 14 — don't `await params`
 - Assistant message content at `message.message.content` (nested BetaMessage)
+- Supabase joined relations (`.select("..., funder:funders(...)")`) come back as arrays — always handle `Array.isArray(funderRaw) ? funderRaw[0] : funderRaw`
 
 ## Deeper context
 

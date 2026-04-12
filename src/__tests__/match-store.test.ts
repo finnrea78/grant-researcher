@@ -92,22 +92,23 @@ describe("upsertMatch", () => {
 describe("upsertMatchBatch", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("upserts multiple matches in one call", async () => {
+  it("upserts multiple matches in one call, mapping researcherId onto each score", async () => {
     const chain = makeChain({ data: null, error: null });
     fromMock.mockReturnValue(chain);
 
-    const matches = [
-      sampleMatch,
-      { ...sampleMatch, funder_slug: "wellcome", scheme_slug: "discovery", score_overall: 6.0 },
+    const { researcher_id: _id, ...scoreWithoutId } = sampleMatch;
+    const scores = [
+      scoreWithoutId,
+      { ...scoreWithoutId, funder_slug: "wellcome", scheme_slug: "discovery", score_overall: 6.0 },
     ];
 
-    await upsertMatchBatch(matches);
+    await upsertMatchBatch(RESEARCHER_ID, scores);
 
     expect(fromMock).toHaveBeenCalledWith("researcher_matches");
     expect(chain.upsert).toHaveBeenCalledWith(
       expect.arrayContaining([
-        expect.objectContaining({ funder_slug: "ahrc" }),
-        expect.objectContaining({ funder_slug: "wellcome" }),
+        expect.objectContaining({ funder_slug: "ahrc", researcher_id: RESEARCHER_ID }),
+        expect.objectContaining({ funder_slug: "wellcome", researcher_id: RESEARCHER_ID }),
       ]),
       expect.objectContaining({ onConflict: "researcher_id,funder_slug,scheme_slug" })
     );
@@ -117,7 +118,7 @@ describe("upsertMatchBatch", () => {
     const chain = makeChain({ data: null, error: null });
     fromMock.mockReturnValue(chain);
 
-    await upsertMatchBatch([]);
+    await upsertMatchBatch(RESEARCHER_ID, []);
 
     expect(fromMock).not.toHaveBeenCalled();
   });

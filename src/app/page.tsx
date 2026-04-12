@@ -41,25 +41,8 @@ export default function HomePage() {
   async function handleCardClick(researcher: ResearcherSummary) {
     setNavigating(researcher.slug);
     setError(null);
-    try {
-      if (researcher.hasProfile) {
-        const res = await fetch("/api/session/hydrate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: researcher.slug }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          setError(data.error ?? "Failed to load researcher");
-          return;
-        }
-      }
-      router.push(`/session/${researcher.slug}`);
-    } catch {
-      setError("Network error — is the server running?");
-    } finally {
-      setNavigating(null);
-    }
+    router.push(`/session/${researcher.slug}`);
+    setNavigating(null);
   }
 
   async function handleSubmit(formData: FormData) {

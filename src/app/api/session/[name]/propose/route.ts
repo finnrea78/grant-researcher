@@ -1,8 +1,8 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { PROPOSAL_OUTLINER_PROMPT } from "@/lib/prompts/proposal-outliner";
-import { formatSSEEvent, sseResponse } from "@/lib/sse";
+import { formatSSEEvent, sseResponse, startHeartbeat } from "@/lib/sse";
 import { getResearcherFull } from "@/lib/researcher-store";
-import { getOpportunityByFunderAndName } from "@/lib/opportunity-store";
+import { getOpportunityById, getOpportunityByFunderAndName } from "@/lib/opportunity-store";
 import { upsertProposalBySlug } from "@/lib/proposal-store";
 import { slugify } from "@/lib/slugify";
 import { requireUser } from "@/lib/auth";
@@ -20,7 +20,7 @@ export async function POST(
   }
 
   const { name } = params;
-  const { funder: rawFunder, scheme } = (await req.json()) as { funder: string; scheme: string };
+  const { funder: rawFunder, scheme, opportunityId } = (await req.json()) as { funder: string; scheme: string; opportunityId?: string };
 
   if (!rawFunder || !scheme) {
     return Response.json({ error: "funder and scheme are required" }, { status: 400 });
@@ -31,8 +31,11 @@ export async function POST(
     return Response.json({ error: "Invalid funder slug" }, { status: 400 });
   }
 
-  // Fetch opportunity details from DB
-  const opportunity = await getOpportunityByFunderAndName(rawFunder, scheme);
+  // Fetch opportunity details from DB — prefer direct id lookup, fall back to name-based
+  const opportunity = opportunityId
+    ? await getOpportunityById(opportunityId)
+    : await getOpportunityByFunderAndName(rawFunder, scheme);
+
   if (!opportunity) {
     return Response.json(
       { error: `Opportunity "${scheme}" from funder "${rawFunder}" not found in database` },
@@ -40,10 +43,7 @@ export async function POST(
     );
   }
 
-  const schemeSlug = scheme
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+  const schemeSlug = slugify(scheme);
 
   const opportunityContext = JSON.stringify(opportunity, null, 2);
 
@@ -87,37 +87,42 @@ export async function POST(
         ].filter(Boolean).join("\n");
 
         let proposalText = "";
-        for await (const message of query({
-          prompt,
-          options: {
-            systemPrompt: PROPOSAL_OUTLINER_PROMPT,
-            // Read is allowed for profile context; Write is NOT — content is captured from text output
-            allowedTools: ["Read"],
-            model: "claude-sonnet-4-6",
-            maxTurns: 20,
-          },
-        })) {
-          if (message.type === "assistant") {
-            for (const block of message.message.content) {
-              if (block.type === "tool_use") {
-                controller.enqueue(formatSSEEvent({ type: "tool", name: block.name }));
-              } else if (block.type === "text" && block.text.trim()) {
-                controller.enqueue(formatSSEEvent({ type: "text", text: block.text.trim() }));
-                proposalText += block.text;
+        const heartbeat = startHeartbeat(controller);
+        try {
+          for await (const message of query({
+            prompt,
+            options: {
+              systemPrompt: PROPOSAL_OUTLINER_PROMPT,
+              // Read is allowed for profile context; Write is NOT — content is captured from text output
+              allowedTools: ["Read"],
+              model: "claude-sonnet-4-6",
+              maxTurns: 20,
+            },
+          })) {
+            if (message.type === "assistant") {
+              for (const block of message.message.content) {
+                if (block.type === "tool_use") {
+                  controller.enqueue(formatSSEEvent({ type: "tool", name: block.name }));
+                } else if (block.type === "text" && block.text.trim()) {
+                  controller.enqueue(formatSSEEvent({ type: "text", text: block.text.trim() }));
+                  proposalText += block.text;
+                }
+              }
+            } else if (message.type === "result" && !message.is_error) {
+              if ("total_cost_usd" in message) {
+                controller.enqueue(
+                  formatSSEEvent({
+                    type: "result",
+                    turns: message.num_turns,
+                    cost: message.total_cost_usd,
+                    duration: "duration_ms" in message ? message.duration_ms : 0,
+                  })
+                );
               }
             }
-          } else if (message.type === "result" && !message.is_error) {
-            if ("total_cost_usd" in message) {
-              controller.enqueue(
-                formatSSEEvent({
-                  type: "result",
-                  turns: message.num_turns,
-                  cost: message.total_cost_usd,
-                  duration: "duration_ms" in message ? message.duration_ms : 0,
-                })
-              );
-            }
           }
+        } finally {
+          clearInterval(heartbeat);
         }
 
         // Persist proposal to DB
