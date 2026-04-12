@@ -13,7 +13,7 @@ import { requireUser } from "@/lib/auth";
 import { agentQueue } from "@/lib/concurrency";
 import type { ResearcherProfile } from "@/lib/types";
 
-const anthropic = new Anthropic();
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function buildEnrichPrompt(name: string, profile: ResearcherProfile | null, publicationsMd: string | null): string {
   return [
