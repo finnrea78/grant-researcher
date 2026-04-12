@@ -12,6 +12,25 @@ import { requireUser } from "@/lib/auth";
 import { agentQueue } from "@/lib/concurrency";
 import type { ResearcherProfile } from "@/lib/types";
 
+async function callHaiku(prompt: string): Promise<string> {
+  let text = "";
+  for await (const message of query({
+    prompt,
+    options: {
+      model: "claude-haiku-4-5-20251001",
+      maxTurns: 1,
+      allowedTools: [],
+    },
+  })) {
+    if (message.type === "assistant") {
+      for (const block of message.message.content) {
+        if (block.type === "text") text += block.text;
+      }
+    }
+  }
+  return text;
+}
+
 function buildEnrichPrompt(name: string, profile: ResearcherProfile | null, publicationsMd: string | null): string {
   return [
     `Research and enrich the profile for researcher "${name}".`,
@@ -24,7 +43,7 @@ function buildEnrichPrompt(name: string, profile: ResearcherProfile | null, publ
     ``,
     `All context is provided above — do NOT read any local files.`,
     `Output a single JSON object (no markdown fences) with these keys:`,
-    `- "enriched_fields": object with fields to merge into the profile (e.g. retrieval_summary, google_scholar_url, scholar_h_index, scholar_citation_count, recent_publications_web)`,
+    `- "enriched_fields": object with fields to merge into the profile (e.g. google_scholar_url, scholar_h_index, scholar_citation_count, recent_publications_web). Do NOT include retrieval_summary — it is generated separately.`,
     `- "scholar_candidate": object { candidate_url, candidate_confidence } if a candidate Scholar profile was found but not yet confirmed, or null if confirmed/not found`,
     `- "researcher_context_md": the researcher-context.md content as a string`,
     ``,
@@ -132,12 +151,37 @@ export async function POST(
 
         const output = parseEnrichOutput(rawText);
 
-        if (output.enriched_fields) {
-          const updatedProfile = { ...(profile ?? {}), ...output.enriched_fields } as ResearcherProfile;
-          await updateResearcherProfile(name, updatedProfile);
-          if (updatedProfile.retrieval_summary) {
-            await updateProfileEmbedding(name, updatedProfile.retrieval_summary);
+        // Generate retrieval_summary via Haiku (cost-optimised)
+        controller.enqueue(formatSSEEvent({ type: "tool", name: "generating-retrieval-summary" }));
+
+        const mergedProfile = { ...(profile ?? {}), ...(output.enriched_fields ?? {}) };
+        const haikuInput = [
+          `Generate a retrieval_summary for this researcher — ~400 words, third-person present tense, natural prose surfacing implicit research affinities for semantic grant matching.\n\nProfile:\n${JSON.stringify(mergedProfile, null, 2)}`,
+          output.researcher_context_md ? `\nResearcher Context:\n${output.researcher_context_md}` : "",
+        ].join("");
+
+        let retrievalSummary: string | null = null;
+        try {
+          retrievalSummary = await callHaiku(haikuInput);
+        } catch {
+          await new Promise(r => setTimeout(r, 1000));
+          try {
+            retrievalSummary = await callHaiku(haikuInput);
+          } catch (err) {
+            controller.enqueue(formatSSEEvent({ type: "error", message: `retrieval_summary generation failed: ${String(err)}` }));
+            agentQueue.release();
+            controller.close();
+            return;
           }
+        }
+
+        const updatedProfile = {
+          ...mergedProfile,
+          ...(retrievalSummary ? { retrieval_summary: retrievalSummary } : {}),
+        } as ResearcherProfile;
+        await updateResearcherProfile(name, updatedProfile);
+        if (updatedProfile.retrieval_summary) {
+          await updateProfileEmbedding(name, updatedProfile.retrieval_summary);
         }
 
         if (output.scholar_candidate) {
