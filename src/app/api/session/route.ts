@@ -1,9 +1,7 @@
-import { mkdirSync, writeFileSync } from "fs";
-import { resolve } from "path";
 import { slugify } from "@/lib/slugify";
-import { upsertResearcher, updateOrcidData } from "@/lib/researcher-store";
+import { upsertResearcher, updateOrcidData, updatePipelineState } from "@/lib/researcher-store";
+import { uploadCv } from "@/lib/cv-store";
 import { stripEphemeralFields } from "@/lib/stripEphemeral";
-import { writeProposalIntent } from "@/lib/proposalIntent";
 import { extractCvText } from "@/lib/extractCvText";
 import { requireUser } from "@/lib/auth";
 import type { IntakeData } from "@/lib/types";
@@ -44,53 +42,39 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "name must contain alphanumeric characters" }, { status: 400 });
   }
 
-  // Ensure intake.name is set to the slugified display name
+  // Ensure intake.name is set to the display name
   intake = { ...intake, name: nameSource };
 
-  const dataDir = resolve(process.cwd(), "data");
-  const rawDir = resolve(dataDir, `researchers/${name}/raw`);
-  const researcherDir = resolve(dataDir, `researchers/${name}`);
-
-  mkdirSync(rawDir, { recursive: true });
-
-  // Write CV file if provided
-  let bytes: ArrayBuffer | null = null;
+  // Extract CV text if file is provided
+  let cvBuffer: Buffer | null = null;
   let cvExt = "md";
   if (file && file.size > 0) {
     const originalName = file.name;
     cvExt = originalName.includes(".")
       ? originalName.split(".").pop() ?? "md"
       : "md";
-    const cvPath = resolve(rawDir, `cv.${cvExt}`);
-    bytes = await file.arrayBuffer();
-    writeFileSync(cvPath, Buffer.from(bytes));
-  }
-
-  // Extract CV text for Supabase storage and downstream agents
-  if (file && file.size > 0 && bytes !== null) {
-    const cvText = await extractCvText(Buffer.from(bytes), file.name);
+    const bytes = await file.arrayBuffer();
+    cvBuffer = Buffer.from(bytes);
+    const cvText = await extractCvText(cvBuffer, file.name);
     if (cvText) {
       intake = { ...intake, cv_text: cvText };
-      // Profile builder reads raw/cv.md — write extracted text so non-text uploads work
-      if (cvExt !== "md" && cvExt !== "txt") {
-        writeFileSync(resolve(rawDir, "cv.md"), cvText);
-      }
     }
   }
 
-  // Write intake.json to disk (Claude agents read this)
-  writeFileSync(resolve(researcherDir, "intake.json"), JSON.stringify(intake, null, 2));
+  // Upsert researcher to DB (strips proposal_intent before writing)
+  const researcherId = await upsertResearcher(stripEphemeralFields(intake), name, userId);
 
-  // Write proposal-intent.json separately (ephemeral — deleted after matching)
-  writeProposalIntent(researcherDir, intake.proposal_intent);
-
-  // Supabase sync — non-critical, pipeline reads from disk
-  // Strip proposal_intent: sensitive IP, never persisted to Supabase
-  try {
-    await upsertResearcher(stripEphemeralFields(intake), name, userId);
-  } catch (err) {
-    console.error(`[session] Supabase upsert failed for ${name}:`, err);
+  // Upload CV binary to Supabase Storage
+  if (cvBuffer && file) {
+    await uploadCv(researcherId, cvBuffer, file.type || "application/octet-stream", cvExt);
   }
+
+  // Store pipeline state: intake complete + proposal_intent (ephemeral, not in researchers table)
+  const pipelineStatePatch: Record<string, unknown> = { intake: true };
+  if (intake.proposal_intent) {
+    pipelineStatePatch.proposal_intent = intake.proposal_intent;
+  }
+  await updatePipelineState(name, pipelineStatePatch);
 
   // Server-side ORCID fetch if identifier provided
   if (intake.identifiers?.orcid) {
@@ -101,11 +85,7 @@ export async function POST(req: Request): Promise<Response> {
       );
       if (orcidRes.ok) {
         const orcidData = await orcidRes.json() as Record<string, unknown>;
-        // Store raw ORCID data in Supabase
         await updateOrcidData(name, orcidData);
-        // Merge into intake.json for the profile-builder agent to use
-        const intakeWithOrcid = { ...intake, orcid_raw: orcidData };
-        writeFileSync(resolve(researcherDir, "intake.json"), JSON.stringify(intakeWithOrcid, null, 2));
       }
     } catch (err) {
       console.error(`[session] ORCID fetch failed:`, err);
