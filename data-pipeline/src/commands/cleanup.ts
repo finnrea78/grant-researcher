@@ -3,6 +3,30 @@ import { supabase } from "@grant-researcher/db";
 import { startRun, completeRun } from "../loaders/log-run.js";
 import { embedBackfill } from "./embed-backfill.js";
 
+export async function runPurge(): Promise<{ deleted: number }> {
+  console.log("\nPurging closed/expired opportunities");
+  const runId = await startRun("purge");
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: deletedRows, error } = await supabase
+    .from("opportunities")
+    .delete()
+    .or(`status.eq.closed,deadline_date.lt.${today}`)
+    .select("id");
+
+  if (error) {
+    console.error(`  Failed to purge opportunities: ${error.message}`);
+    await completeRun(runId, "failed", { created: 0, updated: 0, skipped: 0 }, error.message);
+    return { deleted: 0 };
+  }
+
+  const deleted = deletedRows?.length ?? 0;
+  console.log(`  Deleted ${deleted} closed/expired opportunities`);
+  await completeRun(runId, "success", { created: 0, updated: 0, skipped: deleted });
+  return { deleted };
+}
+
 export async function runCleanup(): Promise<{ closed: number; embedded: number }> {
   console.log("\nRunning cleanup");
   const runId = await startRun("cleanup");

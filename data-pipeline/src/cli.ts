@@ -18,7 +18,7 @@ import { startRun, completeRun } from "./loaders/log-run.js";
 import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
 import { embedBackfill } from "./commands/embed-backfill.js";
 import { runOpportunitySource, ensureFunders, type SourceConfig } from "./commands/run-source.js";
-import { runCleanup } from "./commands/cleanup.js";
+import { runCleanup, runPurge } from "./commands/cleanup.js";
 import type { NormalisedGrant } from "./types.js";
 
 const program = new Command();
@@ -201,6 +201,13 @@ program
   .description("Close expired opportunities and backfill missing embeddings")
   .action(async () => {
     await runCleanup();
+  });
+
+program
+  .command("purge")
+  .description("Permanently delete closed or past-deadline opportunities")
+  .action(async () => {
+    await runPurge();
   });
 
 program
