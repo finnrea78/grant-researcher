@@ -9,3 +9,4 @@ else
 fi
 
 node --import=tsx src/cli.ts cleanup
+node --import=tsx src/cli.ts purge
