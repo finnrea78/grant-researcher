@@ -13,44 +13,16 @@ import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
 import { normaliseWellcome } from "./transforms/normalise-wellcome.js";
 import { normaliseLeverhulme } from "./transforms/normalise-leverhulme.js";
 import { normaliseRoyalSociety } from "./transforms/normalise-royal-society.js";
-import { upsertFunder } from "./loaders/upsert-funder.js";
 import { upsertGrants } from "./loaders/upsert-grants.js";
-import { upsertOpportunities } from "./loaders/upsert-opportunities.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
 import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
 import { embedBackfill } from "./commands/embed-backfill.js";
-import type { NormalisedGrant, NormalisedOpportunity } from "./types.js";
+import { runOpportunitySource, ensureFunders, type SourceConfig } from "./commands/run-source.js";
+import { runCleanup, runPurge } from "./commands/cleanup.js";
+import type { NormalisedGrant } from "./types.js";
 
 const program = new Command();
 program.name("ingest").description("Grant data ingestion pipeline").version("0.1.0");
-
-async function ensureFunders(
-  items: Array<{ funder_slug: string; funder_name?: string | null }>
-): Promise<Map<string, { id: string; name: string }>> {
-  const seen = new Map<string, string | null>();
-  for (const item of items) {
-    if (!seen.has(item.funder_slug)) {
-      seen.set(item.funder_slug, item.funder_name ?? null);
-    }
-  }
-
-  const map = new Map<string, { id: string; name: string }>();
-  for (const [slug, funderName] of seen) {
-    const name = funderName ?? slug.toUpperCase().replace(/-/g, " ");
-    const id = await upsertFunder({
-      slug,
-      name,
-      website: null,
-      type: slug.match(/^(ahrc|bbsrc|epsrc|esrc|mrc|nerc|stfc|innovate-uk|research-england)$/)
-        ? "ukri_council"
-        : null,
-      disciplines: [],
-      source_metadata: {},
-    });
-    map.set(slug, { id, name });
-  }
-  return map;
-}
 
 program
   .command("gtr")
@@ -92,20 +64,12 @@ program
   .description("Ingest open opportunities from UKRI Funding Finder")
   .option("--council <name>", "Filter by council slug")
   .action(async (opts) => {
-    console.log("\nIngesting UKRI Funding Finder");
-    const runId = await startRun("ukri_funding_finder", opts.council);
-    try {
-      const raw = await fetchUkriOpportunities(opts.council);
-      const opportunities: NormalisedOpportunity[] = raw.map(normaliseUkriOpportunity);
-      const funderMap = await ensureFunders(opportunities);
-      const counters = await upsertOpportunities(opportunities, funderMap);
-      console.log(`  Done: ${counters.created} created, ${counters.updated} updated, ${counters.skipped} skipped`);
-      await completeRun(runId, "success", counters);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`  Error: ${msg}`);
-      await completeRun(runId, "failed", { created: 0, updated: 0, skipped: 0 }, msg);
-    }
+    await runOpportunitySource({
+      displayName: "UKRI Funding Finder",
+      source: "ukri_funding_finder",
+      funderSlug: opts.council,
+      fetch: () => fetchUkriOpportunities(opts.council).then(r => r.map(normaliseUkriOpportunity)),
+    });
   });
 
 program
@@ -113,80 +77,137 @@ program
   .description("Ingest open opportunities from UK Find a Grant (GOV.UK)")
   .option("--limit <n>", "Max opportunities to fetch", parseInt)
   .action(async (opts) => {
-    console.log("\nIngesting Find a Grant (GOV.UK)");
-    const runId = await startRun("find_a_grant", undefined);
-    try {
-      const raw = await fetchFindAGrantOpportunities(opts.limit);
-      const opportunities: NormalisedOpportunity[] = raw.map(normaliseFindAGrant);
-      const funderMap = await ensureFunders(opportunities);
-      const counters = await upsertOpportunities(opportunities, funderMap);
-      console.log(`  Done: ${counters.created} created, ${counters.updated} updated, ${counters.skipped} skipped`);
-      await completeRun(runId, "success", counters);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`  Error: ${msg}`);
-      await completeRun(runId, "failed", { created: 0, updated: 0, skipped: 0 }, msg);
-    }
+    await runOpportunitySource({
+      displayName: "Find a Grant (GOV.UK)",
+      source: "find_a_grant",
+      fetch: () => fetchFindAGrantOpportunities(opts.limit).then(r => r.map(normaliseFindAGrant)),
+    });
   });
 
 program
   .command("wellcome")
   .description("Ingest open opportunities from Wellcome Trust")
   .action(async () => {
-    console.log("\nIngesting Wellcome Trust schemes");
-    const runId = await startRun("wellcome", "wellcome-trust");
-    try {
-      const raw = await fetchWellcomeSchemes();
-      const opportunities: NormalisedOpportunity[] = raw.map(normaliseWellcome);
-      const funderMap = await ensureFunders(opportunities);
-      const counters = await upsertOpportunities(opportunities, funderMap);
-      console.log(`  Done: ${counters.created} created, ${counters.updated} updated, ${counters.skipped} skipped`);
-      await completeRun(runId, "success", counters);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`  Error: ${msg}`);
-      await completeRun(runId, "failed", { created: 0, updated: 0, skipped: 0 }, msg);
-    }
+    await runOpportunitySource({
+      displayName: "Wellcome Trust schemes",
+      source: "wellcome",
+      funderSlug: "wellcome-trust",
+      fetch: () => fetchWellcomeSchemes().then(r => r.map(normaliseWellcome)),
+    });
   });
 
 program
   .command("leverhulme")
   .description("Ingest open opportunities from Leverhulme Trust")
   .action(async () => {
-    console.log("\nIngesting Leverhulme Trust schemes");
-    const runId = await startRun("leverhulme", "leverhulme-trust");
-    try {
-      const raw = await fetchLeverhulmeSchemes();
-      const opportunities: NormalisedOpportunity[] = raw.map(normaliseLeverhulme);
-      const funderMap = await ensureFunders(opportunities);
-      const counters = await upsertOpportunities(opportunities, funderMap);
-      console.log(`  Done: ${counters.created} created, ${counters.updated} updated, ${counters.skipped} skipped`);
-      await completeRun(runId, "success", counters);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`  Error: ${msg}`);
-      await completeRun(runId, "failed", { created: 0, updated: 0, skipped: 0 }, msg);
-    }
+    await runOpportunitySource({
+      displayName: "Leverhulme Trust schemes",
+      source: "leverhulme",
+      funderSlug: "leverhulme-trust",
+      fetch: () => fetchLeverhulmeSchemes().then(r => r.map(normaliseLeverhulme)),
+    });
   });
 
 program
   .command("royal-society")
   .description("Ingest open opportunities from the Royal Society (server-rendered items only)")
   .action(async () => {
-    console.log("\nIngesting Royal Society grants");
-    const runId = await startRun("royal_society", "royal-society");
-    try {
-      const raw = await fetchRoyalSocietySchemes();
-      const opportunities: NormalisedOpportunity[] = raw.map(normaliseRoyalSociety);
-      const funderMap = await ensureFunders(opportunities);
-      const counters = await upsertOpportunities(opportunities, funderMap);
-      console.log(`  Done: ${counters.created} created, ${counters.updated} updated, ${counters.skipped} skipped`);
-      await completeRun(runId, "success", counters);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`  Error: ${msg}`);
-      await completeRun(runId, "failed", { created: 0, updated: 0, skipped: 0 }, msg);
+    await runOpportunitySource({
+      displayName: "Royal Society grants",
+      source: "royal_society",
+      funderSlug: "royal-society",
+      fetch: () => fetchRoyalSocietySchemes().then(r => r.map(normaliseRoyalSociety)),
+    });
+  });
+
+const OPPORTUNITY_SOURCES: SourceConfig[] = [
+  {
+    displayName: "UKRI Funding Finder",
+    source: "ukri_funding_finder",
+    fetch: () => fetchUkriOpportunities().then(r => r.map(normaliseUkriOpportunity)),
+  },
+  {
+    displayName: "Find a Grant (GOV.UK)",
+    source: "find_a_grant",
+    fetch: () => fetchFindAGrantOpportunities().then(r => r.map(normaliseFindAGrant)),
+  },
+  {
+    displayName: "Wellcome Trust schemes",
+    source: "wellcome",
+    funderSlug: "wellcome-trust",
+    fetch: () => fetchWellcomeSchemes().then(r => r.map(normaliseWellcome)),
+  },
+  {
+    displayName: "Leverhulme Trust schemes",
+    source: "leverhulme",
+    funderSlug: "leverhulme-trust",
+    fetch: () => fetchLeverhulmeSchemes().then(r => r.map(normaliseLeverhulme)),
+  },
+  {
+    displayName: "Royal Society grants",
+    source: "royal_society",
+    funderSlug: "royal-society",
+    fetch: () => fetchRoyalSocietySchemes().then(r => r.map(normaliseRoyalSociety)),
+  },
+];
+
+program
+  .command("ingest-all")
+  .description("Run all opportunity sources sequentially")
+  .option("--include-gtr", "Also run GtR awarded grants (--all --since 2016)")
+  .action(async (opts) => {
+    const results = [];
+    for (const source of OPPORTUNITY_SOURCES) {
+      results.push(await runOpportunitySource(source));
     }
+
+    console.log("\n── Summary ──────────────────────────────────────");
+    for (let i = 0; i < OPPORTUNITY_SOURCES.length; i++) {
+      const s = OPPORTUNITY_SOURCES[i];
+      const r = results[i];
+      const icon = r.status === "success" ? "✓" : "✗";
+      console.log(`  ${icon} ${s.displayName}: ${r.counters.created} created, ${r.counters.updated} updated, ${r.counters.skipped} skipped`);
+    }
+
+    if (opts.includeGtr) {
+      console.log("\nRunning GtR (all councils, since 2016)...");
+      const sinceYear = 2016;
+      for (const council of Object.keys(GTR_COUNCIL_NAMES)) {
+        console.log(`\nIngesting GtR: ${council} (since ${sinceYear})`);
+        const runId = await startRun("gtr", council);
+        const allGrants: NormalisedGrant[] = [];
+        try {
+          for await (const batch of fetchGtrProjects({ council, sinceYear })) {
+            allGrants.push(...batch.map(normaliseGtrProject));
+          }
+          const funderMap = await ensureFunders(allGrants);
+          const counters = await upsertGrants(allGrants, funderMap);
+          console.log(`  Done: ${counters.created} created, ${counters.updated} updated, ${counters.skipped} skipped`);
+          await completeRun(runId, "success", counters);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`  Error: ${msg}`);
+          await completeRun(runId, "failed", { created: 0, updated: 0, skipped: 0 }, msg);
+        }
+      }
+    }
+
+    const anyFailed = results.some(r => r.status === "failed");
+    if (anyFailed) process.exit(1);
+  });
+
+program
+  .command("cleanup")
+  .description("Close expired opportunities and backfill missing embeddings")
+  .action(async () => {
+    await runCleanup();
+  });
+
+program
+  .command("purge")
+  .description("Permanently delete closed or past-deadline opportunities")
+  .action(async () => {
+    await runPurge();
   });
 
 program

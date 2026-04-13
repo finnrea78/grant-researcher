@@ -1,0 +1,7 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "cd .. && npm ci"
+
+[deploy]
+startCommand = "sh scripts/ingest-cron.sh"
+cronSchedule = "0 6 * * *"
