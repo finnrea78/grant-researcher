@@ -49,6 +49,7 @@ export function formatMatchesMd(
     const urgent = s.urgent ? " ⚠️ URGENT" : "";
     return [
       `### ${i + 1}. ${s.scheme_slug} — ${s.funder_slug}${urgent}`,
+      s.opportunity_id ? `<!-- opportunity-id:${s.opportunity_id} -->` : "",
       `- **Overall score:** ${s.score_overall}/10`,
       s.amount_raw ? `- **Amount:** ${s.amount_raw}` : "",
       s.deadline_raw ? `- **Deadline:** ${s.deadline_raw}` : "",

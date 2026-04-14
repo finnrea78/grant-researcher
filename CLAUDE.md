@@ -36,6 +36,8 @@ Next.js 14, @anthropic-ai/claude-agent-sdk, Supabase, Tailwind/shadcn, TypeScrip
 ## Claude Agent SDK
 Assistant message content lives at `message.message.content` (nested BetaMessage), not `message.content`. See `src/lib/sse.ts` for the streaming pattern.
 
+**Prefer `@anthropic-ai/claude-agent-sdk` over `@anthropic/sdk`** — locally, the agent SDK routes through the Claude subscription (no API token usage). Only reach for the base `@anthropic/sdk` if the agent SDK cannot support the use case.
+
 ## Hard constraints
 - `match` route must never include `WebFetch` or `WebSearch` in `allowedTools`
 
