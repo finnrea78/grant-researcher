@@ -12,8 +12,10 @@ export async function POST(
   req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  let userId: string;
   try {
-    await requireUser();
+    const { user } = await requireUser();
+    userId = user.id;
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
@@ -59,7 +61,7 @@ export async function POST(
 
       try {
         // Read researcher profile from DB
-        const researcher = await getResearcherFull(name);
+        const researcher = await getResearcherFull(name, userId);
         const profileJson = researcher?.enriched_profile
           ? JSON.stringify(researcher.enriched_profile, null, 2)
           : "{}";

@@ -86,40 +86,26 @@ describe("POST /api/session (DB-first)", () => {
     );
   });
 
-  it("strips proposal_intent before calling upsertResearcher", async () => {
-    const intake = JSON.stringify({
-      name: "Jane Smith",
-      proposal_intent: { themes: ["biodiversity"] },
-    });
-    const fd = makeFormData({ intake });
-
-    await POST(makeRequest(fd));
-
-    expect(mockUpsertResearcher).toHaveBeenCalledWith(
-      expect.not.objectContaining({ proposal_intent: expect.anything() }),
-      "jane-smith",
-      "user-123"
-    );
-  });
-
-  it("stores proposal_intent in pipeline_state when provided", async () => {
-    const proposalIntent = { themes: ["climate"], funder_preference: "UKRI" };
+  it("passes proposal_intent to upsertResearcher when provided", async () => {
+    const proposalIntent = { project_title: "Climate Study", description: "Research climate adaptation" };
     const intake = JSON.stringify({ name: "Jane Smith", proposal_intent: proposalIntent });
     const fd = makeFormData({ intake });
 
     await POST(makeRequest(fd));
 
-    expect(mockUpdatePipelineState).toHaveBeenCalledWith(
+    expect(mockUpsertResearcher).toHaveBeenCalledWith(
+      expect.objectContaining({ proposal_intent: proposalIntent }),
       "jane-smith",
-      expect.objectContaining({ intake: true, proposal_intent: proposalIntent })
+      "user-123"
     );
   });
 
-  it("calls updatePipelineState with intake: true even without proposal_intent", async () => {
+  it("calls updatePipelineState with intake: true and userId", async () => {
     await POST(makeRequest(makeFormData()));
 
     expect(mockUpdatePipelineState).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ intake: true })
     );
   });

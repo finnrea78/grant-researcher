@@ -96,7 +96,7 @@ describe("GET /api/session/[name]/status (DB-first)", () => {
 
     await GET(makeRequest(), { params: { name: "jane-smith" } });
 
-    expect(mockGetResearcherFull).toHaveBeenCalledWith("jane-smith");
+    expect(mockGetResearcherFull).toHaveBeenCalledWith("jane-smith", "user-123");
   });
 
   it("returns 401 when not authenticated", async () => {

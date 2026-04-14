@@ -6,15 +6,17 @@ export async function GET(
   _req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  let userId: string;
   try {
-    await requireUser();
+    const { user } = await requireUser();
+    userId = user.id;
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
   }
 
   const { name } = params;
-  const researcher = await getResearcherBySlug(name);
+  const researcher = await getResearcherBySlug(name, userId);
 
   if (!researcher) {
     return Response.json({ error: "Researcher not found" }, { status: 404 });

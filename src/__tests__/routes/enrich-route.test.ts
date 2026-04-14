@@ -120,6 +120,7 @@ const RESEARCHER = {
   publications_md: "## Publications...",
   match_results_md: null,
   scholar_candidate: null,
+  proposal_intent: null,
 };
 
 function makePostRequest(): Request {
@@ -167,6 +168,7 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
 
     expect(mockUpdateScholarCandidate).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ candidate_url: expect.any(String) })
     );
   });
@@ -179,6 +181,7 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
 
     expect(mockUpdatePipelineState).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ enrich: true })
     );
   });
@@ -200,6 +203,7 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
 
     expect(mockUpdateResearcherProfile).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({
         retrieval_summary: "Dr Jane Smith is a climate adaptation researcher at UCL.",
       })
@@ -214,6 +218,7 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
 
     expect(mockUpdateProfileEmbedding).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       "Dr Jane Smith is a climate adaptation researcher at UCL."
     );
   });
@@ -245,6 +250,7 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
     expect(mockQuery).toHaveBeenCalledTimes(3);
     expect(mockUpdateResearcherProfile).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ retrieval_summary: DEFAULT_HAIKU_SUMMARY })
     );
     jest.useRealTimers();
@@ -287,6 +293,7 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(mockUpdateResearcherProfile).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ retrieval_summary: DEFAULT_HAIKU_SUMMARY })
     );
   });
@@ -312,7 +319,7 @@ describe("PATCH /api/session/[name]/enrich (DB-first)", () => {
 
     expect(res.status).toBe(200);
     expect(body.action).toBe("confirmed");
-    expect(mockUpdateScholarCandidate).toHaveBeenCalledWith("jane-smith", null);
+    expect(mockUpdateScholarCandidate).toHaveBeenCalledWith("jane-smith", "user-123", null);
   });
 
   it("skip: clears scholar_candidate and sets scholar_skip in pipeline_state", async () => {
@@ -324,9 +331,10 @@ describe("PATCH /api/session/[name]/enrich (DB-first)", () => {
 
     expect(res.status).toBe(200);
     expect(body.action).toBe("skipped");
-    expect(mockUpdateScholarCandidate).toHaveBeenCalledWith("jane-smith", null);
+    expect(mockUpdateScholarCandidate).toHaveBeenCalledWith("jane-smith", "user-123", null);
     expect(mockUpdatePipelineState).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ scholar_skip: true })
     );
   });

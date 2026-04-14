@@ -1,12 +1,13 @@
 // Server-only module — only import in Next.js API routes, not client components.
 import { supabase as serviceClient } from "@/lib/supabase";
 import { embedText } from "@/lib/embedder";
-import type { IntakeData, ResearcherProfile } from "@/lib/types";
+import type { IntakeData, ResearcherProfile, ProposalIntent } from "@/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Upsert a researcher from intake form data. Returns the researcher's UUID.
  * Pass userId to associate with an authenticated user (sets user_id column).
+ * The unique constraint is (user_id, slug) so two users can each have a "jane-smith".
  * Pass client to use a per-request RLS-scoped client instead of service-role.
  */
 export async function upsertResearcher(
@@ -21,8 +22,6 @@ export async function upsertResearcher(
     name: intake.name ?? slug,
     orcid: intake.identifiers?.orcid,
     google_scholar_url: intake.identifiers?.google_scholar_url,
-    researcher_id: intake.identifiers?.researcher_id,
-    scopus_author_id: intake.identifiers?.scopus_author_id,
     institutional_profile_url: intake.identifiers?.institutional_profile_url,
     institution: intake.institution,
     department: intake.department,
@@ -34,6 +33,7 @@ export async function upsertResearcher(
     cv_text: intake.cv_text,
     intake_source: "web_form",
     intake_completed_at: new Date().toISOString(),
+    proposal_intent: intake.proposal_intent ?? null,
   };
 
   if (userId) {
@@ -42,7 +42,7 @@ export async function upsertResearcher(
 
   const { data, error } = await db
     .from("researchers")
-    .upsert(row, { onConflict: "slug" })
+    .upsert(row, { onConflict: "user_id,slug" })
     .select("id")
     .single();
 
@@ -57,6 +57,7 @@ export async function upsertResearcher(
  */
 export async function updateResearcherProfile(
   slug: string,
+  userId: string,
   profile: ResearcherProfile
 ): Promise<void> {
   const { error } = await serviceClient
@@ -67,7 +68,8 @@ export async function updateResearcherProfile(
       research_themes: profile.research_themes ?? [],
       research_keywords: profile.research_keywords ?? [],
     })
-    .eq("slug", slug);
+    .eq("slug", slug)
+    .eq("user_id", userId);
 
   if (error) {
     throw new Error(`Failed to update profile for ${slug}: ${error.message}`);
@@ -79,6 +81,7 @@ export async function updateResearcherProfile(
  */
 export async function updateOrcidData(
   slug: string,
+  userId: string,
   orcidData: Record<string, unknown>
 ): Promise<void> {
   const { error } = await serviceClient
@@ -87,7 +90,8 @@ export async function updateOrcidData(
       orcid_data: orcidData,
       orcid_fetched_at: new Date().toISOString(),
     })
-    .eq("slug", slug);
+    .eq("slug", slug)
+    .eq("user_id", userId);
 
   if (error) {
     throw new Error(`Failed to update ORCID data for ${slug}: ${error.message}`);
@@ -100,29 +104,32 @@ export async function updateOrcidData(
  */
 export async function updateProfileEmbedding(
   slug: string,
+  userId: string,
   summaryText: string
 ): Promise<void> {
   const profile_embedding = await embedText(summaryText);
   const { error } = await serviceClient
     .from("researchers")
     .update({ profile_embedding })
-    .eq("slug", slug);
+    .eq("slug", slug)
+    .eq("user_id", userId);
   if (error) {
     throw new Error(error.message);
   }
 }
 
 /**
- * List all researchers for the current user.
- * When called with an RLS-scoped client, automatically filters to the current user's researchers.
+ * List all researchers for a specific user.
  */
 export async function listResearchersWithProfiles(
+  userId: string,
   client?: SupabaseClient
 ): Promise<{ slug: string; name: string; hasProfile: boolean }[]> {
   const db = client ?? serviceClient;
   const { data, error } = await db
     .from("researchers")
     .select("slug, name, enriched_profile")
+    .eq("user_id", userId)
     .order("name");
   if (error) throw new Error(error.message);
   return (data ?? []).map((r: { slug: string; name: string; enriched_profile: unknown }) => ({
@@ -133,11 +140,11 @@ export async function listResearchersWithProfiles(
 }
 
 /**
- * Fetch a researcher by slug.
- * When called with an RLS-scoped client, returns null if the researcher belongs to a different user.
+ * Fetch a researcher by slug, scoped to the given user.
  */
 export async function getResearcherBySlug(
   slug: string,
+  userId: string,
   client?: SupabaseClient
 ): Promise<{
   id: string;
@@ -150,6 +157,7 @@ export async function getResearcherBySlug(
     .from("researchers")
     .select("id, slug, name, enriched_profile")
     .eq("slug", slug)
+    .eq("user_id", userId)
     .single();
   if (error || !data?.enriched_profile) return null;
   return { id: data.id, slug: data.slug, name: data.name, enriched_profile: data.enriched_profile as ResearcherProfile };
@@ -162,14 +170,15 @@ export async function getResearcherBySlug(
  */
 export async function updatePipelineState(
   slug: string,
+  userId: string,
   patch: Record<string, unknown>
 ): Promise<void> {
-  // Read current state, merge patch, write back
-  const current = await getPipelineState(slug).catch(() => ({}));
+  const current = await getPipelineState(slug, userId).catch(() => ({}));
   const { error } = await serviceClient
     .from("researchers")
     .update({ pipeline_state: { ...current, ...patch } })
-    .eq("slug", slug);
+    .eq("slug", slug)
+    .eq("user_id", userId);
   if (error) throw new Error(error.message);
 }
 
@@ -177,12 +186,14 @@ export async function updatePipelineState(
  * Read the pipeline_state JSONB for a researcher.
  */
 export async function getPipelineState(
-  slug: string
+  slug: string,
+  userId: string
 ): Promise<Record<string, unknown>> {
   const { data, error } = await serviceClient
     .from("researchers")
     .select("pipeline_state")
     .eq("slug", slug)
+    .eq("user_id", userId)
     .single();
   if (error) throw new Error(error.message);
   return (data?.pipeline_state as Record<string, unknown>) ?? {};
@@ -194,12 +205,14 @@ export async function getPipelineState(
  */
 export async function updateScholarCandidate(
   slug: string,
+  userId: string,
   candidate: Record<string, unknown> | null
 ): Promise<void> {
   const { error } = await serviceClient
     .from("researchers")
     .update({ scholar_candidate: candidate })
-    .eq("slug", slug);
+    .eq("slug", slug)
+    .eq("user_id", userId);
   if (error) throw new Error(error.message);
 }
 
@@ -208,12 +221,14 @@ export async function updateScholarCandidate(
  */
 export async function updatePublicationsMd(
   slug: string,
+  userId: string,
   md: string
 ): Promise<void> {
   const { error } = await serviceClient
     .from("researchers")
     .update({ publications_md: md })
-    .eq("slug", slug);
+    .eq("slug", slug)
+    .eq("user_id", userId);
   if (error) throw new Error(error.message);
 }
 
@@ -222,21 +237,24 @@ export async function updatePublicationsMd(
  */
 export async function updateMatchResultsMd(
   slug: string,
+  userId: string,
   markdown: string
 ): Promise<void> {
   const { error } = await serviceClient
     .from("researchers")
     .update({ match_results_md: markdown })
-    .eq("slug", slug);
+    .eq("slug", slug)
+    .eq("user_id", userId);
   if (error) throw new Error(error.message);
 }
 
 /**
  * Fetch all columns needed by pipeline routes in a single query.
- * Returns null if the researcher is not found.
+ * Returns null if the researcher is not found or belongs to a different user.
  */
 export async function getResearcherFull(
   slug: string,
+  userId: string,
   client?: SupabaseClient
 ): Promise<{
   id: string;
@@ -248,14 +266,16 @@ export async function getResearcherFull(
   publications_md: string | null;
   match_results_md: string | null;
   scholar_candidate: Record<string, unknown> | null;
+  proposal_intent: ProposalIntent | null;
 } | null> {
   const db = client ?? serviceClient;
   const { data, error } = await db
     .from("researchers")
     .select(
-      "id, slug, name, cv_text, enriched_profile, pipeline_state, publications_md, match_results_md, scholar_candidate"
+      "id, slug, name, cv_text, enriched_profile, pipeline_state, publications_md, match_results_md, scholar_candidate, proposal_intent"
     )
     .eq("slug", slug)
+    .eq("user_id", userId)
     .single();
   if (error || !data) return null;
   return {
@@ -268,13 +288,14 @@ export async function getResearcherFull(
     publications_md: data.publications_md ?? null,
     match_results_md: data.match_results_md ?? null,
     scholar_candidate: (data.scholar_candidate as Record<string, unknown>) ?? null,
+    proposal_intent: (data.proposal_intent as ProposalIntent) ?? null,
   };
 }
 
 /**
  * Fetch only the fields needed for opportunity retrieval.
  */
-export async function getResearcherForMatching(slug: string): Promise<{
+export async function getResearcherForMatching(slug: string, userId: string): Promise<{
   profile_embedding: number[] | null;
   research_themes: string[];
   research_keywords: string[];
@@ -283,6 +304,7 @@ export async function getResearcherForMatching(slug: string): Promise<{
     .from("researchers")
     .select("profile_embedding, research_themes, research_keywords")
     .eq("slug", slug)
+    .eq("user_id", userId)
     .single();
   if (error) throw new Error(error.message);
   return {

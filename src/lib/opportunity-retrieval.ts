@@ -77,9 +77,10 @@ function trimCandidate(c: CandidateOpportunity): Partial<CandidateOpportunity> {
  */
 export async function retrieveCandidates(
   researcherSlug: string,
+  userId: string,
   limit = 10
 ): Promise<Partial<CandidateOpportunity>[]> {
-  const researcher = await getResearcherForMatching(researcherSlug);
+  const researcher = await getResearcherForMatching(researcherSlug, userId);
   const seen = new Map<string, CandidateOpportunity>();
 
   // ── pgvector path ────────────────────────────────────────────────────────────

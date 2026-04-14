@@ -62,8 +62,6 @@ export interface ResearcherProfile {
 export interface ResearcherIdentifiers {
   orcid?: string;
   google_scholar_url?: string;
-  researcher_id?: string;
-  scopus_author_id?: string;
   institutional_profile_url?: string;
 }
 
@@ -103,7 +101,7 @@ export interface IntakeData {
   // Eligibility (factual only)
   eligibility?: EligibilityConstraints;
 
-  // Proposal intent (ephemeral — never synced to Supabase)
+  // Proposal intent — persisted to researchers.proposal_intent column
   proposal_intent?: ProposalIntent;
 
   // Optional CV text (extracted from uploaded file)

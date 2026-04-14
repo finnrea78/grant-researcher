@@ -48,7 +48,7 @@ describe("updateProfileEmbedding", () => {
   it("calls embedText with the summary and stores the result", async () => {
     setupChain({ error: null });
 
-    await updateProfileEmbedding("jane-smith", "Jane studies marine acoustics...");
+    await updateProfileEmbedding("jane-smith", "user-123", "Jane studies marine acoustics...");
 
     expect(mockEmbedText).toHaveBeenCalledWith("Jane studies marine acoustics...");
     expect(mockFrom).toHaveBeenCalledWith("researchers");
@@ -61,7 +61,7 @@ describe("updateProfileEmbedding", () => {
     setupChain({ error: { message: "Update failed" } });
 
     await expect(
-      updateProfileEmbedding("jane-smith", "summary text")
+      updateProfileEmbedding("jane-smith", "user-123", "summary text")
     ).rejects.toThrow("Update failed");
   });
 });

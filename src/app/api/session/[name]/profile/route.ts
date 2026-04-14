@@ -53,15 +53,17 @@ export async function GET(
   _req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  let userId: string;
   try {
-    await requireUser();
+    const { user } = await requireUser();
+    userId = user.id;
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
   }
 
   const { name } = params;
-  const researcher = await getResearcherFull(name);
+  const researcher = await getResearcherFull(name, userId);
 
   if (!researcher?.enriched_profile) {
     return Response.json({ error: "Profile not found" }, { status: 404 });
@@ -74,8 +76,10 @@ export async function POST(
   _req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  let userId: string;
   try {
-    await requireUser();
+    const { user } = await requireUser();
+    userId = user.id;
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
@@ -94,12 +98,12 @@ export async function POST(
         return;
       }
       try {
-        const researcher = await getResearcherFull(name);
+        const researcher = await getResearcherFull(name, userId);
         const intake: IntakeData | null = researcher
           ? { name: researcher.name, ...(researcher.enriched_profile as IntakeData ?? {}) }
           : null;
         const cvText = researcher?.cv_text ?? null;
-        const proposalIntent = (researcher?.pipeline_state?.proposal_intent as Record<string, unknown>) ?? null;
+        const proposalIntent = (researcher?.proposal_intent as Record<string, unknown>) ?? null;
 
         const userPrompt = buildUserPrompt(name, intake, cvText, proposalIntent);
 
@@ -138,12 +142,12 @@ export async function POST(
         const { profile, publications_md } = parseProfileResponse(rawText);
 
         await Promise.all([
-          updateResearcherProfile(name, profile),
-          updatePublicationsMd(name, publications_md),
-          updatePipelineState(name, { profile: true }),
+          updateResearcherProfile(name, userId, profile),
+          updatePublicationsMd(name, userId, publications_md),
+          updatePipelineState(name, userId, { profile: true }),
         ]);
         if (profile.retrieval_summary) {
-          await updateProfileEmbedding(name, profile.retrieval_summary);
+          await updateProfileEmbedding(name, userId, profile.retrieval_summary);
         }
 
         controller.enqueue(

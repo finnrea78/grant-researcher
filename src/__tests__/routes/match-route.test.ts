@@ -101,8 +101,8 @@ const RESEARCHER = {
     profile: true,
     enrich: true,
     scan: true,
-    proposal_intent: { themes: ["climate"], funder_preference: "AHRC" },
   },
+  proposal_intent: { project_title: "Climate Research", description: "Studying climate adaptation" },
   publications_md: null,
   match_results_md: null,
   scholar_candidate: null,
@@ -143,11 +143,12 @@ describe("POST /api/session/[name]/match (DB-first)", () => {
 
     expect(mockUpdateMatchResultsMd).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.any(String)
     );
   });
 
-  it("sets pipeline_state.match = true", async () => {
+  it("sets pipeline_state.match = true with userId", async () => {
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
 
     const res = await POST(makeRequest(), { params: { name: "jane-smith" } });
@@ -155,19 +156,22 @@ describe("POST /api/session/[name]/match (DB-first)", () => {
 
     expect(mockUpdatePipelineState).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ match: true })
     );
   });
 
-  it("clears proposal_intent from pipeline_state after matching", async () => {
+  it("does not clear proposal_intent from pipeline_state after matching", async () => {
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
 
     const res = await POST(makeRequest(), { params: { name: "jane-smith" } });
     await drainStream(res);
 
+    // proposal_intent now lives in researchers.proposal_intent column, not pipeline_state
     expect(mockUpdatePipelineState).toHaveBeenCalledWith(
       "jane-smith",
-      expect.objectContaining({ proposal_intent: null })
+      "user-123",
+      expect.not.objectContaining({ proposal_intent: expect.anything() })
     );
   });
 

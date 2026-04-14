@@ -56,29 +56,13 @@ export interface ResearcherMatchRow {
   created_at: string;
 }
 
-/** Shape of a funding_sources row. */
-export interface FundingSourceRow {
-  id: string;
-  slug: string;
-  name: string;
-  content_md: string;
-  source_url: string | null;
-  discovered_at: string;
-  last_harvested: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 /** Shape of a researcher row for upsert. */
 export interface ResearcherRow {
   slug: string;
   user_id?: string;
   name: string;
-  email?: string;
   orcid?: string;
   google_scholar_url?: string;
-  researcher_id?: string;
-  scopus_author_id?: string;
   institutional_profile_url?: string;
   institution?: string;
   department?: string;
@@ -94,4 +78,5 @@ export interface ResearcherRow {
   enriched_at?: string;
   intake_source?: string;
   intake_completed_at?: string;
+  proposal_intent?: Record<string, unknown> | null;
 }

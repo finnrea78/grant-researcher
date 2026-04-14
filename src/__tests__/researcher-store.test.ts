@@ -51,7 +51,7 @@ describe("updatePipelineState", () => {
     const chain = makeChain({ data: null, error: null });
     fromMock.mockReturnValue(chain);
 
-    await updatePipelineState("jane-smith", { profile: true });
+    await updatePipelineState("jane-smith", "user-123", { profile: true });
 
     expect(fromMock).toHaveBeenCalledWith("researchers");
     expect(chain.update).toHaveBeenCalledWith(
@@ -66,7 +66,7 @@ describe("updatePipelineState", () => {
     const chain = makeChain({ data: null, error: { message: "DB error" } });
     fromMock.mockReturnValue(chain);
 
-    await expect(updatePipelineState("jane-smith", { profile: true })).rejects.toThrow(
+    await expect(updatePipelineState("jane-smith", "user-123", { profile: true })).rejects.toThrow(
       "DB error"
     );
   });
@@ -80,7 +80,7 @@ describe("getPipelineState", () => {
     const chain = makeChain({ data: { pipeline_state: state }, error: null });
     fromMock.mockReturnValue(chain);
 
-    const result = await getPipelineState("jane-smith");
+    const result = await getPipelineState("jane-smith", "user-123");
 
     expect(result).toEqual(state);
     expect(fromMock).toHaveBeenCalledWith("researchers");
@@ -90,7 +90,7 @@ describe("getPipelineState", () => {
     const chain = makeChain({ data: { pipeline_state: {} }, error: null });
     fromMock.mockReturnValue(chain);
 
-    const result = await getPipelineState("jane-smith");
+    const result = await getPipelineState("jane-smith", "user-123");
 
     expect(result).toEqual({});
   });
@@ -99,7 +99,7 @@ describe("getPipelineState", () => {
     const chain = makeChain({ data: null, error: { message: "Not found" } });
     fromMock.mockReturnValue(chain);
 
-    await expect(getPipelineState("nonexistent")).rejects.toThrow("Not found");
+    await expect(getPipelineState("nonexistent", "user-123")).rejects.toThrow("Not found");
   });
 });
 
@@ -111,7 +111,7 @@ describe("updateScholarCandidate", () => {
     fromMock.mockReturnValue(chain);
 
     const candidate = { name: "Jane Smith", orcid: "0000-0001-2345-6789" };
-    await updateScholarCandidate("jane-smith", candidate);
+    await updateScholarCandidate("jane-smith", "user-123", candidate);
 
     expect(chain.update).toHaveBeenCalledWith({ scholar_candidate: candidate });
     expect(chain.eq).toHaveBeenCalledWith("slug", "jane-smith");
@@ -121,7 +121,7 @@ describe("updateScholarCandidate", () => {
     const chain = makeChain({ data: null, error: null });
     fromMock.mockReturnValue(chain);
 
-    await updateScholarCandidate("jane-smith", null);
+    await updateScholarCandidate("jane-smith", "user-123", null);
 
     expect(chain.update).toHaveBeenCalledWith({ scholar_candidate: null });
   });
@@ -130,7 +130,7 @@ describe("updateScholarCandidate", () => {
     const chain = makeChain({ data: null, error: { message: "Update failed" } });
     fromMock.mockReturnValue(chain);
 
-    await expect(updateScholarCandidate("jane-smith", null)).rejects.toThrow("Update failed");
+    await expect(updateScholarCandidate("jane-smith", "user-123", null)).rejects.toThrow("Update failed");
   });
 });
 
@@ -141,7 +141,7 @@ describe("updatePublicationsMd", () => {
     const chain = makeChain({ data: null, error: null });
     fromMock.mockReturnValue(chain);
 
-    await updatePublicationsMd("jane-smith", "## Publications\n- Paper 1");
+    await updatePublicationsMd("jane-smith", "user-123", "## Publications\n- Paper 1");
 
     expect(chain.update).toHaveBeenCalledWith({
       publications_md: "## Publications\n- Paper 1",
@@ -157,7 +157,7 @@ describe("updateMatchResultsMd", () => {
     const chain = makeChain({ data: null, error: null });
     fromMock.mockReturnValue(chain);
 
-    await updateMatchResultsMd("jane-smith", "## Matches\n### Strong\n- AHRC Responsive Mode");
+    await updateMatchResultsMd("jane-smith", "user-123", "## Matches\n### Strong\n- AHRC Responsive Mode");
 
     expect(chain.update).toHaveBeenCalledWith({
       match_results_md: "## Matches\n### Strong\n- AHRC Responsive Mode",
@@ -184,7 +184,7 @@ describe("getResearcherFull", () => {
     const chain = makeChain({ data, error: null });
     fromMock.mockReturnValue(chain);
 
-    const result = await getResearcherFull("jane-smith");
+    const result = await getResearcherFull("jane-smith", "user-123");
 
     expect(result).not.toBeNull();
     expect(result!.id).toBe("uuid-123");
@@ -197,7 +197,7 @@ describe("getResearcherFull", () => {
     const chain = makeChain({ data: null, error: { message: "Not found" } });
     fromMock.mockReturnValue(chain);
 
-    const result = await getResearcherFull("nonexistent");
+    const result = await getResearcherFull("nonexistent", "user-123");
 
     expect(result).toBeNull();
   });

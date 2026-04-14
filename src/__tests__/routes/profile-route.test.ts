@@ -90,7 +90,8 @@ const RESEARCHER = {
     research_themes: ["climate"],
     retrieval_summary: "Dr Jane Smith is a climate researcher.",
   },
-  pipeline_state: { intake: true, proposal_intent: { themes: ["climate"] } },
+  pipeline_state: { intake: true },
+  proposal_intent: { themes: ["climate"] },
   publications_md: "## Publications\n\n- Smith 2024...",
   match_results_md: null,
   scholar_candidate: null,
@@ -159,6 +160,7 @@ describe("POST /api/session/[name]/profile (DB-first)", () => {
 
     expect(mockUpdateResearcherProfile).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ name: "Jane Smith" })
     );
   });
@@ -173,6 +175,7 @@ describe("POST /api/session/[name]/profile (DB-first)", () => {
 
     expect(mockUpdatePublicationsMd).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.stringContaining("Publications")
     );
   });
@@ -187,6 +190,7 @@ describe("POST /api/session/[name]/profile (DB-first)", () => {
 
     expect(mockUpdatePipelineState).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ profile: true })
     );
   });
