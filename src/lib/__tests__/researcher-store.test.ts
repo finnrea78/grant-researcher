@@ -80,7 +80,7 @@ describe("getResearcherForMatching", () => {
       error: null,
     });
 
-    const result = await getResearcherForMatching("jane-smith");
+    const result = await getResearcherForMatching("jane-smith", "user-123");
 
     expect(mockFrom).toHaveBeenCalledWith("researchers");
     expect(result.profile_embedding).toEqual(fakeEmbedding);
@@ -94,12 +94,12 @@ describe("getResearcherForMatching", () => {
       error: null,
     });
 
-    const result = await getResearcherForMatching("new-researcher");
+    const result = await getResearcherForMatching("new-researcher", "user-123");
     expect(result.profile_embedding).toBeNull();
   });
 
   it("throws when Supabase returns an error", async () => {
     setupChain({ data: null, error: { message: "Not found" } });
-    await expect(getResearcherForMatching("ghost")).rejects.toThrow("Not found");
+    await expect(getResearcherForMatching("ghost", "user-123")).rejects.toThrow("Not found");
   });
 });
