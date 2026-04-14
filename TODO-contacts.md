@@ -37,6 +37,15 @@ People to reach out to for feedback, testing, and sales conversations.
 
 ---
 
+## Alexandros Zenonos — Beta Tester + Potential Collaborator
+
+- **Alexandros Zenonos** — First real beta tester. Ran the full pipeline, found bugs, gave detailed product feedback. Offered to contribute features.
+- [ ] Follow up once pipeline is hardened and EU grants are in — he wants to retest.
+- [ ] Explore mutual repo access: his AI Trends Radar ↔ Grant Scout collaboration.
+- Building **AI Trends Radar** (Python, early signal detection for AI/ML trends) — worth watching and potentially collaborating on.
+
+---
+
 ## Other Key Contacts
 
 - **Uncle Jonathan** — Academic in law. Reach out and get his thoughts on the product.
