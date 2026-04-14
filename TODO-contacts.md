@@ -28,6 +28,15 @@ People to reach out to for feedback, testing, and sales conversations.
 
 ---
 
+## Max Licciardi — Early Feedback + VC Lead
+
+- **Max Licciardi** — Gave detailed early feedback on the prototype. Keen to chat further, especially re VC/angel funding.
+- **Ayham Fattoum** — Manchester contact (via Max). Worth reaching out.
+- **Nadia Papamichail** — Manchester contact (via Max). Worth reaching out.
+- [ ] Set up a call with Max. He suggested MoU from Exeter + Manchester + nice UI prototype = enough for £100k+ in VC/angel funding.
+
+---
+
 ## Other Key Contacts
 
 - **Uncle Jonathan** — Academic in law. Reach out and get his thoughts on the product.
