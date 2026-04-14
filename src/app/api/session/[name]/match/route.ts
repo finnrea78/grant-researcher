@@ -67,7 +67,7 @@ export async function POST(
           `</opportunities>`,
           ``,
           `Score each opportunity against the researcher's profile. Output ONLY a JSON array (no markdown fences, no surrounding text) where each element has these fields:`,
-          `funder_slug, scheme_slug, score_overall (0-10, 1 decimal), score_thematic, score_track_record, score_strategic, score_practical, eligible (boolean), tier (strong/exploring/longshot/ineligible), why (string), strengths (string[]), weaknesses (string[]), action (string), urgent (boolean), amount_raw (string|null), deadline_raw (string|null), url (string|null)`,
+          `opportunity_id (the "id" field from the candidate, string|null), funder_slug, scheme_slug, score_overall (0-10, 1 decimal), score_thematic, score_track_record, score_strategic, score_practical, eligible (boolean), tier (strong/exploring/longshot/ineligible), why (string), strengths (string[]), weaknesses (string[]), action (string), urgent (boolean), amount_raw (string|null), deadline_raw (string|null), url (string|null)`,
         ].filter(Boolean).join("\n");
 
         let rawText = "";

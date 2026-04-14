@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { RESEARCHER_ENRICHER_PROMPT } from "@/lib/prompts/researcher-enricher";
 import {
@@ -13,22 +14,40 @@ import { agentQueue } from "@/lib/concurrency";
 import type { ResearcherProfile } from "@/lib/types";
 
 async function callHaiku(prompt: string): Promise<string> {
-  let text = "";
-  for await (const message of query({
-    prompt,
-    options: {
-      model: "claude-haiku-4-5-20251001",
-      maxTurns: 1,
-      allowedTools: [],
-    },
-  })) {
-    if (message.type === "assistant") {
-      for (const block of message.message.content) {
-        if (block.type === "text") text += block.text;
+  // Prefer the agent SDK (uses local Claude Code subscription in dev).
+  // Fall back to the direct Anthropic SDK when the CLI isn't available (e.g. Railway).
+  try {
+    let text = "";
+    for await (const message of query({
+      prompt,
+      options: {
+        model: "claude-haiku-4-5-20251001",
+        maxTurns: 1,
+        allowedTools: [],
+      },
+    })) {
+      if (message.type === "assistant") {
+        for (const block of message.message.content) {
+          if (block.type === "text") text += block.text;
+        }
       }
     }
+    return text;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("Claude Code executable not found")) throw err;
+    // CLI not available — fall back to direct Anthropic SDK
+    const client = new Anthropic();
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2048,
+      messages: [{ role: "user", content: prompt }],
+    });
+    for (const block of response.content) {
+      if (block.type === "text") return block.text;
+    }
+    return "";
   }
-  return text;
 }
 
 function buildEnrichPrompt(name: string, profile: ResearcherProfile | null, publicationsMd: string | null): string {

@@ -3,6 +3,9 @@
  * POST: injects researcher context from DB, agent outputs JSON findings (no file writes)
  * PATCH confirm: clears scholar_candidate, updates researcher identifier in DB
  * PATCH skip: clears scholar_candidate, sets pipeline_state.scholar_skip
+ *
+ * callHaiku tries the claude-agent-sdk first (local dev via Claude Code subscription),
+ * falling back to @anthropic-ai/sdk when the CLI executable isn't available (e.g. Railway).
  */
 
 jest.mock("@/lib/auth", () => ({
@@ -23,7 +26,7 @@ jest.mock("@/lib/concurrency", () => ({
 }));
 
 // Agent returns enriched fields + optional scholar candidate as JSON text.
-// retrieval_summary is NOT in enriched_fields — Haiku generates it separately via a second query() call.
+// retrieval_summary is NOT in enriched_fields — Haiku generates it separately.
 const enrichedOutput = {
   enriched_fields: {
     google_scholar_url: null,
@@ -66,6 +69,12 @@ function failingIterator(msg = "service unavailable") {
 
 jest.mock("@anthropic-ai/claude-agent-sdk", () => ({ query: jest.fn() }));
 
+// Mock the direct Anthropic SDK — used by the fallback path when the CLI isn't available
+jest.mock("@anthropic-ai/sdk", () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
+
 jest.mock("fs", () => ({
   existsSync: jest.fn(),
   readFileSync: jest.fn(),
@@ -82,9 +91,11 @@ import {
   updateProfileEmbedding,
 } from "@/lib/researcher-store";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import Anthropic from "@anthropic-ai/sdk";
 import * as fs from "fs";
 
 const mockQuery = query as jest.Mock;
+const MockedAnthropicCtor = Anthropic as unknown as jest.Mock;
 
 const mockGetResearcherFull = getResearcherFull as jest.Mock;
 const mockUpdateScholarCandidate = updateScholarCandidate as jest.Mock;
@@ -131,7 +142,6 @@ async function drainStream(stream: Response): Promise<string> {
     const result = await reader.read();
     done = result.done;
     if (result.value) {
-      // The route uses ReadableStream<string>, so chunks may be strings or Uint8Array
       if (typeof result.value === "string") {
         text += result.value;
       } else {
@@ -145,7 +155,7 @@ async function drainStream(stream: Response): Promise<string> {
 describe("POST /api/session/[name]/enrich (DB-first)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // First query() call = Sonnet enrichment; second = Haiku retrieval_summary
+    // First query() call = Sonnet enrichment; subsequent = Haiku retrieval_summary via agent SDK
     mockQuery.mockReturnValueOnce(sonnetIterator()).mockReturnValue(haikuIterator());
   });
 
@@ -231,7 +241,7 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
     await jest.runAllTimersAsync();
     await streamPromise;
 
-    // query called 3 times: Sonnet + 2 Haiku attempts
+    // query called 3 times: Sonnet + 2 Haiku attempts (non-CLI errors retry via agent SDK)
     expect(mockQuery).toHaveBeenCalledTimes(3);
     expect(mockUpdateResearcherProfile).toHaveBeenCalledWith(
       "jane-smith",
@@ -243,7 +253,6 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
   it("emits SSE error and skips profile write if Haiku fails after retry", async () => {
     jest.useFakeTimers();
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
-    // Reset to clear beforeEach's queued mockReturnValueOnce, then set full chain
     mockQuery.mockReset();
     mockQuery
       .mockReturnValueOnce(sonnetIterator())
@@ -257,6 +266,29 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
     expect(sseText).toContain('"type":"error"');
     expect(mockUpdateResearcherProfile).not.toHaveBeenCalled();
     jest.useRealTimers();
+  });
+
+  it("falls back to direct Anthropic SDK when Claude Code CLI is not available", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+    const cliError = new Error("Claude Code executable not found at /app/node_modules/@anthropic-ai/claude-agent-sdk/cli.js. Is options.pathToClaudeCodeExecutable set?");
+    mockQuery.mockReset();
+    mockQuery
+      .mockReturnValueOnce(sonnetIterator())
+      .mockReturnValueOnce({ [Symbol.asyncIterator]: async function* () { throw cliError; } });
+
+    const mockCreate = jest.fn().mockResolvedValue({
+      content: [{ type: "text", text: DEFAULT_HAIKU_SUMMARY }],
+    });
+    MockedAnthropicCtor.mockImplementation(() => ({ messages: { create: mockCreate } }));
+
+    const stream = await POST(makePostRequest(), { params: { name: "jane-smith" } });
+    await drainStream(stream);
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockUpdateResearcherProfile).toHaveBeenCalledWith(
+      "jane-smith",
+      expect.objectContaining({ retrieval_summary: DEFAULT_HAIKU_SUMMARY })
+    );
   });
 });
 
