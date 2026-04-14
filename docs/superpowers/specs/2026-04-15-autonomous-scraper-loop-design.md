@@ -28,7 +28,7 @@ Iteration N:
   6. Exit → ralph feeds same prompt back → Iteration N+1
 ```
 
-Stops when: `<promise>ALL SOURCES ASSESSED</promise>` is output, or `--max-iterations 30` is hit.
+Stops when: `<promise>DONE</promise>` is output, or `--max-iterations 50` is hit.
 
 ### Invocation
 
@@ -61,7 +61,7 @@ You are an autonomous grant scraper agent. Your job each iteration:
 8. Update SCRAPER_LOG.md with result.
 9. Commit everything with message: feat(data-pipeline): add <name> opportunity scraper
 10. When ALL sources in the seed list plus any discovered sources have been attempted,
-    output: <promise>ALL SOURCES ASSESSED</promise>
+    output: <promise>DONE</promise>
 
 Read the full spec before starting. Follow the existing source/transform patterns exactly —
 read data-pipeline/src/sources/wellcome.ts and data-pipeline/src/transforms/normalise-wellcome.ts
@@ -217,6 +217,8 @@ The loop stops (outputs `<promise>ALL SOURCES ASSESSED</promise>`) when ALL of t
 - All discovered sources (seed + found) have been attempted
 - `npm test -w data-pipeline` passes on the branch
 - `SCRAPER_LOG.md` is committed and up to date
+
+Output `<promise>DONE</promise>` (the word DONE in promise tags) to stop the loop.
 
 ---
 
