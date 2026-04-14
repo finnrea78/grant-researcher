@@ -10,12 +10,6 @@ import {
   deleteMatchesForResearcher,
 } from "@/lib/match-store";
 
-const mockUpsert = jest.fn();
-const mockSelect = jest.fn();
-const mockDelete = jest.fn();
-const mockEq = jest.fn();
-const mockOrder = jest.fn();
-
 jest.mock("@/lib/supabase", () => ({
   supabase: {
     from: jest.fn(),

@@ -16,8 +16,6 @@ import {
 // Mock the Supabase client
 const mockSelect = jest.fn();
 const mockUpdate = jest.fn();
-const mockEq = jest.fn();
-const mockSingle = jest.fn();
 
 jest.mock("@/lib/supabase", () => ({
   supabase: {

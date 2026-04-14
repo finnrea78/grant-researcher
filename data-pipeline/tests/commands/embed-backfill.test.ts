@@ -2,7 +2,6 @@
 
 // ─── Mock @grant-researcher/db ────────────────────────────────────────────────
 const mockLimit = jest.fn();
-const mockRange = jest.fn().mockReturnValue({ data: [], error: null });
 const mockIs = jest.fn().mockReturnValue({ limit: mockLimit });
 const mockEq = jest.fn().mockReturnValue({ data: null, error: null });
 const mockUpdateChain = { eq: mockEq };
