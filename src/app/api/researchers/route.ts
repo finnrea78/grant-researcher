@@ -3,8 +3,8 @@ import { listResearchersWithProfiles } from "@/lib/researcher-store";
 
 export async function GET(): Promise<Response> {
   try {
-    const { supabase } = await requireUser();
-    const researchers = await listResearchersWithProfiles(supabase);
+    const { user, supabase } = await requireUser();
+    const researchers = await listResearchersWithProfiles(user.id, supabase);
     return Response.json(researchers);
   } catch (err) {
     if (err instanceof Response) return err;

@@ -42,7 +42,6 @@ export async function POST(req: Request): Promise<Response> {
 
   intake = { ...intake, name: nameSource };
 
-  const proposalIntent = intake.proposal_intent;
   const intakeForDb = stripEphemeralFields(intake);
 
   let cvExt = "pdf";
@@ -76,12 +75,8 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
-  const pipelinePatch: Record<string, unknown> = { intake: true };
-  if (proposalIntent) {
-    pipelinePatch.proposal_intent = proposalIntent;
-  }
   try {
-    await updatePipelineState(name, pipelinePatch);
+    await updatePipelineState(name, userId, { intake: true });
   } catch (err) {
     console.error("[session] updatePipelineState failed:", err);
     return Response.json({ error: "Failed to update pipeline state" }, { status: 500 });
@@ -95,7 +90,7 @@ export async function POST(req: Request): Promise<Response> {
       );
       if (orcidRes.ok) {
         const orcidData = await orcidRes.json() as Record<string, unknown>;
-        await updateOrcidData(name, orcidData);
+        await updateOrcidData(name, userId, orcidData);
       }
     } catch (err) {
       console.error(`[session] ORCID fetch failed:`, err);

@@ -25,8 +25,10 @@ export async function POST(
   req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  let userId: string;
   try {
-    await requireUser();
+    const { user } = await requireUser();
+    userId = user.id;
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
@@ -39,7 +41,7 @@ export async function POST(
   const dbContext = await buildScanDbContext();
 
   // Read researcher profile from DB for smart scan context injection
-  const researcher = await getResearcherFull(name);
+  const researcher = await getResearcherFull(name, userId);
   const profile = researcher?.enriched_profile as Record<string, unknown> | null ?? null;
 
   let profileContext = "";
@@ -194,7 +196,7 @@ Prefer funders not already in _urls.md. Append new discoveries to _urls.md and w
           await persistDiscoveredManifest(manifestPath, discoveryContext);
 
           // Mark scan complete in DB (replaces _scan-complete file marker)
-          await updatePipelineState(name, { scan: true });
+          await updatePipelineState(name, userId, { scan: true });
         } catch (persistErr) {
           console.error(`[scan] persistDiscoveredManifest failed:`, persistErr);
         }
@@ -216,14 +218,16 @@ export async function PATCH(
   _req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  let userId: string;
   try {
-    await requireUser();
+    const { user } = await requireUser();
+    userId = user.id;
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
   }
 
   const { name } = params;
-  await updatePipelineState(name, { scan: true });
+  await updatePipelineState(name, userId, { scan: true });
   return Response.json({ ok: true });
 }

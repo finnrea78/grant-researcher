@@ -94,7 +94,7 @@ describe("POST /api/session/[name]/scan (DB-first)", () => {
     let done = false;
     while (!done) done = (await reader.read()).done;
 
-    expect(mockGetResearcherFull).toHaveBeenCalledWith("jane-smith");
+    expect(mockGetResearcherFull).toHaveBeenCalledWith("jane-smith", "user-123");
   });
 
   it("sets pipeline_state.scan = true after completion", async () => {
@@ -111,6 +111,7 @@ describe("POST /api/session/[name]/scan (DB-first)", () => {
 
     expect(mockUpdatePipelineState).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ scan: true })
     );
   });
@@ -145,6 +146,7 @@ describe("PATCH /api/session/[name]/scan (DB-first)", () => {
     expect(body.ok).toBe(true);
     expect(mockUpdatePipelineState).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ scan: true })
     );
   });

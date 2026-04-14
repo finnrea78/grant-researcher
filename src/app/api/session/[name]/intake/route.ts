@@ -10,15 +10,17 @@ export async function GET(
   _req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  let userId: string;
   try {
-    await requireUser();
+    const { user } = await requireUser();
+    userId = user.id;
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
   }
 
   const { name } = params;
-  const researcher = await getResearcherFull(name);
+  const researcher = await getResearcherFull(name, userId);
 
   if (!researcher) {
     return Response.json({ error: "Not found" }, { status: 404 });
@@ -73,11 +75,10 @@ export async function PATCH(
     cvText = (await extractCvText(bytes, file.name)) ?? undefined;
   } else {
     // No new CV — preserve existing cv_text from DB
-    const existing = await getResearcherFull(name);
+    const existing = await getResearcherFull(name, userId);
     cvText = existing?.cv_text ?? undefined;
   }
 
-  const proposalIntent = intake.proposal_intent;
   const intakeForDb = stripEphemeralFields({ ...intake, name: intake.name || name });
   if (cvText) intakeForDb.cv_text = cvText;
 
@@ -88,15 +89,13 @@ export async function PATCH(
   }
 
   // Reset pipeline state — null clears derived stage flags so re-intake triggers re-run
-  const pipelinePatch: Record<string, unknown> = {
+  await updatePipelineState(name, userId, {
     intake: true,
     profile: null,
     enrich: null,
     scan: null,
     match: null,
-    proposal_intent: proposalIntent ?? null,
-  };
-  await updatePipelineState(name, pipelinePatch);
+  });
 
   await deleteMatchesForResearcher(researcherId);
 

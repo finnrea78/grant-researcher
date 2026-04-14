@@ -86,7 +86,7 @@ describe("listResearchersWithProfiles — client param", () => {
     mockServiceFrom.mockReturnValue(chain);
 
     const { listResearchersWithProfiles } = await import("@/lib/researcher-store");
-    await listResearchersWithProfiles();
+    await listResearchersWithProfiles("user-123");
 
     expect(mockServiceFrom).toHaveBeenCalledWith("researchers");
   });
@@ -98,7 +98,7 @@ describe("listResearchersWithProfiles — client param", () => {
     const customClient = { from: customFrom } as unknown as SupabaseClient;
 
     const { listResearchersWithProfiles } = await import("@/lib/researcher-store");
-    await listResearchersWithProfiles(customClient);
+    await listResearchersWithProfiles("user-123", customClient);
 
     expect(customFrom).toHaveBeenCalledWith("researchers");
     expect(mockServiceFrom).not.toHaveBeenCalled();
@@ -116,7 +116,7 @@ describe("getResearcherBySlug — client param", () => {
     mockServiceFrom.mockReturnValue(chain);
 
     const { getResearcherBySlug } = await import("@/lib/researcher-store");
-    await getResearcherBySlug("jane-smith");
+    await getResearcherBySlug("jane-smith", "user-123");
 
     expect(mockServiceFrom).toHaveBeenCalledWith("researchers");
   });
@@ -131,7 +131,7 @@ describe("getResearcherBySlug — client param", () => {
     const customClient = { from: customFrom } as unknown as SupabaseClient;
 
     const { getResearcherBySlug } = await import("@/lib/researcher-store");
-    await getResearcherBySlug("jane-smith", customClient);
+    await getResearcherBySlug("jane-smith", "user-123", customClient);
 
     expect(customFrom).toHaveBeenCalledWith("researchers");
     expect(mockServiceFrom).not.toHaveBeenCalled();
@@ -142,7 +142,7 @@ describe("getResearcherBySlug — client param", () => {
     mockServiceFrom.mockReturnValue(chain);
 
     const { getResearcherBySlug } = await import("@/lib/researcher-store");
-    const result = await getResearcherBySlug("other-user-slug");
+    const result = await getResearcherBySlug("other-user-slug", "user-123");
 
     expect(result).toBeNull();
   });

@@ -98,8 +98,10 @@ export async function POST(
   _req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  let userId: string;
   try {
-    await requireUser();
+    const { user } = await requireUser();
+    userId = user.id;
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
@@ -118,7 +120,7 @@ export async function POST(
       }
 
       try {
-        const researcher = await getResearcherFull(name);
+        const researcher = await getResearcherFull(name, userId);
         if (!researcher) {
           controller.enqueue(formatSSEEvent({ type: "error", message: `Researcher "${name}" not found` }));
           agentQueue.release();
@@ -198,16 +200,16 @@ export async function POST(
           ...mergedProfile,
           ...(retrievalSummary ? { retrieval_summary: retrievalSummary } : {}),
         } as ResearcherProfile;
-        await updateResearcherProfile(name, updatedProfile);
+        await updateResearcherProfile(name, userId, updatedProfile);
         if (updatedProfile.retrieval_summary) {
-          await updateProfileEmbedding(name, updatedProfile.retrieval_summary);
+          await updateProfileEmbedding(name, userId, updatedProfile.retrieval_summary);
         }
 
         if (output.scholar_candidate) {
-          await updateScholarCandidate(name, output.scholar_candidate);
+          await updateScholarCandidate(name, userId, output.scholar_candidate);
         }
 
-        await updatePipelineState(name, { enrich: true });
+        await updatePipelineState(name, userId, { enrich: true });
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
       }
@@ -224,8 +226,10 @@ export async function PATCH(
   req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  let userId: string;
   try {
-    await requireUser();
+    const { user } = await requireUser();
+    userId = user.id;
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
@@ -235,7 +239,7 @@ export async function PATCH(
   const body = await req.json() as { confirm: boolean; scholar_url?: string };
 
   if (body.confirm && body.scholar_url) {
-    const researcher = await getResearcherFull(name);
+    const researcher = await getResearcherFull(name, userId);
     if (!researcher) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }
@@ -244,15 +248,15 @@ export async function PATCH(
       google_scholar_url: body.scholar_url,
     };
     await Promise.all([
-      updateResearcherProfile(name, updatedProfile as ResearcherProfile),
-      updateScholarCandidate(name, null),
+      updateResearcherProfile(name, userId, updatedProfile as ResearcherProfile),
+      updateScholarCandidate(name, userId, null),
     ]);
 
     return Response.json({ ok: true, action: "confirmed" });
   }
 
   // User skipped Scholar confirmation — clear candidate, mark skip
-  await updateScholarCandidate(name, null);
-  await updatePipelineState(name, { scholar_skip: true });
+  await updateScholarCandidate(name, userId, null);
+  await updatePipelineState(name, userId, { scholar_skip: true });
   return Response.json({ ok: true, action: "skipped" });
 }

@@ -6,8 +6,10 @@ export async function GET(
   _req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  let userId: string;
   try {
-    await requireUser();
+    const { user } = await requireUser();
+    userId = user.id;
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
@@ -16,7 +18,7 @@ export async function GET(
   const { name } = params;
 
   const [researcher, proposalRows] = await Promise.all([
-    getResearcherFull(name),
+    getResearcherFull(name, userId),
     getProposalsByResearcherSlug(name),
   ]);
 

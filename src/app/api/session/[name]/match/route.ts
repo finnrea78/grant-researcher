@@ -13,8 +13,10 @@ export async function POST(
   _req: Request,
   { params }: { params: { name: string } }
 ): Promise<Response> {
+  let userId: string;
   try {
-    await requireUser();
+    const { user } = await requireUser();
+    userId = user.id;
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
@@ -39,7 +41,7 @@ export async function POST(
         let candidatesJson = "[]";
         let candidateCount = 0;
         try {
-          const candidates = await retrieveCandidates(name);
+          const candidates = await retrieveCandidates(name, userId);
           candidateCount = candidates.length;
           candidatesJson = JSON.stringify(candidates, null, 2);
         } catch (err) {
@@ -47,11 +49,11 @@ export async function POST(
         }
         controller.enqueue(formatSSEEvent({ type: "text", text: `Found ${candidateCount} opportunities. Scoring now — each match will appear as it is scored…` }));
 
-        const researcher = await getResearcherFull(name);
+        const researcher = await getResearcherFull(name, userId);
         const profileJson = researcher?.enriched_profile
           ? JSON.stringify(researcher.enriched_profile, null, 2)
           : "{}";
-        const proposalIntent = researcher?.pipeline_state?.proposal_intent ?? null;
+        const proposalIntent = researcher?.proposal_intent ?? null;
 
         const prompt = [
           `Score and rank funding opportunities for researcher "${name}".`,
@@ -158,8 +160,8 @@ export async function POST(
 
         const md = formatMatchesMd(researcher?.name ?? name, scores);
         await Promise.all([
-          updateMatchResultsMd(name, md),
-          updatePipelineState(name, { match: true, proposal_intent: null }),
+          updateMatchResultsMd(name, userId, md),
+          updatePipelineState(name, userId, { match: true }),
         ]);
       } catch (err) {
         controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));

@@ -47,7 +47,7 @@ describe("retrieveCandidates", () => {
       .mockResolvedValueOnce({ data: [VECTOR_OPP], error: null }) // match_opportunities
       .mockResolvedValueOnce({ data: [FTS_OPP], error: null });   // search_opportunities_fts
 
-    const results = await retrieveCandidates("jane-smith");
+    const results = await retrieveCandidates("jane-smith", "user-123");
 
     expect(mockRpc).toHaveBeenCalledWith("match_opportunities", expect.objectContaining({
       query_embedding: FAKE_EMBEDDING,
@@ -69,7 +69,7 @@ describe("retrieveCandidates", () => {
       .mockResolvedValueOnce({ data: [VECTOR_OPP], error: null })
       .mockResolvedValueOnce({ data: [DUPLICATE], error: null });
 
-    const results = await retrieveCandidates("jane-smith");
+    const results = await retrieveCandidates("jane-smith", "user-123");
 
     expect(results).toHaveLength(1);
     expect(results[0].id).toBe("opp-1");
@@ -83,7 +83,7 @@ describe("retrieveCandidates", () => {
     });
     mockRpc.mockResolvedValueOnce({ data: [FTS_OPP], error: null });
 
-    const results = await retrieveCandidates("jane-smith");
+    const results = await retrieveCandidates("jane-smith", "user-123");
 
     // Only one rpc call (fts only)
     expect(mockRpc).toHaveBeenCalledTimes(1);
@@ -100,7 +100,7 @@ describe("retrieveCandidates", () => {
     const manyOpps = Array.from({ length: 200 }, (_, i) => ({ ...FTS_OPP, id: `opp-${i}` }));
     mockRpc.mockResolvedValueOnce({ data: manyOpps, error: null });
 
-    const results = await retrieveCandidates("jane-smith", 50);
+    const results = await retrieveCandidates("jane-smith", "user-123", 50);
     expect(results.length).toBeLessThanOrEqual(50);
   });
 
@@ -112,12 +112,12 @@ describe("retrieveCandidates", () => {
     });
     mockRpc.mockResolvedValueOnce({ data: [], error: null });
 
-    const results = await retrieveCandidates("jane-smith");
+    const results = await retrieveCandidates("jane-smith", "user-123");
     expect(results).toEqual([]);
   });
 
   it("throws when researcher fetch fails", async () => {
     mockGetResearcher.mockRejectedValue(new Error("Not found"));
-    await expect(retrieveCandidates("ghost")).rejects.toThrow("Not found");
+    await expect(retrieveCandidates("ghost", "user-123")).rejects.toThrow("Not found");
   });
 });

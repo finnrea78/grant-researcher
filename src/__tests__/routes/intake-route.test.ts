@@ -156,6 +156,7 @@ describe("PATCH /api/session/[name]/intake (DB-first)", () => {
     // pipeline_state should be reset to just { intake: true }
     expect(mockUpdatePipelineState).toHaveBeenCalledWith(
       "jane-smith",
+      "user-123",
       expect.objectContaining({ intake: true })
     );
   });
@@ -189,18 +190,19 @@ describe("PATCH /api/session/[name]/intake (DB-first)", () => {
     );
   });
 
-  it("stores proposal_intent in pipeline_state when provided", async () => {
+  it("passes proposal_intent to upsertResearcher when provided", async () => {
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
-    const proposalIntent = { themes: ["AI"], funder_preference: "Wellcome" };
+    const proposalIntent = { project_title: "AI Study", description: "Researching AI safety" };
     const fd = new FormData();
     fd.append("intake", JSON.stringify({ name: "Jane Smith", proposal_intent: proposalIntent }));
 
     const [req, ctx] = makePatchRequest(fd);
     await PATCH(req, ctx);
 
-    expect(mockUpdatePipelineState).toHaveBeenCalledWith(
+    expect(mockUpsertResearcher).toHaveBeenCalledWith(
+      expect.objectContaining({ proposal_intent: proposalIntent }),
       "jane-smith",
-      expect.objectContaining({ proposal_intent: proposalIntent })
+      "user-123"
     );
   });
 
