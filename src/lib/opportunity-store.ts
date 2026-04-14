@@ -241,14 +241,27 @@ export async function getOpportunityByFunderAndName(
 
   if (!funderRow) return null;
 
-  // Step 2: find opportunity by funder_id + name (case-insensitive)
-  const { data: opp } = await supabase
+  // Step 2: find opportunity by slug first (exact match), then name (case-insensitive fallback).
+  // The propose route may pass a scheme_slug rather than a human-readable name, so slug lookup
+  // is the primary path for match results generated before opportunity_id was embedded in the MD.
+  let { data: opp } = await supabase
     .from("opportunities")
     .select("name, description, scope, eligibility, url, funding_type, deadline_date, deadline_raw, amount_raw, status")
     .eq("funder_id", funderRow.id)
-    .ilike("name", opportunityName)
+    .eq("slug", opportunityName)
     .limit(1)
     .maybeSingle();
+
+  if (!opp) {
+    const { data } = await supabase
+      .from("opportunities")
+      .select("name, description, scope, eligibility, url, funding_type, deadline_date, deadline_raw, amount_raw, status")
+      .eq("funder_id", funderRow.id)
+      .ilike("name", opportunityName)
+      .limit(1)
+      .maybeSingle();
+    opp = data;
+  }
 
   if (!opp) return null;
 
