@@ -116,8 +116,8 @@ describe("normaliseClassicalAssoc", () => {
     expect(normaliseClassicalAssoc(rawSmall).funding_type).toBe("grant");
   });
 
-  it("sets scope to classics", () => {
-    expect(normaliseClassicalAssoc(rawSmall).scope).toContain("classics");
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    expect(normaliseClassicalAssoc(rawSmall).scope).toBeNull();
   });
 
   it("sets eligibility", () => {

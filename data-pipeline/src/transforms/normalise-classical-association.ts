@@ -46,7 +46,7 @@ export function normaliseClassicalAssoc(raw: RawClassicalAssocGrant): Normalised
     funding_type: "grant",
     description: raw.description,
     eligibility: "Schoolteachers, students, academics and organisations. Applications must demonstrate a clear link to Ancient Greece and Rome.",
-    scope: "classics, ancient history, Latin, Greek",
+    scope: null,
     source: "classical_association",
     source_metadata: {},
   };
