@@ -84,6 +84,8 @@ import { fetchBouGrants } from "./sources/bou.js";
 import { normaliseBou } from "./transforms/normalise-bou.js";
 import { fetchClassicalAssocGrants } from "./sources/classical-association.js";
 import { normaliseClassicalAssoc } from "./transforms/normalise-classical-association.js";
+import { fetchBenhsGrants } from "./sources/benhs.js";
+import { normaliseBenhs } from "./transforms/normalise-benhs.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -720,6 +722,18 @@ program
       source: "classical_association",
       funderSlug: "classical-association",
       fetch: () => fetchClassicalAssocGrants().then(r => r.map(normaliseClassicalAssoc)),
+    });
+  });
+
+program
+  .command("benhs")
+  .description("Ingest grant schemes from the British Entomological and Natural History Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "BENHS grants",
+      source: "benhs",
+      funderSlug: "benhs",
+      fetch: () => fetchBenhsGrants().then(r => r.map(normaliseBenhs)),
     });
   });
 
