@@ -5,7 +5,8 @@ export type OpportunitySource =
   | "wellcome"
   | "leverhulme"
   | "royal_society"
-  | "nuffield";
+  | "nuffield"
+  | "wolfson";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {

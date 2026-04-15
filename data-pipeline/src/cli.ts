@@ -8,6 +8,7 @@ import { fetchWellcomeSchemes } from "./sources/wellcome.js";
 import { fetchLeverhulmeSchemes } from "./sources/leverhulme.js";
 import { fetchRoyalSocietySchemes } from "./sources/royal-society.js";
 import { fetchNuffieldSchemes } from "./sources/nuffield.js";
+import { fetchWolfsonSchemes } from "./sources/wolfson.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -15,6 +16,7 @@ import { normaliseWellcome } from "./transforms/normalise-wellcome.js";
 import { normaliseLeverhulme } from "./transforms/normalise-leverhulme.js";
 import { normaliseRoyalSociety } from "./transforms/normalise-royal-society.js";
 import { normaliseNuffield } from "./transforms/normalise-nuffield.js";
+import { normaliseWolfson } from "./transforms/normalise-wolfson.js";
 import { upsertGrants } from "./loaders/upsert-grants.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
 import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
@@ -157,7 +159,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "nuffield-foundation",
     fetch: () => fetchNuffieldSchemes().then(r => r.map(normaliseNuffield)),
   },
+  {
+    displayName: "Wolfson Foundation schemes",
+    source: "wolfson",
+    funderSlug: "wolfson-foundation",
+    fetch: () => fetchWolfsonSchemes().then(r => r.map(normaliseWolfson)),
+  },
 ];
+
+program
+  .command("wolfson")
+  .description("Ingest open opportunities from Wolfson Foundation")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Wolfson Foundation schemes",
+      source: "wolfson",
+      funderSlug: "wolfson-foundation",
+      fetch: () => fetchWolfsonSchemes().then(r => r.map(normaliseWolfson)),
+    });
+  });
 
 program
   .command("nuffield")
