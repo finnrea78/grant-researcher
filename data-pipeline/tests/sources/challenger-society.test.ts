@@ -152,6 +152,7 @@ describe("normaliseChallengerSociety", () => {
     description: "Up to £1000 to support marine science research activities.",
     amountRaw: "up to £1000",
     deadlineRaw: null,
+    eligibility: null,
   };
 
   it("sets source to challenger_society", () => {
@@ -184,8 +185,8 @@ describe("normaliseChallengerSociety", () => {
     expect(normaliseChallengerSociety(awardRaw).funding_type).toBe("prize");
   });
 
-  it("sets scope to marine science", () => {
-    expect(normaliseChallengerSociety(raw).scope).toContain("marine science");
+  it("sets scope to null", () => {
+    expect(normaliseChallengerSociety(raw).scope).toBeNull();
   });
 
   it("generates a slug", () => {

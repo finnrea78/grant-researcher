@@ -66,10 +66,13 @@ export function parseChallengerListingPage(html: string): Array<{
 }
 
 /**
- * Parse an individual Challenger Society grant sub-page for deadline info.
- * Deadline appears as <strong>DDth Month YYYY</strong> or date in prose.
+ * Parse an individual Challenger Society grant sub-page for deadline, description, and eligibility.
  */
-export function parseChallengerGrantPage(html: string): { deadlineRaw: string | null } {
+export function parseChallengerGrantPage(html: string): {
+  deadlineRaw: string | null;
+  description: string | null;
+  eligibility: string | null;
+} {
   const $ = cheerio.load(html);
   let deadlineRaw: string | null = null;
 
@@ -82,7 +85,30 @@ export function parseChallengerGrantPage(html: string): { deadlineRaw: string | 
     deadlineRaw = dateMatch[1].replace(/(\d+)(st|nd|rd|th)/i, "$1").trim();
   }
 
-  return { deadlineRaw };
+  // Multi-paragraph description from main content
+  const descParts: string[] = [];
+  $(".entry-content p, article p, main p").each((_i, el) => {
+    const text = $(el).text().trim();
+    if (text.length > 60) descParts.push(text);
+  });
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  // Eligibility from heading sections
+  let eligibility: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (eligibility !== null) return;
+    if (!/eligib|who\s+can\s+apply|who\s+is\s+eligible/i.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
+  });
+
+  return { deadlineRaw, description, eligibility };
 }
 
 export async function fetchChallengerSocietyGrants(): Promise<RawChallengerSocietyGrant[]> {
@@ -97,8 +123,10 @@ export async function fetchChallengerSocietyGrants(): Promise<RawChallengerSocie
   const listings = parseChallengerListingPage(listingHtml);
 
   const grants: RawChallengerSocietyGrant[] = [];
-  for (const { title, url, subpageUrl, amountRaw, description } of listings) {
+  for (const { title, url, subpageUrl, amountRaw, description: listingDescription } of listings) {
     let deadlineRaw: string | null = null;
+    let description = listingDescription;
+    let eligibility: string | null = null;
 
     if (subpageUrl) {
       const subRes = await fetchWithRetry(subpageUrl);
@@ -106,6 +134,8 @@ export async function fetchChallengerSocietyGrants(): Promise<RawChallengerSocie
         const subHtml = await subRes.text();
         const parsed = parseChallengerGrantPage(subHtml);
         deadlineRaw = parsed.deadlineRaw;
+        if (parsed.description) description = parsed.description;
+        if (parsed.eligibility) eligibility = parsed.eligibility;
       }
     }
 
@@ -115,7 +145,7 @@ export async function fetchChallengerSocietyGrants(): Promise<RawChallengerSocie
       if (!isNaN(parsed.getTime()) && parsed < new Date()) status = "closed";
     }
 
-    grants.push({ title, url, status, amountRaw, deadlineRaw, description });
+    grants.push({ title, url, status, amountRaw, deadlineRaw, description, eligibility });
   }
 
   console.log(`  Found ${grants.length} Challenger Society grant entries`);

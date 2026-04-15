@@ -10,6 +10,7 @@ export interface RawChallengerSocietyGrant {
   description: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseChallengerSociety(raw: RawChallengerSocietyGrant): NormalisedOpportunity {
@@ -43,8 +44,8 @@ export function normaliseChallengerSociety(raw: RawChallengerSocietyGrant): Norm
     url: raw.url,
     funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "marine science, oceanography",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "challenger_society",
     source_metadata: {},
   };
