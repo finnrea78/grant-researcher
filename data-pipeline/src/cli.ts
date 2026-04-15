@@ -60,6 +60,8 @@ import { fetchEsebGrants } from "./sources/eseb.js";
 import { normaliseEseb } from "./transforms/normalise-eseb.js";
 import { fetchEndocrinologyGrants } from "./sources/endocrinology.js";
 import { normaliseEndocrinology } from "./transforms/normalise-endocrinology.js";
+import { fetchRhsGrants } from "./sources/royal-historical-society.js";
+import { normaliseRhs } from "./transforms/normalise-royal-historical-society.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -397,6 +399,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "society-for-endocrinology",
     fetch: () => fetchEndocrinologyGrants().then(r => r.map(normaliseEndocrinology)),
   },
+  {
+    displayName: "Royal Historical Society open calls",
+    source: "royal_historical_society",
+    funderSlug: "royal-historical-society",
+    fetch: () => fetchRhsGrants().then(r => r.map(normaliseRhs)),
+  },
 ];
 
 program
@@ -492,6 +500,18 @@ program
       source: "endocrinology",
       funderSlug: "society-for-endocrinology",
       fetch: () => fetchEndocrinologyGrants().then(r => r.map(normaliseEndocrinology)),
+    });
+  });
+
+program
+  .command("royal-historical-society")
+  .description("Ingest open calls from the Royal Historical Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Royal Historical Society open calls",
+      source: "royal_historical_society",
+      funderSlug: "royal-historical-society",
+      fetch: () => fetchRhsGrants().then(r => r.map(normaliseRhs)),
     });
   });
 
