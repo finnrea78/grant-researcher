@@ -24,8 +24,11 @@ const FIXTURE_OPEN = `
   </div>
 
   <div class="content-body">
-    <p>Springboard supports outstanding early-career biomedical and health researchers.</p>
+    <p>Springboard supports outstanding early-career biomedical and health researchers at the start of their first independent post.</p>
     <p>Applicants must submit the Expression of Interest form by <strong>11 December 2026</strong> for consideration in Spring 2027.</p>
+    <h3>Eligibility</h3>
+    <p>Applicants must hold an academic post that incorporates research and be within 5 years of their first independent appointment.</p>
+    <p>They must be based at an eligible UK higher education institution and not hold a clinical contract.</p>
   </div>
 </main>
 </body>
@@ -95,9 +98,16 @@ describe("parseAcMedSciPage (open scheme)", () => {
     expect(result?.amountRaw).toContain("£125,000");
   });
 
-  it("extracts description from first substantive p", () => {
+  it("extracts multi-paragraph description", () => {
     const result = parseAcMedSciPage(FIXTURE_OPEN, SPRINGBOARD_URL, "Springboard");
     expect(result?.description).toContain("Springboard");
+    expect(result?.description?.length).toBeGreaterThan(80);
+  });
+
+  it("extracts eligibility from eligibility heading section", () => {
+    const result = parseAcMedSciPage(FIXTURE_OPEN, SPRINGBOARD_URL, "Springboard");
+    expect(result?.eligibility).not.toBeNull();
+    expect(result?.eligibility).toContain("5 years");
   });
 });
 
@@ -155,5 +165,17 @@ describe("normaliseAcMedSci", () => {
     const raw = parseAcMedSciPage(FIXTURE_CLOSED, STARTER_URL, "Starter Grants")!;
     const result = normaliseAcMedSci(raw);
     expect(result.deadline_date).toBeNull();
+  });
+
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    const raw = parseAcMedSciPage(FIXTURE_OPEN, SPRINGBOARD_URL, "Springboard")!;
+    const result = normaliseAcMedSci(raw);
+    expect(result.scope).toBeNull();
+  });
+
+  it("maps eligibility field", () => {
+    const raw = parseAcMedSciPage(FIXTURE_OPEN, SPRINGBOARD_URL, "Springboard")!;
+    const result = normaliseAcMedSci(raw);
+    expect(result.eligibility).toContain("5 years");
   });
 });

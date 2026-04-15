@@ -2,6 +2,23 @@ import * as cheerio from "cheerio";
 import { fetchWithRetry } from "../utils/fetchWithRetry.js";
 import type { RawAcMedSciGrant } from "../transforms/normalise-acmedsci.js";
 
+function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string | null {
+  let result: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (result !== null) return;
+    if (!headingPattern.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) result = parts.join("\n\n").slice(0, 1500);
+  });
+  return result;
+}
+
 const BASE_URL = "https://acmedsci.ac.uk";
 
 /**
@@ -83,15 +100,22 @@ export function parseAcMedSciPage(
     deadlineRaw = keyDatesText;
   }
 
-  // Description: first <p> in main content, not a label paragraph
-  let description: string | null = null;
-  $("main p, article p, div.col p").each((_i, el) => {
-    if (description) return;
-    const text = $(el).text().trim();
-    if (text.length > 40 && !/key dates|apply now|cookie|javascript/i.test(text)) {
-      description = text;
-    }
-  });
+  // Description: multi-paragraph from main content
+  const descParts: string[] = [];
+  const selectors = ["main p", "article p", "div.content-body p", "div.col p", "body p"];
+  for (const sel of selectors) {
+    $(sel).each((_i, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 60 && !/key dates|apply now|cookie|javascript|scheme-open/i.test(text)) {
+        descParts.push(text);
+      }
+    });
+    if (descParts.length > 0) break;
+  }
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  // Eligibility
+  const eligibility = extractSection($, /eligibility|who can apply|who is eligible/i);
 
   return {
     title,
@@ -100,6 +124,7 @@ export function parseAcMedSciPage(
     deadlineRaw,
     amountRaw,
     description,
+    eligibility,
   };
 }
 

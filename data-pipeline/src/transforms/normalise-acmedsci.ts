@@ -10,6 +10,7 @@ export interface RawAcMedSciGrant {
   deadlineRaw: string | null;
   amountRaw: string | null;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseAcMedSci(raw: RawAcMedSciGrant): NormalisedOpportunity {
@@ -37,8 +38,8 @@ export function normaliseAcMedSci(raw: RawAcMedSciGrant): NormalisedOpportunity 
     url: raw.url,
     funding_type: raw.title.toLowerCase().includes("fellowship") ? "fellowship" : "grant",
     description: raw.description,
-    eligibility: null,
-    scope: "biomedical sciences, clinical research, health",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "acmedsci",
     source_metadata: {},
   };
