@@ -5,6 +5,10 @@ import type { RawRoyalSocietyScheme } from "../transforms/normalise-royal-societ
 const GRANTS_URL = "https://royalsociety.org/grants/search/grant-listings/";
 const BASE_URL = "https://royalsociety.org";
 
+// Boilerplate patterns present on every Royal Society page — skip these paragraphs
+const BOILERPLATE_RE =
+  /Royal Society is a self-governing|Royal Society provides a range|independent scientific academy|cookies on this|privacy policy/i;
+
 export interface RoyalSocietyPageData {
   schemes: RawRoyalSocietyScheme[];
   /** Total grants on the site (pagination not yet supported — AJAX endpoint unknown). */
@@ -54,6 +58,40 @@ export function parseRoyalSocietyPage(html: string): RoyalSocietyPageData {
   return { schemes, totalCount };
 }
 
+/**
+ * Parse a Royal Society individual grant page for a fuller description.
+ * The listing cards truncate descriptions with "…"; sub-pages have the full content.
+ */
+export function parseRoyalSocietyGrantPage(html: string): string | null {
+  const $ = cheerio.load(html);
+
+  // Try specific content areas first, then fall back to main/article
+  const selectors = [
+    ".section__body p",
+    ".grant-detail__body p",
+    ".grant-description p",
+    ".content-section p",
+    "main .wysiwyg p",
+    "main article p",
+    "main p",
+  ];
+
+  for (const selector of selectors) {
+    let found: string | null = null;
+    $(selector).each((_i, el) => {
+      if (found) return false; // break once found
+      const text = $(el).text().trim();
+      if (text.length >= 80 && !BOILERPLATE_RE.test(text)) {
+        found = text;
+        return false;
+      }
+    });
+    if (found) return found;
+  }
+
+  return null;
+}
+
 export async function fetchRoyalSocietySchemes(): Promise<RawRoyalSocietyScheme[]> {
   console.log(`  Fetching Royal Society grants: ${GRANTS_URL}`);
   console.log(`  Note: fetching server-rendered items only (~12 of 28). Full pagination requires AJAX endpoint discovery.`);
@@ -76,5 +114,27 @@ export async function fetchRoyalSocietySchemes(): Promise<RawRoyalSocietyScheme[
     console.log(`  Found ${schemes.length} grants from Royal Society`);
   }
 
-  return schemes;
+  // Enrich truncated descriptions from individual grant pages
+  const enriched: RawRoyalSocietyScheme[] = [];
+  for (const scheme of schemes) {
+    const isTruncated = scheme.description.endsWith("…") || scheme.description.endsWith("...") || scheme.description.length < 150;
+    if (isTruncated && scheme.url) {
+      const subRes = await fetchWithRetry(scheme.url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+      });
+      if (subRes.ok) {
+        const subHtml = await subRes.text();
+        const richer = parseRoyalSocietyGrantPage(subHtml);
+        if (richer && richer.length > scheme.description.length) {
+          enriched.push({ ...scheme, description: richer });
+          continue;
+        }
+      }
+    }
+    enriched.push(scheme);
+  }
+
+  return enriched;
 }
