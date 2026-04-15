@@ -154,6 +154,7 @@ describe("normaliseAsab", () => {
     description: "Grants to support original research projects in animal behaviour.",
     amountRaw: "up to £15,000",
     deadlineRaw: "1 June 2026",
+    eligibility: null,
   };
 
   it("sets source to asab", () => {
@@ -185,8 +186,8 @@ describe("normaliseAsab", () => {
     expect(normaliseAsab(scholarRaw).funding_type).toBe("fellowship");
   });
 
-  it("sets scope to animal behaviour", () => {
-    expect(normaliseAsab(raw).scope).toContain("animal behaviour");
+  it("sets scope to null", () => {
+    expect(normaliseAsab(raw).scope).toBeNull();
   });
 
   it("generates a slug", () => {

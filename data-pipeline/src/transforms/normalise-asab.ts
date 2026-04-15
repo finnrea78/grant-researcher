@@ -10,6 +10,7 @@ export interface RawAsabGrant {
   description: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseAsab(raw: RawAsabGrant): NormalisedOpportunity {
@@ -41,8 +42,8 @@ export function normaliseAsab(raw: RawAsabGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "animal behaviour, behavioural biology, ethology",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "asab",
     source_metadata: {},
   };

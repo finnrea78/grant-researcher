@@ -30,12 +30,12 @@ function extractGrantName(h1: string): string {
 }
 
 /**
- * Parse an individual ASAB grant page to extract amount, deadline, and description.
+ * Parse an individual ASAB grant page to extract amount, deadline, description and eligibility.
  */
 export function parseAsabGrantPage(
   html: string,
   url: string
-): Pick<RawAsabGrant, "title" | "amountRaw" | "deadlineRaw" | "description" | "status"> {
+): Pick<RawAsabGrant, "title" | "amountRaw" | "deadlineRaw" | "description" | "status" | "eligibility"> {
   const $ = cheerio.load(html);
 
   const h1Text = $("h1").first().text().trim();
@@ -65,16 +65,30 @@ export function parseAsabGrantPage(
     if (!isNaN(parsed.getTime()) && parsed < new Date()) status = "closed";
   }
 
-  // Description: first substantive paragraph in main content
-  let description: string | null = null;
+  // Description: collect multiple substantive paragraphs
+  const descParts: string[] = [];
   $("main p, .sqs-block-content p, article p").each((_i, el) => {
     const text = $(el).text().trim();
-    if (text.length > 40 && !description) {
-      description = text;
+    if (text.length > 40) descParts.push(text);
+  });
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  // Eligibility: extract from heading sections
+  let eligibility: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (eligibility !== null) return;
+    if (!/eligib|who\s+can\s+apply|who\s+is\s+eligible/i.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
     }
+    if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
   });
 
-  return { title, amountRaw, deadlineRaw, description, status };
+  return { title, amountRaw, deadlineRaw, description, status, eligibility };
 }
 
 /**
