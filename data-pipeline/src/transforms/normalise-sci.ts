@@ -7,6 +7,8 @@ export interface RawSciGrant {
   title: string;
   url: string;
   status: string;
+  description: string | null;
+  eligibility: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
 }
@@ -43,9 +45,9 @@ export function normaliseSci(raw: RawSciGrant): NormalisedOpportunity {
     amount_currency: currency,
     url: raw.url,
     funding_type: fundingType,
-    description: null,
-    eligibility: null,
-    scope: "chemistry, chemical engineering, chemical industry",
+    description: raw.description,
+    eligibility: raw.eligibility,
+    scope: null,
     source: "sci",
     source_metadata: {},
   };

@@ -43,8 +43,25 @@ export function parseSciListingPage(html: string): { title: string; url: string 
   return results;
 }
 
+function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string | null {
+  let result: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (result !== null) return;
+    if (!headingPattern.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) result = parts.join("\n\n").slice(0, 1500);
+  });
+  return result;
+}
+
 /**
- * Parse an individual SCI award page to extract deadline and amount.
+ * Parse an individual SCI award page to extract description, eligibility, deadline and amount.
  *
  * Timetable: <table><tr><td>Closes:</td><td>30 April 2026</td></tr></table>
  * Amount: first £ mention in body prose.
@@ -52,8 +69,23 @@ export function parseSciListingPage(html: string): { title: string; url: string 
 export function parseSciGrantPage(
   html: string,
   url: string
-): Pick<RawSciGrant, "amountRaw" | "deadlineRaw" | "status"> {
+): Pick<RawSciGrant, "amountRaw" | "deadlineRaw" | "status" | "description" | "eligibility"> {
   const $ = cheerio.load(html);
+
+  // Description: substantial paragraphs — try main/article/content area first, fall back to all body p
+  const descParts: string[] = [];
+  const selectors = ["main p", "article p", ".page-content p", ".field--name-body p", "body p"];
+  for (const sel of selectors) {
+    $(sel).each((_i, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 60) descParts.push(text);
+    });
+    if (descParts.length > 0) break;
+  }
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  // Eligibility
+  const eligibility = extractSection($, /eligibility|who can apply|who is eligible/i);
 
   let deadlineRaw: string | null = null;
 
@@ -80,7 +112,7 @@ export function parseSciGrantPage(
     if (!isNaN(parsed.getTime()) && parsed < new Date()) status = "closed";
   }
 
-  return { amountRaw, deadlineRaw, status };
+  return { description, eligibility, amountRaw, deadlineRaw, status };
 }
 
 export async function fetchSciGrants(): Promise<RawSciGrant[]> {

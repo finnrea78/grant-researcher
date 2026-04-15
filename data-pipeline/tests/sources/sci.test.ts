@@ -125,6 +125,25 @@ describe("parseSciListingPage", () => {
   });
 });
 
+const GRANT_PAGE_WITH_ELIGIBILITY = `
+<!DOCTYPE html>
+<html>
+<body>
+<main>
+  <h1>Ramsay Trust Memorial Fellowship</h1>
+  <p>The Ramsay Trust Memorial Fellowships support postdoctoral chemists in the early stages of their career so that they may initiate a programme of original and independent research in inorganic chemistry.</p>
+  <h3>Eligibility</h3>
+  <p>Applicants must be university graduates with distinction in chemical sciences and have some postdoctoral experience. Applicants from under-represented groups are particularly welcome.</p>
+  <table>
+    <tbody>
+      <tr><td>Closes:</td><td>30 November 2025</td></tr>
+    </tbody>
+  </table>
+  <p>Value: up to £24,000.</p>
+</main>
+</body>
+</html>`;
+
 describe("parseSciGrantPage", () => {
   it("extracts closes date from timetable", () => {
     const result = parseSciGrantPage(GRANT_PAGE_FIXTURE, URL);
@@ -155,6 +174,24 @@ describe("parseSciGrantPage", () => {
     const result = parseSciGrantPage(GRANT_PAGE_NO_TIMETABLE, URL);
     expect(result.amountRaw).toContain("£500");
   });
+
+  it("extracts description from main paragraphs", () => {
+    const result = parseSciGrantPage(GRANT_PAGE_WITH_ELIGIBILITY, URL);
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("Ramsay Trust Memorial Fellowships");
+  });
+
+  it("extracts eligibility section", () => {
+    const result = parseSciGrantPage(GRANT_PAGE_WITH_ELIGIBILITY, URL);
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("postdoctoral experience");
+  });
+
+  it("returns null description for sparse pages", () => {
+    const result = parseSciGrantPage("<html><body><p>Short.</p></body></html>", URL);
+    expect(result.description).toBeNull();
+    expect(result.eligibility).toBeNull();
+  });
 });
 
 describe("normaliseSci", () => {
@@ -162,6 +199,8 @@ describe("normaliseSci", () => {
     title: "AJ Banks Travel Bursary",
     url: "https://www.soci.org/awards/travel-bursaries/aj-banks-travel-bursary",
     status: "open",
+    description: null,
+    eligibility: null,
     amountRaw: "up to £1,500",
     deadlineRaw: "31 October 2026",
   };
@@ -199,7 +238,7 @@ describe("normaliseSci", () => {
     expect(normaliseSci(raw).slug).toBe("aj-banks-travel-bursary");
   });
 
-  it("sets scope to chemistry", () => {
-    expect(normaliseSci(raw).scope).toContain("chemistry");
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    expect(normaliseSci(raw).scope).toBeNull();
   });
 });
