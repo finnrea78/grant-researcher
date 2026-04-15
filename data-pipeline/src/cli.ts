@@ -42,6 +42,8 @@ import { fetchAcMedSciGrants } from "./sources/acmedsci.js";
 import { normaliseAcMedSci } from "./transforms/normalise-acmedsci.js";
 import { fetchRgsGrants } from "./sources/rgs.js";
 import { normaliseRgs } from "./transforms/normalise-rgs.js";
+import { fetchBpsGrants } from "./sources/bps.js";
+import { normaliseBps } from "./transforms/normalise-bps.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -325,7 +327,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "royal-geographical-society",
     fetch: () => fetchRgsGrants().then(r => r.map(normaliseRgs)),
   },
+  {
+    displayName: "British Psychological Society grants",
+    source: "bps",
+    funderSlug: "british-psychological-society",
+    fetch: () => fetchBpsGrants().then(r => r.map(normaliseBps)),
+  },
 ];
+
+program
+  .command("bps")
+  .description("Ingest grants, prizes and bursaries from the British Psychological Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "British Psychological Society grants",
+      source: "bps",
+      funderSlug: "british-psychological-society",
+      fetch: () => fetchBpsGrants().then(r => r.map(normaliseBps)),
+    });
+  });
 
 program
   .command("rgs")

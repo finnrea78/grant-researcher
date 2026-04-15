@@ -26,7 +26,8 @@ export type OpportunitySource =
   | "humboldt_foundation"
   | "geolsoc"
   | "acmedsci"
-  | "rgs";
+  | "rgs"
+  | "bps";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
