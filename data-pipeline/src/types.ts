@@ -46,7 +46,8 @@ export type OpportunitySource =
   | "febs"
   | "palass"
   | "challenger_society"
-  | "bou";
+  | "bou"
+  | "classical_association";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {

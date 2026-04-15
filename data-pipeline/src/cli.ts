@@ -82,6 +82,8 @@ import { fetchChallengerSocietyGrants } from "./sources/challenger-society.js";
 import { normaliseChallengerSociety } from "./transforms/normalise-challenger-society.js";
 import { fetchBouGrants } from "./sources/bou.js";
 import { normaliseBou } from "./transforms/normalise-bou.js";
+import { fetchClassicalAssocGrants } from "./sources/classical-association.js";
+import { normaliseClassicalAssoc } from "./transforms/normalise-classical-association.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -706,6 +708,18 @@ program
       source: "bou",
       funderSlug: "british-ornithological-union",
       fetch: () => fetchBouGrants().then(r => r.map(normaliseBou)),
+    });
+  });
+
+program
+  .command("classical-association")
+  .description("Ingest grant schemes from The Classical Association")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Classical Association grants",
+      source: "classical_association",
+      funderSlug: "classical-association",
+      fetch: () => fetchClassicalAssocGrants().then(r => r.map(normaliseClassicalAssoc)),
     });
   });
 
