@@ -6,6 +6,7 @@ export interface RawCarnegieTrustScheme {
   url: string;
   status: string;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseCarnegie(raw: RawCarnegieTrustScheme): NormalisedOpportunity {
@@ -24,7 +25,7 @@ export function normaliseCarnegie(raw: RawCarnegieTrustScheme): NormalisedOpport
     url: raw.url,
     funding_type: null,
     description: raw.description,
-    eligibility: null,
+    eligibility: raw.eligibility,
     scope: null,
     source: "carnegie_trust",
     source_metadata: {},

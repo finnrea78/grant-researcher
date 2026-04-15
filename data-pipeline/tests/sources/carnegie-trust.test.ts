@@ -1,4 +1,4 @@
-import { parseCarnegieTrustPage } from "../../src/sources/carnegie-trust";
+import { parseCarnegieTrustPage, parseCarnegieTrustDetailPage } from "../../src/sources/carnegie-trust";
 
 // Minimal fixture matching real Carnegie Trust WordPress HTML structure
 const FIXTURE_HTML = `
@@ -60,6 +60,21 @@ const FIXTURE_HTML = `
 </body>
 </html>`;
 
+const DETAIL_FIXTURE = `
+<!DOCTYPE html>
+<html lang="en">
+<body>
+<main>
+  <h1>Undergraduate Tuition Fee Grants</h1>
+  <p>The Carnegie Trust provides grants to support undergraduate students from Scotland.</p>
+  <p>Funding is available for those studying for a first undergraduate degree at a Scottish university.</p>
+  <h3>Eligibility</h3>
+  <p>Applicants must be domiciled in Scotland and studying at a Scottish university.</p>
+  <p>Household income must be below the threshold set by Student Awards Agency Scotland.</p>
+</main>
+</body>
+</html>`;
+
 describe("parseCarnegieTrustPage", () => {
   it("extracts all scheme cards", () => {
     const result = parseCarnegieTrustPage(FIXTURE_HTML);
@@ -97,9 +112,32 @@ describe("parseCarnegieTrustPage", () => {
     expect(result[0].description).toContain("low-income households");
   });
 
+  it("sets eligibility to null (populated by detail fetch)", () => {
+    const result = parseCarnegieTrustPage(FIXTURE_HTML);
+    expect(result[0].eligibility).toBeNull();
+  });
+
   it("throws on page with no card-preview elements", () => {
     expect(() =>
       parseCarnegieTrustPage("<html><body><main></main></body></html>")
     ).toThrow();
+  });
+});
+
+describe("parseCarnegieTrustDetailPage", () => {
+  it("extracts multi-paragraph description from main content", () => {
+    const result = parseCarnegieTrustDetailPage(DETAIL_FIXTURE);
+    expect(result.description).toContain("Carnegie Trust");
+    expect(result.description).toContain("first undergraduate degree");
+  });
+
+  it("extracts eligibility from Eligibility heading section", () => {
+    const result = parseCarnegieTrustDetailPage(DETAIL_FIXTURE);
+    expect(result.eligibility).toContain("domiciled in Scotland");
+  });
+
+  it("returns null eligibility when no eligibility heading found", () => {
+    const result = parseCarnegieTrustDetailPage("<html><body><main><p>Some content about the scheme.</p></main></body></html>");
+    expect(result.eligibility).toBeNull();
   });
 });
