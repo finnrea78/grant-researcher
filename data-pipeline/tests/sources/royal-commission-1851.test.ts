@@ -1,4 +1,4 @@
-import { parseRc1851Page } from "../../src/sources/royal-commission-1851";
+import { parseRc1851Page, parseRc1851DetailPage } from "../../src/sources/royal-commission-1851";
 import { normaliseRc1851 } from "../../src/transforms/normalise-royal-commission-1851";
 
 const FIXTURE = `
@@ -155,6 +155,40 @@ describe("parseRc1851Page", () => {
   });
 });
 
+const FIXTURE_DETAIL = `
+<!DOCTYPE html>
+<html>
+<body>
+<main>
+  <h1>Research Fellowships</h1>
+  <p>The Research Fellowship scheme offers early career scientists and engineers of exceptional promise the opportunity to conduct a research project of their own instigation.</p>
+  <p>Fellowships typically run for three years beginning October 1st of the award year. Up to £100,000 per year is provided for research costs.</p>
+  <h2>Eligibility</h2>
+  <p>Applicants must be within 5 years of completing their PhD. They must be based at a UK research institution for the duration of the fellowship.</p>
+</main>
+</body>
+</html>`;
+
+describe("parseRc1851DetailPage", () => {
+  it("extracts multi-paragraph description", () => {
+    const result = parseRc1851DetailPage(FIXTURE_DETAIL);
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("Research Fellowship scheme");
+    expect(result.description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility from eligibility heading section", () => {
+    const result = parseRc1851DetailPage(FIXTURE_DETAIL);
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("5 years");
+  });
+
+  it("extracts amount from body text", () => {
+    const result = parseRc1851DetailPage(FIXTURE_DETAIL);
+    expect(result.amountRaw).toContain("£100,000");
+  });
+});
+
 describe("normaliseRc1851", () => {
   const raw = {
     title: "Research Fellowships",
@@ -162,6 +196,8 @@ describe("normaliseRc1851", () => {
     status: "open",
     description: "Fellowships for early-career scientists and engineers.",
     amountRaw: null,
+    eligibility: null,
+    deadlineRaw: null,
   };
 
   it("sets source to royal_commission_1851", () => {
@@ -181,13 +217,11 @@ describe("normaliseRc1851", () => {
   });
 
   it("sets funding_type to studentship for studentship entries", () => {
-    const studentRaw = { ...raw, title: "Industrial Design Studentships" };
-    expect(normaliseRc1851(studentRaw).funding_type).toBe("studentship");
+    expect(normaliseRc1851({ ...raw, title: "Industrial Design Studentships" }).funding_type).toBe("studentship");
   });
 
   it("sets funding_type to grant for non-fellowship non-studentship entries", () => {
-    const grantRaw = { ...raw, title: "Sir Misha Black Awards" };
-    expect(normaliseRc1851(grantRaw).funding_type).toBe("grant");
+    expect(normaliseRc1851({ ...raw, title: "Sir Misha Black Awards" }).funding_type).toBe("grant");
   });
 
   it("sets deadline_date to null (no deadlines on listing page)", () => {
@@ -204,7 +238,12 @@ describe("normaliseRc1851", () => {
     expect(normaliseRc1851(raw).slug).toBe("research-fellowships");
   });
 
-  it("sets scope to science, engineering, design, technology", () => {
-    expect(normaliseRc1851(raw).scope).toContain("engineering");
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    expect(normaliseRc1851(raw).scope).toBeNull();
+  });
+
+  it("maps eligibility field", () => {
+    const withElig = { ...raw, eligibility: "Must be within 5 years of PhD" };
+    expect(normaliseRc1851(withElig).eligibility).toBe("Must be within 5 years of PhD");
   });
 });
