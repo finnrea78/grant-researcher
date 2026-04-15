@@ -15,6 +15,7 @@ import { fetchHenryMooreSchemes } from "./sources/henry-moore.js";
 import { fetchERCSchemes } from "./sources/erc.js";
 import { fetchMSCASchemes } from "./sources/msca.js";
 import { fetchHIASSchemes } from "./sources/hias-hamburg.js";
+import { fetchNETIASSchemes } from "./sources/netias.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -29,6 +30,7 @@ import { normaliseHenryMoore } from "./transforms/normalise-henry-moore.js";
 import { normaliseERC } from "./transforms/normalise-erc.js";
 import { normaliseMSCA } from "./transforms/normalise-msca.js";
 import { normaliseHIAS } from "./transforms/normalise-hias-hamburg.js";
+import { normaliseNETIAS } from "./transforms/normalise-netias.js";
 import { upsertGrants } from "./loaders/upsert-grants.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
 import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
@@ -213,7 +215,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "hias-hamburg",
     fetch: () => fetchHIASSchemes().then(r => r.map(normaliseHIAS)),
   },
+  {
+    displayName: "NETIAS fellowship calls",
+    source: "netias",
+    funderSlug: "netias",
+    fetch: () => fetchNETIASSchemes().then(r => r.map(normaliseNETIAS)),
+  },
 ];
+
+program
+  .command("netias")
+  .description("Ingest fellowship calls from NETIAS network of European Institutes for Advanced Study")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "NETIAS fellowship calls",
+      source: "netias",
+      funderSlug: "netias",
+      fetch: () => fetchNETIASSchemes().then(r => r.map(normaliseNETIAS)),
+    });
+  });
 
 program
   .command("hias-hamburg")

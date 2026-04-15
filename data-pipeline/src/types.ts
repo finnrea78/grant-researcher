@@ -12,7 +12,8 @@ export type OpportunitySource =
   | "henry_moore"
   | "erc"
   | "msca"
-  | "hias_hamburg";
+  | "hias_hamburg"
+  | "netias";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
