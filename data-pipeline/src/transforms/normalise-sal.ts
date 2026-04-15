@@ -10,6 +10,7 @@ export interface RawSalGrant {
   description: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseSal(raw: RawSalGrant): NormalisedOpportunity {
@@ -45,8 +46,8 @@ export function normaliseSal(raw: RawSalGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "archaeology, history, heritage, antiquarianism",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "sal",
     source_metadata: {},
   };

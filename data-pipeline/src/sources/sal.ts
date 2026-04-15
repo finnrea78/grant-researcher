@@ -84,14 +84,15 @@ export function parseSalPage(html: string): RawSalGrant[] {
       if (!isNaN(parsed.getTime()) && parsed < new Date()) status = "closed";
     }
 
-    // Description: first non-label p in content
-    let description: string | null = null;
+    // Description: collect all non-label paragraphs for multi-paragraph description
+    const descParts: string[] = [];
     $content.find("p").each((_j, p) => {
       const $p = $(p);
       if ($p.find("strong").length) return; // skip label paragraphs
       const text = $p.text().trim();
-      if (text.length > 20 && !description) description = text;
+      if (text.length > 20) descParts.push(text);
     });
+    const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
 
     grants.push({
       title,
@@ -100,6 +101,7 @@ export function parseSalPage(html: string): RawSalGrant[] {
       description,
       amountRaw,
       deadlineRaw,
+      eligibility: null,
     });
   });
 

@@ -139,6 +139,7 @@ describe("normaliseSal", () => {
     description: "Open to Fellows and Members engaged in research into the human past.",
     amountRaw: "£500 to £5,000",
     deadlineRaw: `15 January ${JAN_YEAR}`,
+    eligibility: null,
   };
 
   it("sets source to sal", () => {
@@ -170,8 +171,8 @@ describe("normaliseSal", () => {
     expect(normaliseSal(travelRaw).funding_type).toBe("bursary");
   });
 
-  it("sets scope to archaeology", () => {
-    expect(normaliseSal(raw).scope).toContain("archaeology");
+  it("sets scope to null", () => {
+    expect(normaliseSal(raw).scope).toBeNull();
   });
 
   it("generates a slug", () => {
