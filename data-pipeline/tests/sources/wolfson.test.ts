@@ -1,4 +1,4 @@
-import { parseWolfsonPlacesPage, parseWolfsonPeoplePage } from "../../src/sources/wolfson";
+import { parseWolfsonPlacesPage, parseWolfsonPeoplePage, parseWolfsonDetailPage } from "../../src/sources/wolfson";
 
 // Minimal fixture matching real Wolfson Foundation Divi WordPress HTML structure
 const PLACES_FIXTURE = `
@@ -105,5 +105,52 @@ describe("parseWolfsonPeoplePage", () => {
   it("sets programme to people", () => {
     const result = parseWolfsonPeoplePage(PEOPLE_FIXTURE);
     expect(result[0].programme).toBe("people");
+  });
+});
+
+const DETAIL_FIXTURE = `
+<!DOCTYPE html>
+<html lang="en-GB">
+<body>
+<main>
+  <div class="et_pb_text">
+    <p>The Wolfson Foundation provides capital funding for UK charities focused on mental health. Grants support new building, refurbishment work or equipment with emphasis on training, employment, and supported housing initiatives.</p>
+    <p>We fund projects that make a meaningful difference to people living with mental health conditions.</p>
+    <h3>Eligibility</h3>
+    <p>Applicants must be a registered charity or local authority. Projects must have capital costs of at least £50,000 and a funding shortfall of at least £25,000.</p>
+    <h3>When to apply</h3>
+    <p>Stage 1 closes January 5 each year. Stage 2 closes March 1. Decisions announced in June.</p>
+    <h3>How much can I apply for?</h3>
+    <p>Typical grants range from £40,000–£75,000. Minimum grant is £25,000.</p>
+  </div>
+</main>
+</body>
+</html>`;
+
+describe("parseWolfsonDetailPage", () => {
+  it("extracts description from main paragraphs", () => {
+    const result = parseWolfsonDetailPage(DETAIL_FIXTURE);
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("Wolfson Foundation provides capital funding");
+  });
+
+  it("extracts eligibility section", () => {
+    const result = parseWolfsonDetailPage(DETAIL_FIXTURE);
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("registered charity");
+  });
+
+  it("extracts amount", () => {
+    const result = parseWolfsonDetailPage(DETAIL_FIXTURE);
+    expect(result.amountRaw).not.toBeNull();
+    expect(result.amountRaw).toContain("£");
+  });
+
+  it("returns null for missing fields on sparse pages", () => {
+    const result = parseWolfsonDetailPage("<html><body><p>Short.</p></body></html>");
+    expect(result.description).toBeNull();
+    expect(result.eligibility).toBeNull();
+    expect(result.amountRaw).toBeNull();
+    expect(result.deadlineRaw).toBeNull();
   });
 });
