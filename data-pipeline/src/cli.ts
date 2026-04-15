@@ -52,6 +52,8 @@ import { fetchRoyEnSocGrants } from "./sources/royensoc.js";
 import { normaliseRoyEnSoc } from "./transforms/normalise-royensoc.js";
 import { fetchLmsGrants } from "./sources/lms.js";
 import { normaliseLms } from "./transforms/normalise-lms.js";
+import { fetchPhysocGrants } from "./sources/physoc.js";
+import { normalisePhysoc } from "./transforms/normalise-physoc.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -365,6 +367,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "london-mathematical-society",
     fetch: () => fetchLmsGrants().then(r => r.map(normaliseLms)),
   },
+  {
+    displayName: "Physiological Society grants",
+    source: "physoc",
+    funderSlug: "physiological-society",
+    fetch: () => fetchPhysocGrants().then(r => r.map(normalisePhysoc)),
+  },
 ];
 
 program
@@ -412,6 +420,18 @@ program
       source: "lms",
       funderSlug: "london-mathematical-society",
       fetch: () => fetchLmsGrants().then(r => r.map(normaliseLms)),
+    });
+  });
+
+program
+  .command("physoc")
+  .description("Ingest grant schemes from the Physiological Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Physiological Society grants",
+      source: "physoc",
+      funderSlug: "physiological-society",
+      fetch: () => fetchPhysocGrants().then(r => r.map(normalisePhysoc)),
     });
   });
 
