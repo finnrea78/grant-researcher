@@ -34,6 +34,8 @@ import { fetchHfspGrants } from "./sources/hfsp.js";
 import { normaliseHfsp } from "./transforms/normalise-hfsp.js";
 import { fetchBiochemGrants } from "./sources/biochemical-society.js";
 import { normaliseBiochem } from "./transforms/normalise-biochemical-society.js";
+import { fetchHumboldtGrants } from "./sources/humboldt.js";
+import { normaliseHumboldt } from "./transforms/normalise-humboldt.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -293,7 +295,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "biochemical-society",
     fetch: () => fetchBiochemGrants().then(r => r.map(normaliseBiochem)),
   },
+  {
+    displayName: "Humboldt Foundation programmes",
+    source: "humboldt_foundation",
+    funderSlug: "humboldt-foundation",
+    fetch: () => fetchHumboldtGrants().then(r => r.map(normaliseHumboldt)),
+  },
 ];
+
+program
+  .command("humboldt")
+  .description("Ingest sponsorship programmes from Alexander von Humboldt Foundation")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Humboldt Foundation programmes",
+      source: "humboldt_foundation",
+      funderSlug: "humboldt-foundation",
+      fetch: () => fetchHumboldtGrants().then(r => r.map(normaliseHumboldt)),
+    });
+  });
 
 program
   .command("biochemical-society")
