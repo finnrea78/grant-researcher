@@ -11,6 +11,7 @@ export interface RawNuffieldScheme {
   deadlineRaw: string | null;
   durationRaw: string | null;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseNuffield(raw: RawNuffieldScheme): NormalisedOpportunity {
@@ -39,7 +40,7 @@ export function normaliseNuffield(raw: RawNuffieldScheme): NormalisedOpportunity
     url: raw.url,
     funding_type: null,
     description: raw.description,
-    eligibility: null,
+    eligibility: raw.eligibility,
     scope: null,
     source: "nuffield",
     source_metadata: {

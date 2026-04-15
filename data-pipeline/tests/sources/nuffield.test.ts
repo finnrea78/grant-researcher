@@ -1,4 +1,5 @@
-import { parseNuffieldPage } from "../../src/sources/nuffield";
+import { parseNuffieldPage, parseNuffieldDetailPage } from "../../src/sources/nuffield";
+import { normaliseNuffield } from "../../src/transforms/normalise-nuffield";
 
 // Fixture matches real Nuffield Foundation HTML structure (WordPress theme "salty")
 const FIXTURE_HTML = `
@@ -58,6 +59,47 @@ const FIXTURE_HTML = `
 </ul>
 </body>
 </html>`;
+
+const FIXTURE_DETAIL = `
+<!DOCTYPE html>
+<html lang="en">
+<body>
+<main>
+  <h1>Main Grants</h1>
+  <p>The Nuffield Foundation funds research projects that address its five interconnected priorities aimed at improving lives in the UK.</p>
+  <p>Projects typically last from six months to three years and receive grants of up to £500,000. Most awards are below £300,000.</p>
+  <h2>Who can apply</h2>
+  <p>Applicants must be employed by, or have formal affiliation with, a UK-based organisation.</p>
+  <p>The Foundation does not fund individuals without formal institutional affiliation or PhD-focused work.</p>
+</main>
+</body>
+</html>`;
+
+describe("parseNuffieldDetailPage", () => {
+  it("extracts multi-paragraph description", () => {
+    const result = parseNuffieldDetailPage(FIXTURE_DETAIL);
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("Nuffield Foundation");
+    expect(result.description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility from who can apply section", () => {
+    const result = parseNuffieldDetailPage(FIXTURE_DETAIL);
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("UK-based organisation");
+  });
+});
+
+describe("normaliseNuffield", () => {
+  it("maps eligibility field", () => {
+    const raw = {
+      title: "Main Grants", url: "https://example.com", status: "open",
+      amountRaw: null, deadlineRaw: null, durationRaw: null,
+      description: "desc", eligibility: "Must be at a UK institution"
+    };
+    expect(normaliseNuffield(raw).eligibility).toBe("Must be at a UK institution");
+  });
+});
 
 describe("parseNuffieldPage", () => {
   it("extracts all fund cards from the page", () => {
