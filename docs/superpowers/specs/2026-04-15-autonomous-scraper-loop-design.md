@@ -96,27 +96,53 @@ as your reference implementation.
 
 ## Seed List
 
-The agent starts with these known sources (from vault research), then uses WebSearch to discover more:
+Sources already implemented are noted ✓. Previously skipped are noted ⚠️. All others are untried.
+The agent starts here, then uses WebSearch to discover more once this list is exhausted.
 
-**UK — Independent foundations**
-- British Academy (`thebritishacademy.ac.uk/funding/`) — ⚠️ previously 403, try alternate URLs
-- Nuffield Foundation (`nuffieldfoundation.org/funding`) — clean HTML, 4 schemes
-- Wolfson Foundation (`wolfson.org.uk/funding/`) — landing page, needs sub-page navigation
-- National Lottery Heritage Fund (`heritagefund.org.uk/funding`) — Drupal CMS
-- British Council (`britishcouncil.org/arts/funding`) — previously timeout
-- Paul Mellon Centre (`paul-mellon-centre.ac.uk/fellowships-and-grants`)
-- Henry Moore Foundation (`henry-moore.org/grants`)
-- Carnegie Trust for the Universities of Scotland (`carnegie-trust.org`)
-- Royal Society of Edinburgh (`rse.org.uk/grants`)
+**UK — Independent foundations (previously seeded)**
+- ✓ Nuffield Foundation (`nuffieldfoundation.org/funding-for-research`)
+- ✓ Wolfson Foundation (`wolfson.org.uk/funding/`)
+- ✓ National Lottery Heritage Fund (`heritagefund.org.uk/funding`)
+- ✓ Henry Moore Foundation (`henry-moore.org/what-we-do/grants-fellowships/`)
+- ✓ Carnegie Trust (`carnegie-trust.org/award-schemes/`)
+- ⚠️ British Academy (`thebritishacademy.ac.uk/funding/`) — 403 on listing page; try individual scheme URLs e.g. `thebritishacademy.ac.uk/funding/schemes/`
+- ⚠️ British Council (`britishcouncil.org/arts/funding`) — timeout; try `britishcouncil.org/education/he-science`
+- ⚠️ Paul Mellon Centre (`paul-mellon-centre.ac.uk/fellowships-and-grants`) — JS/Cloudflare
+- ⚠️ Royal Society of Edinburgh (`rse.org.uk/grants-prizes-and-fellowships/`) — 403
 
-**EU — Open calls**
-- ERC open calls (`erc.europa.eu/apply-grant/open-calls`)
-- MSCA fellowship calls (`marie-sklodowska-curie-actions.ec.europa.eu/calls`)
-- Horizon Europe open calls (`ec.europa.eu/info/funding-tenders/opportunities/portal/`)
+**EU — Open calls (previously seeded)**
+- ✓ ERC (`erc.europa.eu/apply-grant`)
+- ✓ MSCA (`marie-sklodowska-curie-actions.ec.europa.eu/calls`)
+- ⚠️ Horizon Europe portal (`ec.europa.eu/info/funding-tenders/opportunities/portal/`) — too broad; ERC+MSCA already cover main routes
+
+**UK — Medical research charities (NEW — from issue #68)**
+- British Heart Foundation (`bhf.org.uk/for-professionals/information-for-researchers/what-we-fund`) — project grants rolling + Grand Challenge
+- Cancer Research UK (`cancerresearchuk.org/funding-for-researchers`) — project/programme grants, high volume
+- Alzheimer's Society (`alzheimers.org.uk/research/researchers/grants`) — postdoc fellowships + project grants
+- Blood Cancer UK (`bloodcancer.org.uk/research/funding/apply-for-funding/`) — project grants + fellowships
+- MS Society (`mssociety.org.uk/research/researchers/funding`) — 5 schemes with annual rounds
+- Parkinson's UK (`parkinsons.org.uk/research/funding-grants/open-funding-rounds`) — 4 schemes, deadlines published in advance
+- Stroke Association (`stroke.org.uk/research/our-funding-schemes`) — project grants + fellowships
+
+**UK — Arts, humanities & social science (NEW)**
+- Arts Council England (`artscouncil.org.uk/our-open-funds`) — National Lottery Project Grants, thousands per year
+- NIHR (`fundingawards.nihr.ac.uk/`) — major health research funder, large volume open calls, standard table structure
+
+**UK — Innovation / applied R&D (NEW)**
+- Innovate UK (`apply-for-innovation-funding.service.gov.uk/competition/search`) — filter open competitions, JSON-LD in page
+
+**UK — Aggregators / regional (NEW)**
+- Funding Scotland (`funding.scot`) — Scottish-specific, free search, open calls listed
+- Get Grants (`getgrants.org.uk/funding-finder/`) — free, charity-focused, HTML scrapeable
+
+**International (NEW)**
+- Royal Society Newton International Fellowships (`royalsociety.org/grants/newton-international/`) — separate from main Royal Society scraper
+- Commonwealth Scholarship Commission (`cscuk.fcdo.gov.uk/apply/`) — annual call, Oct deadline
 
 **Discovery:** After the seed list, run WebSearch queries like:
 - `"UK research grant" "apply now" "open call" site:.ac.uk OR site:.org.uk`
 - `"EU research fellowship" "open call" 2026 humanities social science`
+- `"open funding round" 2026 site:.org.uk research`
 
 ---
 
