@@ -160,4 +160,10 @@ describe("normaliseEmbo", () => {
     const result = normaliseEmbo(raw);
     expect(result.amount_currency).toBe("EUR");
   });
+
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    const raw = parseEmboPage(FIXTURE_WITH_DEADLINE, PAGE_URL, "EMBO Postdoctoral Fellowships", "fellowship");
+    const result = normaliseEmbo(raw);
+    expect(result.scope).toBeNull();
+  });
 });

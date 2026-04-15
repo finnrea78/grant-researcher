@@ -10,6 +10,7 @@ export interface RawEmboGrant {
   deadlineRaw: string | null;
   deadlineDateRaw: string | null; // extracted parseable date portion
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseEmbo(raw: RawEmboGrant): NormalisedOpportunity {
@@ -30,8 +31,8 @@ export function normaliseEmbo(raw: RawEmboGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: raw.fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "life sciences, molecular biology",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "embo",
     source_metadata: {
       deadline_date_raw: raw.deadlineDateRaw,
