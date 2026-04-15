@@ -34,14 +34,29 @@ export function parsePhysocListingPage(html: string): { title: string; url: stri
  * Structure: repeated <figure class="icon-block"> sections with h3 + p content.
  *   - Amount: icon-block where h3 contains "How much funding"
  *   - Deadline: icon-block where h3 contains "Deadline"
+ *   - Eligibility: icon-block where h3 contains "Who can apply"
+ *   - Description: article/page paragraphs at the top
  *   - Status: inferred from deadline text or "Applications are now open"/"closed"
  */
 export function parsePhysocGrantPage(
   html: string,
   url: string
-): { amountRaw: string | null; deadlineRaw: string | null; status: string } {
+): { description: string | null; eligibility: string | null; amountRaw: string | null; deadlineRaw: string | null; status: string } {
   const $ = cheerio.load(html);
 
+  // Description: collect substantial paragraphs from the article/main content area
+  const descParts: string[] = [];
+  const descSelectors = ["article p", "main p", ".entry-content p", "body p"];
+  for (const sel of descSelectors) {
+    $(sel).each((_i, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 60) descParts.push(text);
+    });
+    if (descParts.length > 0) break;
+  }
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  let eligibility: string | null = null;
   let amountRaw: string | null = null;
   let deadlineRaw: string | null = null;
   let status = "open";
@@ -51,6 +66,10 @@ export function parsePhysocGrantPage(
     const $block = $(el);
     const heading = $block.find("h3").first().text().trim().toLowerCase();
     const bodyText = $block.find("figcaption").text().trim();
+
+    if ((heading.includes("who can apply") || heading.includes("eligibility")) && !eligibility) {
+      if (bodyText.length > 20) eligibility = bodyText.slice(0, 1500);
+    }
 
     if (heading.includes("how much") || heading.includes("funding available")) {
       const amountMatch = bodyText.match(/£[\d,]+(?:\s*-\s*£[\d,]+)?/);
@@ -97,7 +116,7 @@ export function parsePhysocGrantPage(
     }
   });
 
-  return { amountRaw, deadlineRaw, status };
+  return { description, eligibility, amountRaw, deadlineRaw, status };
 }
 
 export async function fetchPhysocGrants(): Promise<RawPhysocGrant[]> {
@@ -121,7 +140,12 @@ export async function fetchPhysocGrants(): Promise<RawPhysocGrant[]> {
     }
     const html = await resp.text();
     const details = parsePhysocGrantPage(html, entry.url);
-    grants.push({ ...entry, ...details });
+    // Use detail-page description if available (richer than listing card description)
+    grants.push({
+      ...entry,
+      ...details,
+      description: details.description || entry.description,
+    });
   }
 
   console.log(`  Fetched ${grants.length} Physiological Society grants`);

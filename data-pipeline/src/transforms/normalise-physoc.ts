@@ -8,6 +8,7 @@ export interface RawPhysocGrant {
   url: string;
   status: string;
   description: string | null;
+  eligibility: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
 }
@@ -38,8 +39,8 @@ export function normalisePhysoc(raw: RawPhysocGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "physiology, life sciences",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "physoc",
     source_metadata: {},
   };

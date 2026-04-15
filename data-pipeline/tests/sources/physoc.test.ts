@@ -53,11 +53,22 @@ const GRANT_PAGE_WITH_DEADLINE = `
 <html>
 <body>
 <main>
+  <article>
+    <p>The Education and Teaching Award supports physiologists to develop new educational resources and carry out research into physiology education at all levels, from school through to higher education.</p>
+    <p>Awards may be used to fund projects, materials, or events that enhance the teaching and learning of physiology.</p>
+  </article>
   <figure class="icon-block">
     <div class="icon"><i class="fa fa-gbp"></i></div>
     <figcaption>
       <h3>How much funding is available?</h3>
       <p>Up to £10,000 per award.</p>
+    </figcaption>
+  </figure>
+  <figure class="icon-block">
+    <div class="icon"><i class="fa fa-user"></i></div>
+    <figcaption>
+      <h3>Who can apply?</h3>
+      <p>Full and Fellow members of the Physiological Society who are engaged in education or teaching physiology at any level.</p>
     </figcaption>
   </figure>
   <figure class="icon-block">
@@ -173,6 +184,18 @@ describe("parsePhysocGrantPage (single deadline)", () => {
     const result = parsePhysocGrantPage(GRANT_PAGE_WITH_DEADLINE, "url");
     expect(result.status).toBe("open");
   });
+
+  it("extracts description from article paragraphs", () => {
+    const result = parsePhysocGrantPage(GRANT_PAGE_WITH_DEADLINE, "url");
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("Education and Teaching Award");
+  });
+
+  it("extracts eligibility from who can apply icon-block", () => {
+    const result = parsePhysocGrantPage(GRANT_PAGE_WITH_DEADLINE, "url");
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("Full and Fellow members");
+  });
 });
 
 describe("parsePhysocGrantPage (multiple deadlines)", () => {
@@ -200,6 +223,7 @@ describe("normalisePhysoc", () => {
     url: "https://www.physoc.org/grants-and-prizes/grants/education-and-teaching-award/",
     status: "open",
     description: "Support for educational resources.",
+    eligibility: null,
     amountRaw: "£10,000",
     deadlineRaw: "20 April 2026",
   };
@@ -231,5 +255,9 @@ describe("normalisePhysoc", () => {
 
   it("generates a slug from the title", () => {
     expect(normalisePhysoc(raw).slug).toBe("education-and-teaching-award");
+  });
+
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    expect(normalisePhysoc(raw).scope).toBeNull();
   });
 });
