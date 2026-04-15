@@ -28,7 +28,7 @@ Iteration N:
   6. Exit → ralph feeds same prompt back → Iteration N+1
 ```
 
-Stops when: `<promise>DONE</promise>` is output, or `--max-iterations 50` is hit.
+Stops when: `<promise>DONE</promise>` is output, or `--max-iterations 100` is hit.
 
 ### Invocation
 
@@ -43,30 +43,49 @@ git checkout -b feat/new-scrapers
 You are an autonomous grant scraper agent. Your job each iteration:
 
 1. Read git log and data-pipeline/SCRAPER_LOG.md to see what's already done or skipped.
-2. Pick the next untried source from the seed list in the spec at
+
+2. DATA QUALITY AUDIT — Before picking a new source, check if any already-implemented
+   scraper has poor data quality in the DB. For each source in the Implemented list, run:
+     SELECT source, count(*) as total,
+            count(amount_min) as has_amount,
+            count(deadline_date) as has_deadline
+     FROM opportunities GROUP BY source;
+   If any implemented scraper has has_amount=0 OR has_deadline=0, AND the source page
+   actually contains that data (fetch the page to check), fix the transform first.
+   Commit the fix with: fix(data-pipeline): improve amount/deadline parsing for <slug>
+   Only move on to a new source once all fixable quality issues are resolved.
+
+3. Pick the next untried source from the seed list in the spec at
    docs/superpowers/specs/2026-04-15-autonomous-scraper-loop-design.md.
    If the seed list is exhausted, run a WebSearch for more UK/EU grant opportunity sources.
-3. Probe the source: fetch the page, check it returns 200 HTML with visible grant listings.
+
+4. Probe the source: fetch the page, check it returns 200 HTML with visible grant listings.
    If blocked or JS-only: log it in SCRAPER_LOG.md as skipped with reason, commit, done.
-4. If scrapeable: implement the scraper following the pattern in the spec exactly:
+
+5. If scrapeable: implement the scraper following the pattern in the spec exactly:
    - data-pipeline/src/sources/<slug>.ts
    - data-pipeline/src/transforms/normalise-<slug>.ts
    - data-pipeline/tests/<slug>.test.ts
    - Add to OpportunitySource union in data-pipeline/src/types.ts
    - Wire CLI command + OPPORTUNITY_SOURCES in data-pipeline/src/cli.ts
-5. Run: npm test -w data-pipeline — must pass. Debug up to 2 attempts, then skip.
-6. Run: npm run ingest -w data-pipeline -- <slug> — must succeed.
-7. After ingest, query the DB directly to verify data quality:
-   - Count rows: SELECT count(*) FROM opportunities WHERE source='<slug>'
-   - Check amounts: SELECT count(*) FROM opportunities WHERE source='<slug>' AND amount_min IS NOT NULL
-   - Check deadlines: SELECT count(*) FROM opportunities WHERE source='<slug>' AND deadline_date IS NOT NULL
+
+6. Run: npm test -w data-pipeline — must pass. Debug up to 2 attempts, then skip.
+
+7. Run: npm run ingest -w data-pipeline -- <slug> — must succeed.
+
+8. After ingest, verify data quality in the DB:
+     SELECT count(*) as total, count(amount_min) as has_amount, count(deadline_date) as has_deadline
+     FROM opportunities WHERE source='<slug>';
    If amounts or deadlines are all NULL but the source page has that data, improve the
-   transform before committing. The DB pipeline auto-removes closed opportunities —
+   transform and re-ingest before committing. The pipeline auto-removes closed opportunities —
    only open ones should appear in the DB.
-8. Update SCRAPER_LOG.md: note row count, how many have amount_min set, how many have deadline_date set.
-9. Commit everything with message: feat(data-pipeline): add <name> opportunity scraper
-10. When ALL sources in the seed list plus any discovered sources have been attempted,
-    output: <promise>DONE</promise>
+
+9. Update SCRAPER_LOG.md: note row count, how many have amount_min set, how many have deadline_date set.
+
+10. Commit everything with message: feat(data-pipeline): add <name> opportunity scraper
+
+11. When ALL sources in the seed list plus any discovered sources have been attempted,
+    AND all fixable data quality issues are resolved, output: <promise>DONE</promise>
 
 Read the full spec before starting. Follow the existing source/transform patterns exactly —
 read data-pipeline/src/sources/wellcome.ts and data-pipeline/src/transforms/normalise-wellcome.ts
