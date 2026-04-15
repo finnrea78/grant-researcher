@@ -22,6 +22,8 @@ import { fetchBloodCancerUKSchemes } from "./sources/blood-cancer-uk.js";
 import { normaliseBloodCancerUK } from "./transforms/normalise-blood-cancer-uk.js";
 import { fetchNewtonFellowship } from "./sources/newton-fellowship.js";
 import { normaliseNewton } from "./transforms/normalise-newton.js";
+import { fetchRSEAwards } from "./sources/rse.js";
+import { normaliseRSE } from "./transforms/normalise-rse.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -245,7 +247,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "royal-society",
     fetch: () => fetchNewtonFellowship().then(r => r.map(normaliseNewton)),
   },
+  {
+    displayName: "Royal Society of Edinburgh awards",
+    source: "rse",
+    funderSlug: "royal-society-of-edinburgh",
+    fetch: () => fetchRSEAwards().then(r => r.map(normaliseRSE)),
+  },
 ];
+
+program
+  .command("rse")
+  .description("Ingest award schemes from Royal Society of Edinburgh")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Royal Society of Edinburgh awards",
+      source: "rse",
+      funderSlug: "royal-society-of-edinburgh",
+      fetch: () => fetchRSEAwards().then(r => r.map(normaliseRSE)),
+    });
+  });
 
 program
   .command("blood-cancer-uk")

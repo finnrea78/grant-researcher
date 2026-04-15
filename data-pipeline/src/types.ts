@@ -16,7 +16,8 @@ export type OpportunitySource =
   | "netias"
   | "innovate_uk"
   | "blood_cancer_uk"
-  | "newton_fellowship";
+  | "newton_fellowship"
+  | "rse";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
