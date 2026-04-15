@@ -46,6 +46,8 @@ import { fetchBpsGrants } from "./sources/bps.js";
 import { normaliseBps } from "./transforms/normalise-bps.js";
 import { fetchGeneticsSocietyGrants } from "./sources/genetics-society.js";
 import { normaliseGeneticsSociety } from "./transforms/normalise-genetics-society.js";
+import { fetchMicrobiologySocietyGrants } from "./sources/microbiology-society.js";
+import { normaliseMicrobiologySociety } from "./transforms/normalise-microbiology-society.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -341,6 +343,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "genetics-society",
     fetch: () => fetchGeneticsSocietyGrants().then(r => r.map(normaliseGeneticsSociety)),
   },
+  {
+    displayName: "Microbiology Society grants",
+    source: "microbiology_society",
+    funderSlug: "microbiology-society",
+    fetch: () => fetchMicrobiologySocietyGrants().then(r => r.map(normaliseMicrobiologySociety)),
+  },
 ];
 
 program
@@ -352,6 +360,18 @@ program
       source: "genetics_society",
       funderSlug: "genetics-society",
       fetch: () => fetchGeneticsSocietyGrants().then(r => r.map(normaliseGeneticsSociety)),
+    });
+  });
+
+program
+  .command("microbiology-society")
+  .description("Ingest grant schemes from the Microbiology Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Microbiology Society grants",
+      source: "microbiology_society",
+      funderSlug: "microbiology-society",
+      fetch: () => fetchMicrobiologySocietyGrants().then(r => r.map(normaliseMicrobiologySociety)),
     });
   });
 
