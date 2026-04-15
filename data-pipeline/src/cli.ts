@@ -9,6 +9,7 @@ import { fetchLeverhulmeSchemes } from "./sources/leverhulme.js";
 import { fetchRoyalSocietySchemes } from "./sources/royal-society.js";
 import { fetchNuffieldSchemes } from "./sources/nuffield.js";
 import { fetchWolfsonSchemes } from "./sources/wolfson.js";
+import { fetchHeritageFundSchemes } from "./sources/heritage-fund.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -17,6 +18,7 @@ import { normaliseLeverhulme } from "./transforms/normalise-leverhulme.js";
 import { normaliseRoyalSociety } from "./transforms/normalise-royal-society.js";
 import { normaliseNuffield } from "./transforms/normalise-nuffield.js";
 import { normaliseWolfson } from "./transforms/normalise-wolfson.js";
+import { normaliseHeritageFund } from "./transforms/normalise-heritage-fund.js";
 import { upsertGrants } from "./loaders/upsert-grants.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
 import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
@@ -165,7 +167,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "wolfson-foundation",
     fetch: () => fetchWolfsonSchemes().then(r => r.map(normaliseWolfson)),
   },
+  {
+    displayName: "National Lottery Heritage Fund",
+    source: "heritage_fund",
+    funderSlug: "national-lottery-heritage-fund",
+    fetch: () => fetchHeritageFundSchemes().then(r => r.map(normaliseHeritageFund)),
+  },
 ];
+
+program
+  .command("heritage-fund")
+  .description("Ingest open programmes from National Lottery Heritage Fund")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "National Lottery Heritage Fund",
+      source: "heritage_fund",
+      funderSlug: "national-lottery-heritage-fund",
+      fetch: () => fetchHeritageFundSchemes().then(r => r.map(normaliseHeritageFund)),
+    });
+  });
 
 program
   .command("wolfson")
