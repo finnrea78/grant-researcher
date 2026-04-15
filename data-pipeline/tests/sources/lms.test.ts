@@ -1,4 +1,4 @@
-import { parseLmsPage } from "../../src/sources/lms";
+import { parseLmsPage, parseLmsDetailPage } from "../../src/sources/lms";
 import { normaliseLms } from "../../src/transforms/normalise-lms";
 
 const FIXTURE = `
@@ -108,12 +108,51 @@ describe("parseLmsPage", () => {
   });
 });
 
+const DETAIL_FIXTURE = `
+<!DOCTYPE html>
+<html>
+<body>
+<main>
+  <div class="field--name-body">
+    <p>The LMS Interdisciplinary Collaboration Grants support universities in hosting joint lectures and events that connect mathematics with other disciplines, such as medicine or engineering.</p>
+    <p>Grants of £400 per event are available, with a total fund of £4,000 supporting up to 10 events per year.</p>
+    <h3>Eligibility</h3>
+    <p>Applications must be submitted by the LMS Representative at an eligible UK university. Events must be held in the United Kingdom.</p>
+    <h3>Deadlines</h3>
+    <p>Applications close on 15 October 2025, 22 January 2026, and 15 May 2026.</p>
+  </div>
+</main>
+</body>
+</html>`;
+
+describe("parseLmsDetailPage", () => {
+  it("extracts description from content paragraphs", () => {
+    const result = parseLmsDetailPage(DETAIL_FIXTURE);
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("Interdisciplinary Collaboration Grants");
+  });
+
+  it("extracts eligibility section", () => {
+    const result = parseLmsDetailPage(DETAIL_FIXTURE);
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("LMS Representative");
+  });
+
+  it("returns null description for sparse pages", () => {
+    const result = parseLmsDetailPage("<html><body><p>Short.</p></body></html>");
+    expect(result.description).toBeNull();
+    expect(result.eligibility).toBeNull();
+  });
+});
+
 describe("normaliseLms", () => {
   const raw = {
     title: "Conference and Workshop Grants",
     url: "https://www.lms.ac.uk/grants/conference-grants-scheme-1",
     status: "open",
     description: null,
+    eligibility: null,
+    deadlineRaw: null,
     amountRaw: "£7,000",
   };
 
@@ -129,8 +168,17 @@ describe("normaliseLms", () => {
     expect(normaliseLms(raw).amount_max).toBe(700_000); // £7,000 in pence
   });
 
-  it("sets deadline_date to null (rolling schemes)", () => {
+  it("sets deadline_date to null when no date in deadlineRaw", () => {
     expect(normaliseLms(raw).deadline_date).toBeNull();
+  });
+
+  it("parses deadline_date from deadlineRaw with a full date", () => {
+    const withDeadline = { ...raw, deadlineRaw: "15 October 2025" };
+    expect(normaliseLms(withDeadline).deadline_date).toBe("2025-10-15");
+  });
+
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    expect(normaliseLms(raw).scope).toBeNull();
   });
 
   it("sets funding_type to fellowship for fellowship entries", () => {
