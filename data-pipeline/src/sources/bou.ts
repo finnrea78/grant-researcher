@@ -60,6 +60,7 @@ export function parseBouGrantPage(html: string): {
   title: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
+  description: string | null;
   status: string;
 } {
   const $ = cheerio.load(html);
@@ -82,13 +83,51 @@ export function parseBouGrantPage(html: string): {
     deadlineRaw = deadlineMatch[1].replace(",", "").trim();
   }
 
+  // Description: first substantive paragraph from body
+  let description: string | null = null;
+  $("main p, article p, .fusion-post-content p").each((_i, el) => {
+    const text = $(el).text().trim();
+    if (text.length >= 80 && !text.match(/^\s*home\s*$/i)) {
+      description = text;
+      return false; // break
+    }
+  });
+
   let status = "open";
   if (deadlineRaw) {
     const parsed = new Date(deadlineRaw);
     if (!isNaN(parsed.getTime()) && parsed < new Date()) status = "closed";
   }
 
-  return { title, amountRaw, deadlineRaw, status };
+  return { title, amountRaw, deadlineRaw, description, status };
+}
+
+/**
+ * Try to get grant page content via WordPress REST API.
+ * BOU sub-pages sometimes return JS-rendered shells; the WP API provides the full content.
+ */
+async function fetchBouPageViaApi(pageUrl: string): Promise<{
+  title: string | null;
+  amountRaw: string | null;
+  deadlineRaw: string | null;
+  description: string | null;
+  status: string;
+} | null> {
+  // Extract the slug from the URL path, e.g. /warham-studentship/ or /funding/brenda-and-tony-gibbs-award/
+  const urlObj = new URL(pageUrl);
+  const segments = urlObj.pathname.split("/").filter(Boolean);
+  const slug = segments[segments.length - 1] ?? "";
+  if (!slug) return null;
+
+  const apiUrl = `${BASE_URL}/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}&_fields=content.rendered`;
+  const res = await fetchWithRetry(apiUrl);
+  if (!res.ok) return null;
+
+  const pages: Array<{ content: { rendered: string } }> = await res.json().catch(() => []);
+  if (!pages.length) return null;
+
+  const html = pages[0].content.rendered;
+  return parseBouGrantPage(html);
 }
 
 export async function fetchBouGrants(): Promise<RawBouGrant[]> {
@@ -105,29 +144,41 @@ export async function fetchBouGrants(): Promise<RawBouGrant[]> {
   console.log(`  BOU: fetching ${listings.length} individual scheme pages`);
 
   const grants: RawBouGrant[] = [];
-  for (const { title, url, description, amountRaw: listingAmount } of listings) {
+  for (const { title, url, description: listingDesc, amountRaw: listingAmount } of listings) {
     const res = await fetchWithRetry(url);
-    if (!res.ok) {
-      console.warn(`  BOU: ${url} returned ${res.status} — using listing data only`);
+
+    // If the direct fetch returned a usable HTML body, parse it
+    let details: Awaited<ReturnType<typeof parseBouGrantPage>> | null = null;
+    if (res.ok) {
+      const subHtml = await res.text();
+      // Check if the response is a real page (> 10KB) vs a JS-rendered shell
+      if (subHtml.length > 10_000) {
+        details = parseBouGrantPage(subHtml);
+      }
+    }
+
+    // Fall back to WP REST API when direct fetch is a JS shell or failed
+    if (!details || (!details.description && !details.amountRaw && !details.deadlineRaw)) {
+      details = await fetchBouPageViaApi(url);
+    }
+
+    if (!details) {
       grants.push({
         title,
         url,
         status: "open",
-        description,
+        description: listingDesc,
         amountRaw: listingAmount,
         deadlineRaw: null,
       });
       continue;
     }
 
-    const subHtml = await res.text();
-    const details = parseBouGrantPage(subHtml);
-
     grants.push({
       title: details.title ?? title,
       url,
       status: details.status,
-      description,
+      description: details.description ?? listingDesc,
       amountRaw: details.amountRaw ?? listingAmount,
       deadlineRaw: details.deadlineRaw,
     });

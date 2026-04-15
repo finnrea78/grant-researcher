@@ -37,17 +37,21 @@ export function parseBenhsGrantsPage(html: string): RawBenhsGrant[] {
     const $h2 = $(el);
     const rawTitle = $h2.text().trim();
 
-    // Skip section headers, honorary awards, and closed entries
+    // Skip section headers and honorary awards
     if (!rawTitle) return;
     if (SKIP_TITLE_RE.test(rawTitle)) return;
     if (HONORARY_RE.test(rawTitle)) return;
-    if (CLOSED_RE.test(rawTitle)) return;
 
-    // Remove "(closed)" suffix and anchor name tags from title
+    // Normalise title (strip "(closed)" suffix) before deduplication
     const title = rawTitle.replace(CLOSED_RE, "").trim();
 
+    // Always add to seen — whether we process or skip — so the second WPBakery
+    // render (which omits "(closed)") doesn't create a duplicate entry.
     if (seen.has(title)) return;
     seen.add(title);
+
+    // Skip closed entries (after adding to seen so duplicates are blocked)
+    if (CLOSED_RE.test(rawTitle)) return;
 
     // Collect following sibling p elements until the next h2
     let amountRaw: string | null = null;
