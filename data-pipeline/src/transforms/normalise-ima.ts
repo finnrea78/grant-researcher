@@ -8,6 +8,7 @@ export interface RawImaGrant {
   status: string;
   description: string | null;
   amountRaw: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseIma(raw: RawImaGrant): NormalisedOpportunity {
@@ -28,8 +29,8 @@ export function normaliseIma(raw: RawImaGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: "grant",
     description: raw.description,
-    eligibility: null,
-    scope: "mathematics, applied mathematics, statistics",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "ima",
     source_metadata: {},
   };
