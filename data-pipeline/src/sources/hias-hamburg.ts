@@ -17,12 +17,25 @@ export function parseHIASPage(html: string): RawHIASScheme[] {
     const title = $el.find("[class*='Accordion__title']").first().text().trim();
     if (!title) return;
 
-    // Description from first paragraph in Accordion__content
+    // Description: collect substantial paragraphs from accordion content
     const $content = $el.find("[class*='Accordion__content']");
-    const description = $content.find("p").first().text().replace(/\s+/g, " ").trim() || null;
+    const fullText = $content.text();
+
+    const descParts: string[] = [];
+    $content.find("p").each((_j, p) => {
+      const text = $(p).text().replace(/\s+/g, " ").trim();
+      if (text.length > 60) descParts.push(text);
+    });
+    const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+    // Eligibility: look for label pattern in text
+    let eligibility: string | null = null;
+    const eligMatch = fullText.match(/[Ee]ligibility[:\s]+([^\n]{20,500})/);
+    if (eligMatch) {
+      eligibility = eligMatch[1].replace(/\s+/g, " ").trim().slice(0, 500);
+    }
 
     // Status: closed/paused if specific phrases found in content
-    const fullText = $content.text();
     const isClosed = /paused until further notice|is closed|closed\*\*\*|call.*closed|deadline.*ended/i.test(fullText);
     const status = isClosed ? "closed" : "open";
 
@@ -43,7 +56,7 @@ export function parseHIASPage(html: string): RawHIASScheme[] {
       }
     });
 
-    schemes.push({ title, url, status, deadlineRaw, description });
+    schemes.push({ title, url, status, deadlineRaw, description, eligibility });
   });
 
   if (schemes.length === 0) {

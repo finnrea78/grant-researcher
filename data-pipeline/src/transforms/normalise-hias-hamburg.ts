@@ -8,6 +8,7 @@ export interface RawHIASScheme {
   status: string;
   deadlineRaw: string | null;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseHIAS(raw: RawHIASScheme): NormalisedOpportunity {
@@ -28,7 +29,7 @@ export function normaliseHIAS(raw: RawHIASScheme): NormalisedOpportunity {
     url: raw.url,
     funding_type: "fellowship",
     description: raw.description,
-    eligibility: null,
+    eligibility: raw.eligibility,
     scope: null,
     source: "hias_hamburg",
     source_metadata: {

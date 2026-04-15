@@ -6,7 +6,9 @@ const OPEN_SCHEME_HTML = `
 <div class="wp-block-pb-accordion-item Accordion__item">
   <h3 class="Accordion__title">HIAS Fellowships 2027-2028</h3>
   <div class="Accordion__content">
-    <p>HIAS offers residential fellowships for scholars from all disciplines.</p>
+    <p>HIAS offers residential fellowships for scholars from all disciplines to pursue their own research projects in Hamburg.</p>
+    <p>The fellowship includes a monthly stipend, workspace in Hamburg city centre, and regular academic events.</p>
+    <p>Eligibility: Postdoctoral researchers of all nationalities; preference for early-career researchers. PhD required.</p>
     <p>Deadline: 15 October 2026</p>
     <a href="https://hias-hamburg.de/en/fellowship/application/hias-fellowships-2027-2028/">Apply here</a>
   </div>
@@ -58,9 +60,16 @@ describe("parseHIASPage", () => {
     expect(schemes[0].deadlineRaw).toMatch(/15 October 2026/);
   });
 
-  it("extracts description from first paragraph", () => {
+  it("extracts multi-paragraph description", () => {
     const schemes = parseHIASPage(OPEN_SCHEME_HTML);
     expect(schemes[0].description).toContain("residential fellowships");
+    expect(schemes[0].description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility from Eligibility: label", () => {
+    const schemes = parseHIASPage(OPEN_SCHEME_HTML);
+    expect(schemes[0].eligibility).not.toBeNull();
+    expect(schemes[0].eligibility).toContain("Postdoctoral");
   });
 
   it("uses external link as URL when present", () => {
@@ -87,6 +96,7 @@ describe("normaliseHIAS", () => {
     status: "open",
     deadlineRaw: "15 October 2026",
     description: "HIAS offers residential fellowships for scholars from all disciplines.",
+    eligibility: "Postdoctoral researchers of all nationalities.",
   };
 
   it("maps funder fields correctly", () => {
@@ -131,5 +141,10 @@ describe("normaliseHIAS", () => {
     const result = normaliseHIAS({ ...SAMPLE_RAW, deadlineRaw: null });
     expect(result.deadline_raw).toBeNull();
     expect(result.deadline_date).toBeNull();
+  });
+
+  it("maps eligibility field", () => {
+    const result = normaliseHIAS(SAMPLE_RAW);
+    expect(result.eligibility).toContain("Postdoctoral");
   });
 });
