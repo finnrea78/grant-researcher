@@ -78,6 +78,8 @@ import { fetchFebsGrants } from "./sources/febs.js";
 import { normaliseFebs } from "./transforms/normalise-febs.js";
 import { fetchPalassGrants } from "./sources/palass.js";
 import { normalisePalass } from "./transforms/normalise-palass.js";
+import { fetchChallengerSocietyGrants } from "./sources/challenger-society.js";
+import { normaliseChallengerSociety } from "./transforms/normalise-challenger-society.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -469,6 +471,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "palaeontological-association",
     fetch: () => fetchPalassGrants().then(r => r.map(normalisePalass)),
   },
+  {
+    displayName: "Challenger Society for Marine Science grants",
+    source: "challenger_society",
+    funderSlug: "challenger-society",
+    fetch: () => fetchChallengerSocietyGrants().then(r => r.map(normaliseChallengerSociety)),
+  },
 ];
 
 program
@@ -672,6 +680,18 @@ program
       source: "palass",
       funderSlug: "palaeontological-association",
       fetch: () => fetchPalassGrants().then(r => r.map(normalisePalass)),
+    });
+  });
+
+program
+  .command("challenger-society")
+  .description("Ingest grants from the Challenger Society for Marine Science")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Challenger Society for Marine Science grants",
+      source: "challenger_society",
+      funderSlug: "challenger-society",
+      fetch: () => fetchChallengerSocietyGrants().then(r => r.map(normaliseChallengerSociety)),
     });
   });
 
