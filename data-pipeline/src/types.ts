@@ -33,7 +33,8 @@ export type OpportunitySource =
   | "royensoc"
   | "lms"
   | "physoc"
-  | "ima";
+  | "ima"
+  | "eseb";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {

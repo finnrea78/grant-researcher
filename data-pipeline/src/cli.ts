@@ -56,6 +56,8 @@ import { fetchPhysocGrants } from "./sources/physoc.js";
 import { normalisePhysoc } from "./transforms/normalise-physoc.js";
 import { fetchImaGrants } from "./sources/ima.js";
 import { normaliseIma } from "./transforms/normalise-ima.js";
+import { fetchEsebGrants } from "./sources/eseb.js";
+import { normaliseEseb } from "./transforms/normalise-eseb.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -381,6 +383,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "institute-of-mathematics-and-its-applications",
     fetch: () => fetchImaGrants().then(r => r.map(normaliseIma)),
   },
+  {
+    displayName: "ESEB prizes & funding",
+    source: "eseb",
+    funderSlug: "eseb",
+    fetch: () => fetchEsebGrants().then(r => r.map(normaliseEseb)),
+  },
 ];
 
 program
@@ -452,6 +460,18 @@ program
       source: "ima",
       funderSlug: "institute-of-mathematics-and-its-applications",
       fetch: () => fetchImaGrants().then(r => r.map(normaliseIma)),
+    });
+  });
+
+program
+  .command("eseb")
+  .description("Ingest prizes & funding from the European Society for Evolutionary Biology")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "ESEB prizes & funding",
+      source: "eseb",
+      funderSlug: "eseb",
+      fetch: () => fetchEsebGrants().then(r => r.map(normaliseEseb)),
     });
   });
 
