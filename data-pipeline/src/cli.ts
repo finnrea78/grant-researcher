@@ -76,6 +76,8 @@ import { fetchBsbiGrants } from "./sources/bsbi.js";
 import { normaliseBsbi } from "./transforms/normalise-bsbi.js";
 import { fetchFebsGrants } from "./sources/febs.js";
 import { normaliseFebs } from "./transforms/normalise-febs.js";
+import { fetchPalassGrants } from "./sources/palass.js";
+import { normalisePalass } from "./transforms/normalise-palass.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -461,6 +463,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "febs",
     fetch: () => fetchFebsGrants().then(r => r.map(normaliseFebs)),
   },
+  {
+    displayName: "Palaeontological Association grants",
+    source: "palass",
+    funderSlug: "palaeontological-association",
+    fetch: () => fetchPalassGrants().then(r => r.map(normalisePalass)),
+  },
 ];
 
 program
@@ -652,6 +660,18 @@ program
       source: "febs",
       funderSlug: "febs",
       fetch: () => fetchFebsGrants().then(r => r.map(normaliseFebs)),
+    });
+  });
+
+program
+  .command("palass")
+  .description("Ingest grant schemes from the Palaeontological Association")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Palaeontological Association grants",
+      source: "palass",
+      funderSlug: "palaeontological-association",
+      fetch: () => fetchPalassGrants().then(r => r.map(normalisePalass)),
     });
   });
 

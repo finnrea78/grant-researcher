@@ -43,7 +43,8 @@ export type OpportunitySource =
   | "sal"
   | "bshs"
   | "bsbi"
-  | "febs";
+  | "febs"
+  | "palass";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
