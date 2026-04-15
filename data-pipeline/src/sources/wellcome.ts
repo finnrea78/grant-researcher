@@ -1,9 +1,12 @@
 import * as cheerio from "cheerio";
 import { fetchWithRetry } from "../utils/fetchWithRetry.js";
+import { sleep } from "../utils/sleep.js";
 import type { RawWellcomeScheme } from "../transforms/normalise-wellcome.js";
 
 const SCHEMES_URL = "https://wellcome.org/grant-funding/schemes";
 const WELLCOME_BASE = "https://wellcome.org";
+
+const DETAIL_DELAY_MS = 300;
 
 function stripHtml(html: string | null | undefined): string {
   if (!html) return "";
@@ -22,6 +25,72 @@ interface WellcomeApiListing {
   frequency: string;
   lead_applicant_career_stage: Array<{ name: string }>;
   location_ref: Array<{ name: string }>;
+}
+
+function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string | null {
+  let result: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (result !== null) return;
+    if (!headingPattern.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) result = parts.join("\n\n").slice(0, 1500);
+  });
+  return result;
+}
+
+export function parseWellcomeDetailPage(html: string): { description: string | null; eligibility: string | null } {
+  const $ = cheerio.load(html);
+
+  // Try __NEXT_DATA__ first for structured content
+  const nextDataRaw = $("#__NEXT_DATA__").html();
+  if (nextDataRaw) {
+    try {
+      const data = JSON.parse(nextDataRaw);
+      const pageProps = data?.props?.pageProps;
+
+      // Wellcome detail pages often have body_text or similar fields
+      const bodyText =
+        pageProps?.body_text ||
+        pageProps?.scheme?.body_text ||
+        pageProps?.data?.body_text ||
+        null;
+
+      if (bodyText) {
+        const descParts: string[] = [];
+        const $body = cheerio.load(typeof bodyText === "string" ? bodyText : JSON.stringify(bodyText));
+        $body("p").each((_i, el) => {
+          const text = $body(el).text().trim();
+          if (text.length > 60) descParts.push(text);
+        });
+        if (descParts.length > 0) {
+          return {
+            description: descParts.join("\n\n").slice(0, 2000),
+            eligibility: null,
+          };
+        }
+      }
+    } catch {
+      // Fall through to HTML parsing
+    }
+  }
+
+  // Fall back to HTML parsing
+  const descParts: string[] = [];
+  $("main p, article p, .content p, [class*='body'] p").each((_i, el) => {
+    const text = $(el).text().trim();
+    if (text.length > 60) descParts.push(text);
+  });
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  const eligibility = extractSection($, /eligibility|who can apply|who is eligible|criteria/i);
+
+  return { description, eligibility };
 }
 
 export function parseWellcomePage(html: string): RawWellcomeScheme[] {
@@ -48,6 +117,7 @@ export function parseWellcomePage(html: string): RawWellcomeScheme[] {
     location: item.location_ref.map((l) => l.name).join(", "),
     description: stripHtml(item.listing_summary),
     frequency: item.frequency,
+    eligibility: null,
   }));
 }
 
@@ -62,5 +132,24 @@ export async function fetchWellcomeSchemes(): Promise<RawWellcomeScheme[]> {
   const html = await response.text();
   const schemes = parseWellcomePage(html);
   console.log(`  Found ${schemes.length} schemes from Wellcome`);
+
+  // Enrich from detail pages
+  for (const item of schemes) {
+    if (!item.url) continue;
+    await sleep(DETAIL_DELAY_MS);
+    try {
+      const res = await fetchWithRetry(item.url);
+      if (!res.ok) continue;
+      const detailHtml = await res.text();
+      const { description, eligibility } = parseWellcomeDetailPage(detailHtml);
+      if (description && description.length > (item.description?.length ?? 0)) {
+        item.description = description;
+      }
+      if (eligibility) item.eligibility = eligibility;
+    } catch {
+      // Skip failed detail fetches — listing data is still valid
+    }
+  }
+
   return schemes;
 }

@@ -1,4 +1,5 @@
-import { parseWellcomePage } from "../../src/sources/wellcome";
+import { parseWellcomePage, parseWellcomeDetailPage } from "../../src/sources/wellcome";
+import { normaliseWellcome } from "../../src/transforms/normalise-wellcome";
 
 const FIXTURE_HTML = `
 <!DOCTYPE html>
@@ -46,6 +47,23 @@ const FIXTURE_HTML = `
 </body>
 </html>`;
 
+const FIXTURE_DETAIL_HTML = `
+<!DOCTYPE html>
+<html>
+<body>
+<main>
+  <h1>Discovery Research</h1>
+  <p>Wellcome Discovery Research funds imaginative research that answers questions about life, health and wellbeing.</p>
+  <p>It supports established researchers who want to pursue a curiosity-driven question that could lead to significant new understanding.</p>
+  <h2>Eligibility</h2>
+  <p>Applicants must hold a permanent or equivalent position at an eligible organisation in the UK, Republic of Ireland, or a low- or middle-income country.</p>
+  <p>You must have at least 5 years of active research experience at independent level.</p>
+  <h2>What we fund</h2>
+  <p>Salaries, research costs, and indirect costs associated with the project.</p>
+</main>
+</body>
+</html>`;
+
 describe("parseWellcomePage", () => {
   it("extracts schemes from initialListings", () => {
     const result = parseWellcomePage(FIXTURE_HTML);
@@ -86,8 +104,63 @@ describe("parseWellcomePage", () => {
     expect(result[0].careerStage).toBe("Mid-career researcher");
   });
 
+  it("sets eligibility to null initially (populated by detail fetch)", () => {
+    const result = parseWellcomePage(FIXTURE_HTML);
+    result.forEach(r => expect(r.eligibility).toBeNull());
+  });
+
   it("throws when __NEXT_DATA__ is missing", () => {
     expect(() => parseWellcomePage("<html><body></body></html>"))
       .toThrow();
+  });
+});
+
+describe("parseWellcomeDetailPage", () => {
+  it("extracts multi-paragraph description from HTML", () => {
+    const result = parseWellcomeDetailPage(FIXTURE_DETAIL_HTML);
+    expect(result.description).toContain("Wellcome Discovery Research");
+    expect(result.description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility section", () => {
+    const result = parseWellcomeDetailPage(FIXTURE_DETAIL_HTML);
+    expect(result.eligibility).toContain("permanent or equivalent position");
+  });
+});
+
+describe("normaliseWellcome", () => {
+  const raw = {
+    title: "Discovery Research",
+    url: "https://wellcome.org/research-funding/schemes/discovery-research",
+    status: "Open",
+    deadline: "01 September 2026",
+    fundingLevel: "Up to £300,000",
+    duration: "Up to 2 years",
+    careerStage: "Mid-career researcher",
+    location: "UK",
+    description: "Curiosity-driven research funding.",
+    frequency: "Annual",
+    eligibility: "Applicants must hold a permanent position at an eligible organisation.",
+  };
+
+  it("sets source to wellcome", () => {
+    expect(normaliseWellcome(raw).source).toBe("wellcome");
+  });
+
+  it("passes through eligibility", () => {
+    expect(normaliseWellcome(raw).eligibility).toContain("permanent position");
+  });
+
+  it("passes through null eligibility", () => {
+    const noElig = { ...raw, eligibility: null };
+    expect(normaliseWellcome(noElig).eligibility).toBeNull();
+  });
+
+  it("sets scope to null", () => {
+    expect(normaliseWellcome(raw).scope).toBeNull();
+  });
+
+  it("parses amount_max from funding level", () => {
+    expect(normaliseWellcome(raw).amount_max).toBe(30_000_000);
   });
 });
