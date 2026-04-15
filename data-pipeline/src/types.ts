@@ -23,7 +23,8 @@ export type OpportunitySource =
   | "embo"
   | "hfsp"
   | "biochemical_society"
-  | "humboldt_foundation";
+  | "humboldt_foundation"
+  | "geolsoc";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {

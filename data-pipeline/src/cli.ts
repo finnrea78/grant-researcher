@@ -36,6 +36,8 @@ import { fetchBiochemGrants } from "./sources/biochemical-society.js";
 import { normaliseBiochem } from "./transforms/normalise-biochemical-society.js";
 import { fetchHumboldtGrants } from "./sources/humboldt.js";
 import { normaliseHumboldt } from "./transforms/normalise-humboldt.js";
+import { fetchGeolsocGrants } from "./sources/geolsoc.js";
+import { normaliseGeolsoc } from "./transforms/normalise-geolsoc.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -301,7 +303,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "humboldt-foundation",
     fetch: () => fetchHumboldtGrants().then(r => r.map(normaliseHumboldt)),
   },
+  {
+    displayName: "Geological Society of London grants",
+    source: "geolsoc",
+    funderSlug: "geological-society-of-london",
+    fetch: () => fetchGeolsocGrants().then(r => r.map(normaliseGeolsoc)),
+  },
 ];
+
+program
+  .command("geolsoc")
+  .description("Ingest grants and bursaries from the Geological Society of London")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Geological Society of London grants",
+      source: "geolsoc",
+      funderSlug: "geological-society-of-london",
+      fetch: () => fetchGeolsocGrants().then(r => r.map(normaliseGeolsoc)),
+    });
+  });
 
 program
   .command("humboldt")
