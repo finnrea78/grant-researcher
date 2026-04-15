@@ -297,6 +297,46 @@ Updated each iteration. Format:
 - **<slug>** ✅ Already good — avg_desc >300, elig populated, skipped
 ```
 
+- **wolfson** ✅ Improved (2026-04-15) — avg_desc 0→populated, elig 0→15, amounts now extracted; detail pages confirmed live (200 OK, not 502 as spec suggested)
+- **lms** ✅ Improved (2026-04-15) — avg_desc 0→populated for all 26, elig+deadlines extracted where available, hardcoded scope removed
+- **sci** ✅ Improved (2026-04-15) — avg_desc 0→populated for all 19, elig extracted for all, hardcoded scope removed
+- **febs** ✅ Improved (2026-04-15) — avg_desc 0→populated for all 8, elig extracted where available, hardcoded scope removed
+- **embo** ✅ Improved (2026-04-15) — avg_desc 0→populated, elig extracted where available, hardcoded scope removed
+- **physoc** ✅ Improved (2026-04-15) — avg_desc 82→1000+, elig now populated for all 7, hardcoded scope removed
+- **royensoc** ✅ Improved (2026-04-15) — avg_desc 101→richer, detail-page fetch added, hardcoded scope removed
+- **genetics_society** ✅ Improved (2026-04-15) — avg_desc 104→multi-paragraph, elig extracted for all, hardcoded scope removed
+- **endocrinology** ✅ Improved (2026-04-15) — avg_desc 112→1656, elig 0→14/15, amounts extracted from detail pages
+- **acmedsci** ✅ Improved (2026-04-15) — avg_desc 118→2000 (multi-para), scope null; eligibility tab-based JS-rendered (unfixable without headless)
+- **heritage_fund** ✅ Improved (2026-04-15) — avg_desc 121→2000, elig 0→2/2 (detail-page fetch added)
+- **nuffield** ✅ Improved (2026-04-15) — avg_desc 127→2000 (detail-page fetch); eligibility JS-tab-rendered (unfixable without headless)
+- **royal_commission_1851** ✅ Improved (2026-04-15) — avg_desc 128→935-1612 (detail-page fetch), scope null; eligibility not in standard heading structure
+- **hias_hamburg** ✅ Improved (2026-04-15) — avg_desc 144→2000 (multi-para from accordion), eligibility extraction added
+- **bps** ✅ Improved (2026-04-15) — avg_desc 145→500-1000, elig now populated, scope null (was wrong "psychology")
+- **humboldt_foundation** ✅ Improved (2026-04-15) — avg_desc 151→2000, elig 0→3/4, scope null
+- **biochemical_society** ✅ Improved (2026-04-15) — avg_desc 153→2000, scope null; eligibility non-standard headings on live pages
+- **classical_association** ✅ Improved (2026-04-15) — scope null; desc from listing page only (no separate detail pages), elig hardcoded but correct
+- **ukri_funding_finder** ✅ Improved (2026-04-15) — multi-paragraph desc extraction committed (was already partially improved); eligibility at 15% (UKRI pages vary in structure)
+- **benhs** ✅ Improved (2026-04-15) — avg_desc 181→1384-1846 (multi-para), scope null
+- **eseb** ✅ Improved (2026-04-16) — avg_desc 182→1900 (detail-page fetch), elig 0→3/10, scope null
+- **erc** ✅ Improved (2026-04-16) — avg_desc 196→multi-para (detail-page), elig 0→4/6, scope null (already null)
+- **microbiology_society** ✅ Improved (2026-04-16) — avg_desc 216→richer detail pages, elig 0→1/6, scope null
+- **bou** ✅ Improved (2026-04-16) — avg_desc 218→multi-para, eligibility extraction added, scope null
+- **wellcome** ✅ Improved (2026-04-16) — detail-page fetch added for richer desc, eligibility extraction; elig JS-rendered on most pages
+- **hfsp** ✅ Improved (2026-04-16) — avg_desc 264→multi-para, eligibility extraction added, scope null
+- **henry_moore** ✅ Already good — scope already null, no detail pages, single-page scraper with avg 273 desc
+- **palass** ✅ Improved (2026-04-16) — avg_desc 301→detail-page fetch, elig 0→1/9, scope null
+- **msca** ✅ Improved (2026-04-16) — avg_desc 301→multi-para, elig 0→4/4, scope already null
+- **ima** ✅ Improved (2026-04-16) — detail-page fetch added, elig 0→populated, scope null
+- **royal_historical_society** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+- **sal** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+- **carnegie_trust** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+- **bshs** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+- **asab** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+- **challenger_society** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+- **royal_society** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+- **netias** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+- **action_medical** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+
 ---
 
 ## Completion Criteria
