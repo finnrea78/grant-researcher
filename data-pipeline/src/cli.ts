@@ -38,6 +38,8 @@ import { fetchHumboldtGrants } from "./sources/humboldt.js";
 import { normaliseHumboldt } from "./transforms/normalise-humboldt.js";
 import { fetchGeolsocGrants } from "./sources/geolsoc.js";
 import { normaliseGeolsoc } from "./transforms/normalise-geolsoc.js";
+import { fetchAcMedSciGrants } from "./sources/acmedsci.js";
+import { normaliseAcMedSci } from "./transforms/normalise-acmedsci.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -309,7 +311,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "geological-society-of-london",
     fetch: () => fetchGeolsocGrants().then(r => r.map(normaliseGeolsoc)),
   },
+  {
+    displayName: "Academy of Medical Sciences schemes",
+    source: "acmedsci",
+    funderSlug: "academy-of-medical-sciences",
+    fetch: () => fetchAcMedSciGrants().then(r => r.map(normaliseAcMedSci)),
+  },
 ];
+
+program
+  .command("acmedsci")
+  .description("Ingest grant schemes from Academy of Medical Sciences")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Academy of Medical Sciences schemes",
+      source: "acmedsci",
+      funderSlug: "academy-of-medical-sciences",
+      fetch: () => fetchAcMedSciGrants().then(r => r.map(normaliseAcMedSci)),
+    });
+  });
 
 program
   .command("geolsoc")
