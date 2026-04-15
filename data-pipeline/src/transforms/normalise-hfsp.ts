@@ -10,6 +10,7 @@ export interface RawHfspGrant {
   deadlineRaw: string | null; // first deadline date text (LOI submission)
   allDates: string[];         // all deadline dates extracted
   description: string | null;
+  eligibility: string | null;
 }
 
 /**
@@ -42,8 +43,8 @@ export function normaliseHfsp(raw: RawHfspGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: raw.fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "frontier life science, interdisciplinary biology",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "hfsp",
     source_metadata: {
       all_deadline_dates: raw.allDates,

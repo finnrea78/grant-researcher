@@ -11,8 +11,12 @@ const FIXTURE_GRANTS = `
 <head><title>Research Grants | Human Frontier Science Program</title></head>
 <body>
 <div>
-  <p>HFSP Research Grants are team grants providing financial support for three years.</p>
-  <p>The amount paid depends on the number of team members (normally 2-4).</p>
+  <p>HFSP Research Grants are team grants providing financial support for three years of highly innovative basic research at the frontier of life sciences.</p>
+  <p>The amount paid depends on the number of team members (normally 2-4). Typical budgets are around USD 450,000 per year for a 3-member team.</p>
+
+  <h4>Eligibility</h4>
+  <p>All team members must be independent researchers. At least one team member must be from a non-G7 country.</p>
+  <p>Applicants cannot be current HFSP grantees applying for a renewal of the same project.</p>
 
   <h4 class="text-align-justify">Deadlines</h4>
   <p class="text-align-justify">i. Compulsory initiation of a letter of Intent by obtaining an LOI ID number by
@@ -59,9 +63,15 @@ describe("parseHfspPage (Research Grants)", () => {
     expect(result.allDates.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("extracts description from first p tag", () => {
+  it("extracts multi-paragraph description", () => {
     const result = parseHfspPage(FIXTURE_GRANTS, GRANTS_URL, "HFSP Research Grants", "grant");
     expect(result.description).toContain("HFSP Research Grants");
+    expect(result.description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility from heading section", () => {
+    const result = parseHfspPage(FIXTURE_GRANTS, GRANTS_URL, "HFSP Research Grants", "grant");
+    expect(result.eligibility).toContain("independent researchers");
   });
 
   it("sets status to open", () => {
@@ -131,5 +141,15 @@ describe("normaliseHfsp", () => {
     const raw = parseHfspPage(FIXTURE_GRANTS, GRANTS_URL, "HFSP Research Grants", "grant");
     const result = normaliseHfsp(raw);
     expect((result.source_metadata.all_deadline_dates as string[]).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    const raw = parseHfspPage(FIXTURE_GRANTS, GRANTS_URL, "HFSP Research Grants", "grant");
+    expect(normaliseHfsp(raw).scope).toBeNull();
+  });
+
+  it("passes through eligibility", () => {
+    const raw = parseHfspPage(FIXTURE_GRANTS, GRANTS_URL, "HFSP Research Grants", "grant");
+    expect(normaliseHfsp(raw).eligibility).toContain("independent researchers");
   });
 });

@@ -61,15 +61,29 @@ export function parseHfspPage(
   const rawTitle = $("title").first().text().trim();
   const title = rawTitle.split("|")[0].trim() || defaultTitle;
 
-  // Description: first substantial <p> in the main content (not nav/header)
-  // Use the first <p> that contains more than 30 chars and isn't a nav element
-  let description: string | null = null;
+  // Description: collect substantial paragraphs from main content
+  const descParts: string[] = [];
   $("main p, article p, div.field p, div.node-content p, div p").each((_i, el) => {
-    if (description) return;
     const text = $(el).text().trim();
-    if (text.length > 40 && !/cookie|navigation|javascript/i.test(text)) {
-      description = text;
+    if (text.length > 60 && !/cookie|navigation|javascript/i.test(text)) {
+      descParts.push(text);
     }
+  });
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  // Eligibility: section under relevant heading
+  let eligibility: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (eligibility !== null) return;
+    if (!/eligibility|who can apply|who is eligible|requirements|criteria/i.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
   });
 
   // Find h4 containing "Deadlines"
@@ -94,6 +108,7 @@ export function parseHfspPage(
     deadlineRaw,
     allDates,
     description,
+    eligibility,
   };
 }
 
