@@ -1,9 +1,44 @@
 import * as cheerio from "cheerio";
 import { fetchWithRetry } from "../utils/fetchWithRetry.js";
+import { sleep } from "../utils/sleep.js";
 import type { RawMicrobiologySocietyGrant } from "../transforms/normalise-microbiology-society.js";
 
 const BASE_URL = "https://microbiologysociety.org";
 const GRANTS_URL = `${BASE_URL}/grants-prizes/all-grants.html`;
+
+const DETAIL_DELAY_MS = 300;
+
+function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string | null {
+  let result: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (result !== null) return;
+    if (!headingPattern.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) result = parts.join("\n\n").slice(0, 1500);
+  });
+  return result;
+}
+
+export function parseMicrobiologySocietyDetailPage(html: string): { description: string | null; eligibility: string | null } {
+  const $ = cheerio.load(html);
+
+  const descParts: string[] = [];
+  $("main p, article p, .article-body p, .content p").each((_i, el) => {
+    const text = $(el).text().trim();
+    if (text.length > 60) descParts.push(text);
+  });
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  const eligibility = extractSection($, /eligibility|who can apply|who is eligible|criteria/i);
+
+  return { description, eligibility };
+}
 
 /**
  * Parse the Microbiology Society all-grants listing page.
@@ -43,6 +78,7 @@ export function parseMicrobiologySocietyPage(html: string): RawMicrobiologySocie
       status: "open", // all schemes are rolling, no closed indicators on page
       description,
       amountRaw,
+      eligibility: null,
     });
   });
 
@@ -59,5 +95,22 @@ export async function fetchMicrobiologySocietyGrants(): Promise<RawMicrobiologyS
   const html = await response.text();
   const grants = parseMicrobiologySocietyPage(html);
   console.log(`  Found ${grants.length} Microbiology Society grant entries`);
+
+  // Enrich from detail pages
+  for (const item of grants) {
+    if (!item.url || item.url === GRANTS_URL) continue;
+    await sleep(DETAIL_DELAY_MS);
+    try {
+      const res = await fetchWithRetry(item.url);
+      if (!res.ok) continue;
+      const detailHtml = await res.text();
+      const { description, eligibility } = parseMicrobiologySocietyDetailPage(detailHtml);
+      if (description) item.description = description;
+      if (eligibility) item.eligibility = eligibility;
+    } catch {
+      // Skip failed detail fetches — listing data is still valid
+    }
+  }
+
   return grants;
 }

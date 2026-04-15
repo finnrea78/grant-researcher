@@ -1,4 +1,4 @@
-import { parseMicrobiologySocietyPage } from "../../src/sources/microbiology-society";
+import { parseMicrobiologySocietyPage, parseMicrobiologySocietyDetailPage } from "../../src/sources/microbiology-society";
 import { normaliseMicrobiologySociety } from "../../src/transforms/normalise-microbiology-society";
 
 const GRANTS_URL = "https://microbiologysociety.org/grants-prizes/all-grants.html";
@@ -23,6 +23,22 @@ const FIXTURE_LISTING = `
   <h3><span class="not-a-link">No Link Card</span></h3>
   <p class="article-text">This card has no link and should be skipped.</p>
 </div>
+</body>
+</html>`;
+
+const FIXTURE_DETAIL = `
+<!DOCTYPE html>
+<html lang="en">
+<body>
+<main>
+  <h1>Travel Grants</h1>
+  <p>The Microbiology Society Travel Grant scheme supports members to attend national and international scientific meetings and conferences.</p>
+  <p>Awards of up to £750 are available for members to attend meetings outside the UK. Members can apply for up to two travel grants per year.</p>
+  <h2>Eligibility</h2>
+  <p>Applicants must be current members of the Microbiology Society. The grant is open to all career stages including students, postdoctoral researchers, and established academics.</p>
+  <h2>How to Apply</h2>
+  <p>Applications should be submitted via the online portal at least four weeks before the meeting.</p>
+</main>
 </body>
 </html>`;
 
@@ -85,9 +101,27 @@ describe("parseMicrobiologySocietyPage", () => {
     expect(results.map(r => r.title)).not.toContain("No Link Card");
   });
 
+  it("sets eligibility to null initially (populated by detail fetch)", () => {
+    const results = parseMicrobiologySocietyPage(FIXTURE_LISTING);
+    results.forEach(r => expect(r.eligibility).toBeNull());
+  });
+
   it("returns empty array for page with no grant cards", () => {
     const results = parseMicrobiologySocietyPage(FIXTURE_EMPTY);
     expect(results).toHaveLength(0);
+  });
+});
+
+describe("parseMicrobiologySocietyDetailPage", () => {
+  it("extracts multi-paragraph description", () => {
+    const result = parseMicrobiologySocietyDetailPage(FIXTURE_DETAIL);
+    expect(result.description).toContain("Travel Grant scheme");
+    expect(result.description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility section", () => {
+    const result = parseMicrobiologySocietyDetailPage(FIXTURE_DETAIL);
+    expect(result.eligibility).toContain("current members");
   });
 });
 
@@ -123,9 +157,14 @@ describe("normaliseMicrobiologySociety", () => {
     expect(result.slug).toBe("travel-grants");
   });
 
-  it("sets scope to include microbiology", () => {
+  it("sets scope to null (not hardcoded subject labels)", () => {
     const raw = parseMicrobiologySocietyPage(FIXTURE_LISTING)[0];
     const result = normaliseMicrobiologySociety(raw);
-    expect(result.scope).toContain("microbiology");
+    expect(result.scope).toBeNull();
+  });
+
+  it("passes through eligibility when set", () => {
+    const raw = { ...parseMicrobiologySocietyPage(FIXTURE_LISTING)[0], eligibility: "Must be a Society member." };
+    expect(normaliseMicrobiologySociety(raw).eligibility).toContain("Society member");
   });
 });

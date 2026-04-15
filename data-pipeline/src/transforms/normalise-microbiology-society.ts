@@ -8,6 +8,7 @@ export interface RawMicrobiologySocietyGrant {
   status: string;
   description: string | null;
   amountRaw: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseMicrobiologySociety(raw: RawMicrobiologySocietyGrant): NormalisedOpportunity {
@@ -28,8 +29,8 @@ export function normaliseMicrobiologySociety(raw: RawMicrobiologySocietyGrant): 
     url: raw.url,
     funding_type: "grant",
     description: raw.description,
-    eligibility: null,
-    scope: "microbiology, virology, mycology, bacteriology",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "microbiology_society",
     source_metadata: {},
   };
