@@ -37,23 +37,42 @@ export function parseERCApplyPage(html: string): Array<{ title: string; url: str
   return items;
 }
 
-async function fetchGrantDescription(url: string): Promise<string | null> {
+function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string | null {
+  let result: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (result !== null) return;
+    if (!headingPattern.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) result = parts.join("\n\n").slice(0, 1500);
+  });
+  return result;
+}
+
+async function fetchGrantDetail(url: string): Promise<{ description: string | null; eligibility: string | null }> {
   try {
     const response = await fetchWithRetry(url);
-    if (!response.ok) return null;
+    if (!response.ok) return { description: null, eligibility: null };
     const html = await response.text();
     const $ = cheerio.load(html);
-    // First meaningful paragraph in the main content area
-    let description: string | null = null;
-    $("main p, .paragraph p, .field--name-body p").each((_i, el) => {
+
+    const descParts: string[] = [];
+    $("main p, .paragraph p, .field--name-body p, article p").each((_i, el) => {
       const text = $(el).text().replace(/\s+/g, " ").trim();
-      if (text && text.length > 50 && !description) {
-        description = text;
-      }
+      if (text.length > 60) descParts.push(text);
     });
-    return description;
+    const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+    const eligibility = extractSection($, /eligibility|who can apply|who is eligible|requirements/i);
+
+    return { description, eligibility };
   } catch {
-    return null;
+    return { description: null, eligibility: null };
   }
 }
 
@@ -68,20 +87,21 @@ export async function fetchERCSchemes(): Promise<RawERCScheme[]> {
   const html = await response.text();
   const items = parseERCApplyPage(html);
 
-  // Fetch descriptions in parallel
-  const withDescriptions = await Promise.all(
+  // Fetch descriptions and eligibility in parallel
+  const withDetails = await Promise.all(
     items.map(async (item) => {
-      const description = await fetchGrantDescription(item.url);
-      return { ...item, description };
+      const { description, eligibility } = await fetchGrantDetail(item.url);
+      return { ...item, description, eligibility };
     })
   );
 
-  console.log(`  Found ${withDescriptions.length} ERC grant types`);
+  console.log(`  Found ${withDetails.length} ERC grant types`);
 
-  return withDescriptions.map((item) => ({
+  return withDetails.map((item) => ({
     title: item.title,
     url: item.url,
     status: "open",
     description: item.description,
+    eligibility: item.eligibility,
   }));
 }

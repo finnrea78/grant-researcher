@@ -6,6 +6,7 @@ export interface RawERCScheme {
   url: string;
   status: string;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseERC(raw: RawERCScheme): NormalisedOpportunity {
@@ -24,7 +25,7 @@ export function normaliseERC(raw: RawERCScheme): NormalisedOpportunity {
     url: raw.url,
     funding_type: "grant",
     description: raw.description,
-    eligibility: null,
+    eligibility: raw.eligibility,
     scope: null,
     source: "erc",
     source_metadata: {

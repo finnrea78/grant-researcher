@@ -1,4 +1,5 @@
 import { parseERCApplyPage } from "../../src/sources/erc";
+import { normaliseERC } from "../../src/transforms/normalise-erc";
 
 // Minimal fixture matching real ERC apply-grant page structure (Drupal OpenEuropa theme)
 const FIXTURE_HTML = `
@@ -105,5 +106,52 @@ describe("parseERCApplyPage", () => {
     expect(() =>
       parseERCApplyPage("<html><body><main></main></body></html>")
     ).toThrow();
+  });
+});
+
+describe("normaliseERC", () => {
+  const raw = {
+    title: "ERC Starting Grant",
+    url: "https://erc.europa.eu/apply-grant/starting-grants",
+    status: "open",
+    description: "ERC Starting Grants support excellent researchers launching their own independent career.",
+    eligibility: "Applicants must be 2–7 years post-PhD and have not yet held a major independent grant.",
+  };
+
+  it("sets source to erc", () => {
+    expect(normaliseERC(raw).source).toBe("erc");
+  });
+
+  it("sets funder_slug to european-research-council", () => {
+    expect(normaliseERC(raw).funder_slug).toBe("european-research-council");
+  });
+
+  it("sets amount_currency to EUR", () => {
+    expect(normaliseERC(raw).amount_currency).toBe("EUR");
+  });
+
+  it("sets funding_type to grant", () => {
+    expect(normaliseERC(raw).funding_type).toBe("grant");
+  });
+
+  it("sets scope to null", () => {
+    expect(normaliseERC(raw).scope).toBeNull();
+  });
+
+  it("passes through description", () => {
+    expect(normaliseERC(raw).description).toContain("ERC Starting Grants");
+  });
+
+  it("passes through eligibility", () => {
+    expect(normaliseERC(raw).eligibility).toContain("post-PhD");
+  });
+
+  it("passes through null eligibility", () => {
+    const noElig = { ...raw, eligibility: null };
+    expect(normaliseERC(noElig).eligibility).toBeNull();
+  });
+
+  it("generates a slug", () => {
+    expect(normaliseERC(raw).slug).toBe("erc-starting-grant");
   });
 });
