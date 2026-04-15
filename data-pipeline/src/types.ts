@@ -32,7 +32,8 @@ export type OpportunitySource =
   | "microbiology_society"
   | "royensoc"
   | "lms"
-  | "physoc";
+  | "physoc"
+  | "ima";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {

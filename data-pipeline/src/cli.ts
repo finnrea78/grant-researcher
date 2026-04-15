@@ -54,6 +54,8 @@ import { fetchLmsGrants } from "./sources/lms.js";
 import { normaliseLms } from "./transforms/normalise-lms.js";
 import { fetchPhysocGrants } from "./sources/physoc.js";
 import { normalisePhysoc } from "./transforms/normalise-physoc.js";
+import { fetchImaGrants } from "./sources/ima.js";
+import { normaliseIma } from "./transforms/normalise-ima.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -373,6 +375,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "physiological-society",
     fetch: () => fetchPhysocGrants().then(r => r.map(normalisePhysoc)),
   },
+  {
+    displayName: "IMA grants",
+    source: "ima",
+    funderSlug: "institute-of-mathematics-and-its-applications",
+    fetch: () => fetchImaGrants().then(r => r.map(normaliseIma)),
+  },
 ];
 
 program
@@ -432,6 +440,18 @@ program
       source: "physoc",
       funderSlug: "physiological-society",
       fetch: () => fetchPhysocGrants().then(r => r.map(normalisePhysoc)),
+    });
+  });
+
+program
+  .command("ima")
+  .description("Ingest grant schemes from the Institute of Mathematics and its Applications")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "IMA grants",
+      source: "ima",
+      funderSlug: "institute-of-mathematics-and-its-applications",
+      fetch: () => fetchImaGrants().then(r => r.map(normaliseIma)),
     });
   });
 
