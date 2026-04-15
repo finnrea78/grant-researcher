@@ -91,6 +91,23 @@ function extractDeadlineAndStatus(
   return { status: "open", deadlineRaw: null };
 }
 
+function extractSection($: ReturnType<typeof cheerio.load>, headingPattern: RegExp): string | null {
+  let result: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (result !== null) return;
+    if (!headingPattern.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) result = parts.join("\n\n").slice(0, 1500);
+  });
+  return result;
+}
+
 export function parseHumboldtPage(
   html: string,
   pageUrl: string,
@@ -103,15 +120,22 @@ export function parseHumboldtPage(
   const rawTitle = $("title").first().text().trim();
   const title = rawTitle.split("|")[0].trim() || defaultTitle;
 
-  // Description: first <p> in main content area with > 30 chars, no cookie text
-  let description: string | null = null;
-  $("main p, article p, .content p").each((_i, el) => {
-    if (description) return;
-    const text = $(el).text().trim();
-    if (text.length > 40 && !/cookie|javascript|browser/i.test(text)) {
-      description = text;
-    }
-  });
+  // Description: multi-paragraph from main content area
+  const descParts: string[] = [];
+  const selectors = ["main p", "article p", ".content p", "body p"];
+  for (const sel of selectors) {
+    $(sel).each((_i, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 60 && !/cookie|javascript|browser/i.test(text)) {
+        descParts.push(text);
+      }
+    });
+    if (descParts.length > 0) break;
+  }
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  // Eligibility from dedicated section
+  const eligibility = extractSection($, /who can apply|eligibility|requirements|prerequisites/i);
 
   const amountRaw = extractAmount($);
   const { status, deadlineRaw } = extractDeadlineAndStatus($);
@@ -124,6 +148,7 @@ export function parseHumboldtPage(
     deadlineRaw,
     amountRaw,
     description,
+    eligibility,
   };
 }
 

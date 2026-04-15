@@ -11,9 +11,13 @@ const FIXTURE_FELLOWSHIP = `
 <head><title>Humboldt Research Fellowship | Alexander von Humboldt-Stiftung</title></head>
 <body>
 <main>
-  <p>The Humboldt Research Fellowship supports excellent researchers from abroad to conduct research in Germany.</p>
+  <p>The Humboldt Research Fellowship supports excellent researchers from abroad to conduct research in Germany for 6 to 24 months.</p>
   <p>The monthly fellowship amount is €3,000 plus additional benefits. Fellowships may last from 6 to 24 months for postdoctoral researchers.</p>
   <p>The fellowship amount is €3,600 plus additional benefits for experienced researchers. Fellowships may last from 6 to 18 months.</p>
+
+  <h3 class="headline headline--3">Eligibility</h3>
+  <p>Applicants must hold a doctorate completed within the last 4 years (postdoctoral) or 12 years (experienced). All nationalities except German nationals are eligible.</p>
+  <p>Applicants must not have resided in Germany more than 90 days in the 18 months before application.</p>
 
   <h3 class="headline headline--3">Deadlines</h3>
   <p>Corresponding to the three selection rounds per year.</p>
@@ -75,9 +79,16 @@ describe("parseHumboldtPage (fellowship — rolling)", () => {
     expect(result.status).toBe("open");
   });
 
-  it("extracts description from first substantial p", () => {
+  it("extracts multi-paragraph description", () => {
     const result = parseHumboldtPage(FIXTURE_FELLOWSHIP, FELLOWSHIP_URL, "Humboldt Research Fellowship", "fellowship");
     expect(result.description).toContain("Humboldt Research Fellowship");
+    expect(result.description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility from eligibility heading section", () => {
+    const result = parseHumboldtPage(FIXTURE_FELLOWSHIP, FELLOWSHIP_URL, "Humboldt Research Fellowship", "fellowship");
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("doctorate");
   });
 });
 
@@ -136,5 +147,17 @@ describe("normaliseHumboldt", () => {
     const raw = parseHumboldtPage(FIXTURE_FELLOWSHIP, FELLOWSHIP_URL, "Humboldt Research Fellowship", "fellowship");
     const result = normaliseHumboldt(raw);
     expect(result.deadline_date).toBeNull();
+  });
+
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    const raw = parseHumboldtPage(FIXTURE_FELLOWSHIP, FELLOWSHIP_URL, "Humboldt Research Fellowship", "fellowship");
+    const result = normaliseHumboldt(raw);
+    expect(result.scope).toBeNull();
+  });
+
+  it("maps eligibility field", () => {
+    const raw = parseHumboldtPage(FIXTURE_FELLOWSHIP, FELLOWSHIP_URL, "Humboldt Research Fellowship", "fellowship");
+    const result = normaliseHumboldt(raw);
+    expect(result.eligibility).toContain("doctorate");
   });
 });

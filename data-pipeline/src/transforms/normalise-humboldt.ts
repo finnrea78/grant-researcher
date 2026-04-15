@@ -10,6 +10,7 @@ export interface RawHumboldtGrant {
   deadlineRaw: string | null;
   amountRaw: string | null;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseHumboldt(raw: RawHumboldtGrant): NormalisedOpportunity {
@@ -30,8 +31,8 @@ export function normaliseHumboldt(raw: RawHumboldtGrant): NormalisedOpportunity 
     url: raw.url,
     funding_type: raw.fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "research excellence, international academic exchange, Germany",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "humboldt_foundation",
     source_metadata: {},
   };
