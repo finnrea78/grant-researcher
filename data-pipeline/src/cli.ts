@@ -62,6 +62,8 @@ import { fetchEndocrinologyGrants } from "./sources/endocrinology.js";
 import { normaliseEndocrinology } from "./transforms/normalise-endocrinology.js";
 import { fetchRhsGrants } from "./sources/royal-historical-society.js";
 import { normaliseRhs } from "./transforms/normalise-royal-historical-society.js";
+import { fetchRc1851Grants } from "./sources/royal-commission-1851.js";
+import { normaliseRc1851 } from "./transforms/normalise-royal-commission-1851.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -405,6 +407,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "royal-historical-society",
     fetch: () => fetchRhsGrants().then(r => r.map(normaliseRhs)),
   },
+  {
+    displayName: "Royal Commission for the Exhibition of 1851 awards",
+    source: "royal_commission_1851",
+    funderSlug: "royal-commission-1851",
+    fetch: () => fetchRc1851Grants().then(r => r.map(normaliseRc1851)),
+  },
 ];
 
 program
@@ -512,6 +520,18 @@ program
       source: "royal_historical_society",
       funderSlug: "royal-historical-society",
       fetch: () => fetchRhsGrants().then(r => r.map(normaliseRhs)),
+    });
+  });
+
+program
+  .command("royal-commission-1851")
+  .description("Ingest award schemes from the Royal Commission for the Exhibition of 1851")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Royal Commission for the Exhibition of 1851 awards",
+      source: "royal_commission_1851",
+      funderSlug: "royal-commission-1851",
+      fetch: () => fetchRc1851Grants().then(r => r.map(normaliseRc1851)),
     });
   });
 
