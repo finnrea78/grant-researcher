@@ -1,4 +1,4 @@
-import { parseEsebPage } from "../../src/sources/eseb";
+import { parseEsebPage, parseEsebDetailPage } from "../../src/sources/eseb";
 import { normaliseEseb } from "../../src/transforms/normalise-eseb";
 
 const FIXTURE = `
@@ -28,6 +28,24 @@ const FIXTURE = `
 <p>The Outreach Initiative supports projects that promote evolution-related activities in order to improve public knowledge about evolution and evolutionary biology.</p>
 <p><a href="https://eseb.org/prizes-funding/outreach-fund/">More &#8230;</a></p>
 
+</div>
+</article>
+</body>
+</html>`;
+
+const FIXTURE_DETAIL = `
+<!DOCTYPE html>
+<html>
+<body>
+<article>
+<div class="entry-content">
+<h1>Conference Travel Award</h1>
+<p>ESEB offers travel stipends to support early-career researchers attending the biennial ESEB congress, the EMPSEB, or the annual Evolution meeting of the Society for the Study of Evolution.</p>
+<p>The award covers travel costs and registration fees up to a maximum of €500. Priority is given to PhD students and postdoctoral researchers presenting their work.</p>
+<h2>Eligibility</h2>
+<p>Applicants must be ESEB members and early-career researchers (PhD student or within 5 years of PhD completion). The applicant must be presenting at the target conference.</p>
+<h2>How to Apply</h2>
+<p>Submit a short application form via the ESEB website before the deadline.</p>
 </div>
 </article>
 </body>
@@ -68,8 +86,31 @@ describe("parseEsebPage", () => {
     results.forEach(r => expect(r.amountRaw).toBeNull());
   });
 
+  it("sets eligibility to null initially (populated by detail fetch)", () => {
+    const results = parseEsebPage(FIXTURE);
+    results.forEach(r => expect(r.eligibility).toBeNull());
+  });
+
   it("returns empty array when no entry-content", () => {
     expect(parseEsebPage(FIXTURE_NO_CONTENT)).toHaveLength(0);
+  });
+});
+
+describe("parseEsebDetailPage", () => {
+  it("extracts multi-paragraph description", () => {
+    const result = parseEsebDetailPage(FIXTURE_DETAIL);
+    expect(result.description).toContain("travel stipends");
+    expect(result.description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility section", () => {
+    const result = parseEsebDetailPage(FIXTURE_DETAIL);
+    expect(result.eligibility).toContain("ESEB members");
+  });
+
+  it("description contains multiple paragraphs joined", () => {
+    const result = parseEsebDetailPage(FIXTURE_DETAIL);
+    expect(result.description).toContain("PhD students");
   });
 });
 
@@ -80,6 +121,7 @@ describe("normaliseEseb", () => {
     status: "open",
     description: "ESEB offers travel stipends.",
     amountRaw: null,
+    eligibility: "Applicants must be ESEB members and early-career researchers.",
   };
 
   const prizeRaw = {
@@ -88,6 +130,7 @@ describe("normaliseEseb", () => {
     status: "open",
     description: "Prize for outstanding young evolutionary biologist.",
     amountRaw: null,
+    eligibility: null,
   };
 
   it("sets source to eseb", () => {
@@ -127,7 +170,15 @@ describe("normaliseEseb", () => {
     expect(normaliseEseb(grantRaw).slug).toBe("conference-travel-award");
   });
 
-  it("sets scope to include evolutionary biology", () => {
-    expect(normaliseEseb(grantRaw).scope).toContain("evolutionary biology");
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    expect(normaliseEseb(grantRaw).scope).toBeNull();
+  });
+
+  it("passes through eligibility", () => {
+    expect(normaliseEseb(grantRaw).eligibility).toContain("ESEB members");
+  });
+
+  it("passes through null eligibility", () => {
+    expect(normaliseEseb(prizeRaw).eligibility).toBeNull();
   });
 });

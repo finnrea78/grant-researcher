@@ -7,6 +7,7 @@ export interface RawEsebGrant {
   status: string;
   description: string | null;
   amountRaw: string | null;
+  eligibility: string | null;
 }
 
 const PRIZE_KEYWORDS = /prize|award|fellowship|medal/i;
@@ -35,8 +36,8 @@ export function normaliseEseb(raw: RawEsebGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "evolutionary biology, ecology, genetics",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "eseb",
     source_metadata: {},
   };
