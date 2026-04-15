@@ -14,6 +14,7 @@ import { fetchCarnegieTrustSchemes } from "./sources/carnegie-trust.js";
 import { fetchHenryMooreSchemes } from "./sources/henry-moore.js";
 import { fetchERCSchemes } from "./sources/erc.js";
 import { fetchMSCASchemes } from "./sources/msca.js";
+import { fetchHIASSchemes } from "./sources/hias-hamburg.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -27,6 +28,7 @@ import { normaliseCarnegie } from "./transforms/normalise-carnegie-trust.js";
 import { normaliseHenryMoore } from "./transforms/normalise-henry-moore.js";
 import { normaliseERC } from "./transforms/normalise-erc.js";
 import { normaliseMSCA } from "./transforms/normalise-msca.js";
+import { normaliseHIAS } from "./transforms/normalise-hias-hamburg.js";
 import { upsertGrants } from "./loaders/upsert-grants.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
 import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
@@ -205,7 +207,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "european-commission",
     fetch: () => fetchMSCASchemes().then(r => r.map(normaliseMSCA)),
   },
+  {
+    displayName: "HIAS Hamburg fellowships",
+    source: "hias_hamburg",
+    funderSlug: "hias-hamburg",
+    fetch: () => fetchHIASSchemes().then(r => r.map(normaliseHIAS)),
+  },
 ];
+
+program
+  .command("hias-hamburg")
+  .description("Ingest fellowship calls from Hamburg Institute for Advanced Study")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "HIAS Hamburg fellowships",
+      source: "hias_hamburg",
+      funderSlug: "hias-hamburg",
+      fetch: () => fetchHIASSchemes().then(r => r.map(normaliseHIAS)),
+    });
+  });
 
 program
   .command("msca")
