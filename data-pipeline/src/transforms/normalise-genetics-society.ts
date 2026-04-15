@@ -10,6 +10,7 @@ export interface RawGeneticsSocietyGrant {
   deadlineRaw: string | null;
   amountRaw: string | null;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseGeneticsSociety(raw: RawGeneticsSocietyGrant): NormalisedOpportunity {
@@ -35,8 +36,8 @@ export function normaliseGeneticsSociety(raw: RawGeneticsSocietyGrant): Normalis
     url: raw.url,
     funding_type: raw.title.toLowerCase().includes("studentship") ? "studentship" : "grant",
     description: raw.description,
-    eligibility: null,
-    scope: "genetics, genomics, heredity",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "genetics_society",
     source_metadata: {},
   };

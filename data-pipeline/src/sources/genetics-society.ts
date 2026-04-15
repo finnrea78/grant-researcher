@@ -37,14 +37,29 @@ export function parseGeneticsSocietyPage(
   const title = $("h1, h2").first().text().trim();
   if (!title) return null;
 
-  // Description: first substantial <p> not containing just a heading word
-  let description: string | null = null;
+  // Description: collect substantial paragraphs from the page content
+  const descParts: string[] = [];
   $("p").each((_i, el) => {
-    if (description) return;
     const text = $(el).text().trim();
-    if (text.length > 30 && !/^(grants?|apply|eligib)/i.test(text)) {
-      description = text;
+    if (text.length > 60 && !/^(apply|log in|sign in|mySociety)/i.test(text)) {
+      descParts.push(text);
     }
+  });
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  // Eligibility: extract section under eligibility heading or collect eligibility-related paragraphs
+  let eligibility: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (eligibility !== null) return;
+    if (!/eligibility|who can apply|who is eligible/i.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
   });
 
   // Deadline: first <p> containing "deadline" with a parseable date
@@ -97,6 +112,7 @@ export function parseGeneticsSocietyPage(
     deadlineRaw,
     amountRaw,
     description,
+    eligibility,
   };
 }
 

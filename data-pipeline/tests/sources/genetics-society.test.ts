@@ -4,7 +4,7 @@ import { normaliseGeneticsSociety } from "../../src/transforms/normalise-genetic
 const FIELDWORK_URL = "https://genetics.org.uk/grants/heredity-fieldwork-grant/";
 const CONFERENCE_URL = "https://genetics.org.uk/grants/junior-scientist-conference-grants/";
 
-// Fixture: scheme with specific year deadline
+// Fixture: scheme with specific year deadline and eligibility section
 const FIXTURE_WITH_YEAR = `
 <!DOCTYPE html>
 <html lang="en">
@@ -12,7 +12,9 @@ const FIXTURE_WITH_YEAR = `
 <main>
   <h2>Heredity Fieldwork Grant</h2>
   <p>The Genetics Society has made awards up to £2,000 available to cover travel and accommodation costs associated with a field-based genetic research project.</p>
-  <p>Eligible applicants are postgraduate or postdoctoral researchers at a UK institution.</p>
+  <p>These grants are intended to support projects that require access to natural populations or specific geographical locations where the study organisms are found.</p>
+  <h3>Eligibility</h3>
+  <p>Eligible applicants are postgraduate or postdoctoral researchers at a UK institution who are members of the Genetics Society.</p>
   <p>The deadline for 2026 applications is 31st March 2026. Applications should be submitted via the online portal.</p>
 </main>
 </body>
@@ -53,6 +55,19 @@ describe("parseGeneticsSocietyPage (with year deadline)", () => {
   it("extracts title from h2", () => {
     const result = parseGeneticsSocietyPage(FIXTURE_WITH_YEAR, FIELDWORK_URL);
     expect(result?.title).toBe("Heredity Fieldwork Grant");
+  });
+
+  it("extracts multi-paragraph description", () => {
+    const result = parseGeneticsSocietyPage(FIXTURE_WITH_YEAR, FIELDWORK_URL);
+    expect(result?.description).not.toBeNull();
+    expect(result?.description).toContain("Genetics Society has made awards");
+    expect(result?.description?.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility from eligibility section", () => {
+    const result = parseGeneticsSocietyPage(FIXTURE_WITH_YEAR, FIELDWORK_URL);
+    expect(result?.eligibility).not.toBeNull();
+    expect(result?.eligibility).toContain("postgraduate or postdoctoral");
   });
 
   it("extracts deadline from p containing deadline keyword", () => {
@@ -123,5 +138,11 @@ describe("normaliseGeneticsSociety", () => {
     const result = normaliseGeneticsSociety(raw);
     expect(result.amount_max).toBe(200_000); // £2,000 in pence
     expect(result.amount_min).toBeNull();
+  });
+
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    const raw = parseGeneticsSocietyPage(FIXTURE_WITH_YEAR, FIELDWORK_URL)!;
+    const result = normaliseGeneticsSociety(raw);
+    expect(result.scope).toBeNull();
   });
 });
