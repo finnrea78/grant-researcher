@@ -48,6 +48,8 @@ import { fetchGeneticsSocietyGrants } from "./sources/genetics-society.js";
 import { normaliseGeneticsSociety } from "./transforms/normalise-genetics-society.js";
 import { fetchMicrobiologySocietyGrants } from "./sources/microbiology-society.js";
 import { normaliseMicrobiologySociety } from "./transforms/normalise-microbiology-society.js";
+import { fetchRoyEnSocGrants } from "./sources/royensoc.js";
+import { normaliseRoyEnSoc } from "./transforms/normalise-royensoc.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -349,6 +351,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "microbiology-society",
     fetch: () => fetchMicrobiologySocietyGrants().then(r => r.map(normaliseMicrobiologySociety)),
   },
+  {
+    displayName: "Royal Entomological Society grants",
+    source: "royensoc",
+    funderSlug: "royal-entomological-society",
+    fetch: () => fetchRoyEnSocGrants().then(r => r.map(normaliseRoyEnSoc)),
+  },
 ];
 
 program
@@ -372,6 +380,18 @@ program
       source: "microbiology_society",
       funderSlug: "microbiology-society",
       fetch: () => fetchMicrobiologySocietyGrants().then(r => r.map(normaliseMicrobiologySociety)),
+    });
+  });
+
+program
+  .command("royensoc")
+  .description("Ingest grants from the Royal Entomological Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Royal Entomological Society grants",
+      source: "royensoc",
+      funderSlug: "royal-entomological-society",
+      fetch: () => fetchRoyEnSocGrants().then(r => r.map(normaliseRoyEnSoc)),
     });
   });
 

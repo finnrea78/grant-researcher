@@ -29,7 +29,8 @@ export type OpportunitySource =
   | "rgs"
   | "bps"
   | "genetics_society"
-  | "microbiology_society";
+  | "microbiology_society"
+  | "royensoc";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
