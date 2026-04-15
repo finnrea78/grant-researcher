@@ -42,7 +42,7 @@ export function parseRoyalSocietyPage(html: string): RoyalSocietyPageData {
       if (match) deadlineText = match[1].trim();
     }
 
-    schemes.push({ title, url, status, deadlineText, description });
+    schemes.push({ title, url, status, deadlineText, description, eligibility: null });
   });
 
   if (schemes.length === 0) {
@@ -59,13 +59,16 @@ export function parseRoyalSocietyPage(html: string): RoyalSocietyPageData {
 }
 
 /**
- * Parse a Royal Society individual grant page for a fuller description.
+ * Parse a Royal Society individual grant page for a fuller description and eligibility.
  * The listing cards truncate descriptions with "…"; sub-pages have the full content.
  */
-export function parseRoyalSocietyGrantPage(html: string): string | null {
+export function parseRoyalSocietyGrantPage(html: string): {
+  description: string | null;
+  eligibility: string | null;
+} {
   const $ = cheerio.load(html);
 
-  // Try specific content areas first, then fall back to main/article
+  // Multi-paragraph description from content areas
   const selectors = [
     ".section__body p",
     ".grant-detail__body p",
@@ -76,20 +79,35 @@ export function parseRoyalSocietyGrantPage(html: string): string | null {
     "main p",
   ];
 
+  let description: string | null = null;
   for (const selector of selectors) {
-    let found: string | null = null;
+    const parts: string[] = [];
     $(selector).each((_i, el) => {
-      if (found) return false; // break once found
       const text = $(el).text().trim();
-      if (text.length >= 80 && !BOILERPLATE_RE.test(text)) {
-        found = text;
-        return false;
-      }
+      if (text.length >= 60 && !BOILERPLATE_RE.test(text)) parts.push(text);
     });
-    if (found) return found;
+    if (parts.length > 0) {
+      description = parts.join("\n\n").slice(0, 2000);
+      break;
+    }
   }
 
-  return null;
+  // Eligibility from heading sections
+  let eligibility: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (eligibility !== null) return;
+    if (!/eligib|who\s+can\s+apply|who\s+is\s+eligible/i.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
+  });
+
+  return { description, eligibility };
 }
 
 export async function fetchRoyalSocietySchemes(): Promise<RawRoyalSocietyScheme[]> {
@@ -114,11 +132,11 @@ export async function fetchRoyalSocietySchemes(): Promise<RawRoyalSocietyScheme[
     console.log(`  Found ${schemes.length} grants from Royal Society`);
   }
 
-  // Enrich truncated descriptions from individual grant pages
+  // Enrich truncated descriptions and add eligibility from individual grant pages
   const enriched: RawRoyalSocietyScheme[] = [];
   for (const scheme of schemes) {
     const isTruncated = scheme.description.endsWith("…") || scheme.description.endsWith("...") || scheme.description.length < 150;
-    if (isTruncated && scheme.url) {
+    if (scheme.url) {
       const subRes = await fetchWithRetry(scheme.url, {
         headers: {
           "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -126,11 +144,12 @@ export async function fetchRoyalSocietySchemes(): Promise<RawRoyalSocietyScheme[
       });
       if (subRes.ok) {
         const subHtml = await subRes.text();
-        const richer = parseRoyalSocietyGrantPage(subHtml);
-        if (richer && richer.length > scheme.description.length) {
-          enriched.push({ ...scheme, description: richer });
-          continue;
-        }
+        const { description: richer, eligibility } = parseRoyalSocietyGrantPage(subHtml);
+        const updatedDescription = (isTruncated && richer && richer.length > scheme.description.length)
+          ? richer
+          : scheme.description;
+        enriched.push({ ...scheme, description: updatedDescription, eligibility });
+        continue;
       }
     }
     enriched.push(scheme);

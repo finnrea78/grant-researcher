@@ -8,6 +8,7 @@ export interface RawRoyalSocietyScheme {
   status: string;
   deadlineText: string | null;
   description: string;
+  eligibility: string | null;
 }
 
 export function normaliseRoyalSociety(raw: RawRoyalSocietyScheme): NormalisedOpportunity {
@@ -28,7 +29,7 @@ export function normaliseRoyalSociety(raw: RawRoyalSocietyScheme): NormalisedOpp
     url: raw.url,
     funding_type: null,
     description: raw.description || null,
-    eligibility: null,
+    eligibility: raw.eligibility,
     scope: null,
     source: "royal_society",
     source_metadata: {},
