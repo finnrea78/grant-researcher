@@ -64,6 +64,8 @@ import { fetchRhsGrants } from "./sources/royal-historical-society.js";
 import { normaliseRhs } from "./transforms/normalise-royal-historical-society.js";
 import { fetchRc1851Grants } from "./sources/royal-commission-1851.js";
 import { normaliseRc1851 } from "./transforms/normalise-royal-commission-1851.js";
+import { fetchAsabGrants } from "./sources/asab.js";
+import { normaliseAsab } from "./transforms/normalise-asab.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -413,6 +415,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "royal-commission-1851",
     fetch: () => fetchRc1851Grants().then(r => r.map(normaliseRc1851)),
   },
+  {
+    displayName: "ASAB grants",
+    source: "asab",
+    funderSlug: "asab",
+    fetch: () => fetchAsabGrants().then(r => r.map(normaliseAsab)),
+  },
 ];
 
 program
@@ -532,6 +540,18 @@ program
       source: "royal_commission_1851",
       funderSlug: "royal-commission-1851",
       fetch: () => fetchRc1851Grants().then(r => r.map(normaliseRc1851)),
+    });
+  });
+
+program
+  .command("asab")
+  .description("Ingest grant schemes from the Association for the Study of Animal Behaviour")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "ASAB grants",
+      source: "asab",
+      funderSlug: "asab",
+      fetch: () => fetchAsabGrants().then(r => r.map(normaliseAsab)),
     });
   });
 

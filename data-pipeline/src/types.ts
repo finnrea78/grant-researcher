@@ -37,7 +37,8 @@ export type OpportunitySource =
   | "eseb"
   | "endocrinology"
   | "royal_historical_society"
-  | "royal_commission_1851";
+  | "royal_commission_1851"
+  | "asab";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
