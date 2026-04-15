@@ -10,6 +10,7 @@ export interface RawBouGrant {
   description: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseBou(raw: RawBouGrant): NormalisedOpportunity {
@@ -43,8 +44,8 @@ export function normaliseBou(raw: RawBouGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "ornithology, bird biology",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "bou",
     source_metadata: {},
   };

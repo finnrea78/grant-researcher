@@ -61,6 +61,7 @@ export function parseBouGrantPage(html: string): {
   amountRaw: string | null;
   deadlineRaw: string | null;
   description: string | null;
+  eligibility: string | null;
   status: string;
 } {
   const $ = cheerio.load(html);
@@ -83,14 +84,29 @@ export function parseBouGrantPage(html: string): {
     deadlineRaw = deadlineMatch[1].replace(",", "").trim();
   }
 
-  // Description: first substantive paragraph from body
-  let description: string | null = null;
+  // Description: collect substantial paragraphs
+  const descParts: string[] = [];
   $("main p, article p, .fusion-post-content p").each((_i, el) => {
     const text = $(el).text().trim();
-    if (text.length >= 80 && !text.match(/^\s*home\s*$/i)) {
-      description = text;
-      return false; // break
+    if (text.length >= 60 && !text.match(/^\s*home\s*$/i)) {
+      descParts.push(text);
     }
+  });
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  // Eligibility: section under relevant heading
+  let eligibility: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (eligibility !== null) return;
+    if (!/eligibility|who can apply|who is eligible|criteria/i.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
   });
 
   let status = "open";
@@ -99,7 +115,7 @@ export function parseBouGrantPage(html: string): {
     if (!isNaN(parsed.getTime()) && parsed < new Date()) status = "closed";
   }
 
-  return { title, amountRaw, deadlineRaw, description, status };
+  return { title, amountRaw, deadlineRaw, description, eligibility, status };
 }
 
 /**
@@ -111,6 +127,7 @@ async function fetchBouPageViaApi(pageUrl: string): Promise<{
   amountRaw: string | null;
   deadlineRaw: string | null;
   description: string | null;
+  eligibility: string | null;
   status: string;
 } | null> {
   // Extract the slug from the URL path, e.g. /warham-studentship/ or /funding/brenda-and-tony-gibbs-award/
@@ -170,6 +187,7 @@ export async function fetchBouGrants(): Promise<RawBouGrant[]> {
         description: listingDesc,
         amountRaw: listingAmount,
         deadlineRaw: null,
+        eligibility: null,
       });
       continue;
     }
@@ -181,6 +199,7 @@ export async function fetchBouGrants(): Promise<RawBouGrant[]> {
       description: details.description ?? listingDesc,
       amountRaw: details.amountRaw ?? listingAmount,
       deadlineRaw: details.deadlineRaw,
+      eligibility: details.eligibility ?? null,
     });
   }
 

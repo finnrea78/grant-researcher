@@ -53,9 +53,11 @@ const GRANT_PAGE_FIXTURE = `
 <article>
   <span class="entry-title">BOU Research Fund</span>
   <div class="fusion-post-content">
-    <p>The BOU Research Fund provides grants of up to £2,000 to ornithologists.</p>
+    <p>The BOU Research Fund provides grants of up to £2,000 to ornithologists conducting original research on birds.</p>
     <p><strong>Closing date for applications: 31 March 2026</strong></p>
     <p>Applications should be submitted via the online portal.</p>
+    <h3>Eligibility</h3>
+    <p>Applicants must be members of the BOU. The fund is open to researchers at any career stage, from students to established professionals.</p>
   </div>
 </article>
 </body>
@@ -169,6 +171,22 @@ describe("parseBouGrantPage", () => {
     const result = parseBouGrantPage(GRANT_PAGE_DEADLINE2_FIXTURE);
     expect(result.status).toBe("open");
   });
+
+  it("extracts multi-paragraph description", () => {
+    const result = parseBouGrantPage(GRANT_PAGE_FIXTURE);
+    expect(result.description).toContain("BOU Research Fund");
+    expect(result.description!.length).toBeGreaterThan(80);
+  });
+
+  it("extracts eligibility from heading section", () => {
+    const result = parseBouGrantPage(GRANT_PAGE_FIXTURE);
+    expect(result.eligibility).toContain("members of the BOU");
+  });
+
+  it("returns null eligibility when no eligibility heading", () => {
+    const result = parseBouGrantPage(GRANT_PAGE_NO_DEADLINE);
+    expect(result.eligibility).toBeNull();
+  });
 });
 
 describe("normaliseBou", () => {
@@ -179,6 +197,7 @@ describe("normaliseBou", () => {
     description: "Supports ornithological research. Grants up to £2,000.",
     amountRaw: "up to £2,000",
     deadlineRaw: "31 March 2026",
+    eligibility: null,
   };
 
   it("sets source to bou", () => {
@@ -211,8 +230,13 @@ describe("normaliseBou", () => {
     expect(normaliseBou(bursaryRaw).funding_type).toBe("bursary");
   });
 
-  it("sets scope to ornithology", () => {
-    expect(normaliseBou(raw).scope).toContain("ornithology");
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    expect(normaliseBou(raw).scope).toBeNull();
+  });
+
+  it("passes through eligibility", () => {
+    const withElig = { ...raw, eligibility: "Must be a BOU member." };
+    expect(normaliseBou(withElig).eligibility).toContain("BOU member");
   });
 
   it("generates a slug", () => {
