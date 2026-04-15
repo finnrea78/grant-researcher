@@ -92,6 +92,7 @@ export function parseActionMedicalPage(
       openDateRaw: null,
       deadlineRaw: null,
       fullDeadlineRaw: null,
+      eligibility: null,
     });
     return grants;
   }
@@ -113,6 +114,21 @@ export function parseActionMedicalPage(
     // Description: first <p> text in toggle
     const description = $toggle.find("p").first().text().trim() || null;
 
+    // Eligibility: extract from toggle content heading sections
+    let eligibility: string | null = null;
+    $toggle.find("h2, h3, h4, strong").each((_j, el) => {
+      if (eligibility !== null) return;
+      if (!/eligib|who\s+can\s+apply|who\s+is\s+eligible/i.test($(el).text().trim())) return;
+      const parts: string[] = [];
+      let sibling = $(el).parent().next();
+      while (sibling.length && !sibling.is("h2, h3, h4")) {
+        const text = sibling.text().trim();
+        if (text) parts.push(text);
+        sibling = sibling.next();
+      }
+      if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
+    });
+
     grants.push({
       title,
       url: pageUrl,
@@ -121,6 +137,7 @@ export function parseActionMedicalPage(
       openDateRaw: openDateRaw ?? null,
       deadlineRaw: deadlineRaw ?? null,
       fullDeadlineRaw: fullDeadlineRaw ?? null,
+      eligibility,
     });
   }
 

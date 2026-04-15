@@ -133,4 +133,9 @@ describe("normaliseActionMedical", () => {
     expect(result.status).toBe("open");
     expect(result.deadline_date).toBe("2027-06-09");
   });
+
+  it("sets scope to null", () => {
+    const raw = parseActionMedicalPage(FIXTURE_NO_CALLS, PAGE_URL, "Project Grants")[0];
+    expect(normaliseActionMedical(raw).scope).toBeNull();
+  });
 });

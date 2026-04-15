@@ -10,6 +10,7 @@ export interface RawActionMedicalGrant {
   openDateRaw: string | null;
   deadlineRaw: string | null;
   fullDeadlineRaw: string | null;
+  eligibility: string | null;
 }
 
 const BASE_URL = "https://action.org.uk";
@@ -37,8 +38,8 @@ export function normaliseActionMedical(raw: RawActionMedicalGrant): NormalisedOp
     url: raw.url.startsWith("http") ? raw.url : `${BASE_URL}${raw.url}`,
     funding_type: "grant",
     description: raw.description,
-    eligibility: null,
-    scope: "child health, disability prevention",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "action_medical",
     source_metadata: {
       open_date: raw.openDateRaw,
