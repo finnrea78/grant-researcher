@@ -1,4 +1,4 @@
-import { parseBiochemPage } from "../../src/sources/biochemical-society";
+import { parseBiochemPage, parseBiochemDetailPage } from "../../src/sources/biochemical-society";
 import { normaliseBiochem } from "../../src/transforms/normalise-biochemical-society";
 
 const FIXTURE = `
@@ -145,5 +145,41 @@ describe("normaliseBiochem", () => {
     const raw = parseBiochemPage(FIXTURE)[0];
     const result = normaliseBiochem(raw);
     expect(result.source_metadata.category).toBe("Conference and Travel Grants");
+  });
+
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    const raw = parseBiochemPage(FIXTURE)[0];
+    const result = normaliseBiochem(raw);
+    expect(result.scope).toBeNull();
+  });
+});
+
+const FIXTURE_DETAIL = `
+<!DOCTYPE html>
+<html lang="en">
+<body>
+<main>
+  <h1>General Travel Grants</h1>
+  <p>The Biochemical Society offers General Travel Grants to support members to attend national and international scientific conferences and training events in person.</p>
+  <p>Grants of up to £500 are available for national conferences. Up to £1,000 is available for international conferences, awarded in exceptional cases.</p>
+  <h2>Eligibility</h2>
+  <p>Applicants must be Postgraduate, Early Career, Full, or Emeritus members of the Society and have held membership for at least 12 months prior to the deadline.</p>
+  <p>Funding cannot be received from this scheme in consecutive years.</p>
+</main>
+</body>
+</html>`;
+
+describe("parseBiochemDetailPage", () => {
+  it("extracts multi-paragraph description", () => {
+    const result = parseBiochemDetailPage(FIXTURE_DETAIL);
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("General Travel Grants");
+    expect(result.description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility from eligibility heading section", () => {
+    const result = parseBiochemDetailPage(FIXTURE_DETAIL);
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("Postgraduate");
   });
 });
