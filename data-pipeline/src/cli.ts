@@ -28,6 +28,8 @@ import { fetchActionMedicalGrants } from "./sources/action-medical.js";
 import { normaliseActionMedical } from "./transforms/normalise-action-medical.js";
 import { fetchVivensaGrants } from "./sources/vivensa.js";
 import { normaliseVivensa } from "./transforms/normalise-vivensa.js";
+import { fetchEmboGrants } from "./sources/embo.js";
+import { normaliseEmbo } from "./transforms/normalise-embo.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -269,7 +271,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "vivensa-foundation",
     fetch: () => fetchVivensaGrants().then(r => r.map(normaliseVivensa)),
   },
+  {
+    displayName: "EMBO funding programmes",
+    source: "embo",
+    funderSlug: "embo",
+    fetch: () => fetchEmboGrants().then(r => r.map(normaliseEmbo)),
+  },
 ];
+
+program
+  .command("embo")
+  .description("Ingest EMBO funding programmes (European Molecular Biology Organization)")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "EMBO funding programmes",
+      source: "embo",
+      funderSlug: "embo",
+      fetch: () => fetchEmboGrants().then(r => r.map(normaliseEmbo)),
+    });
+  });
 
 program
   .command("vivensa-foundation")
