@@ -1,4 +1,5 @@
-import { parseHeritageFundPage } from "../../src/sources/heritage-fund";
+import { parseHeritageFundPage, parseHeritageFundDetailPage } from "../../src/sources/heritage-fund";
+import { normaliseHeritageFund } from "../../src/transforms/normalise-heritage-fund";
 
 // Minimal fixture matching real Drupal CMS structure at heritagefund.org.uk
 const FIXTURE_HTML = `
@@ -50,6 +51,48 @@ const FIXTURE_HTML = `
 </div>
 </body>
 </html>`;
+
+const FIXTURE_DETAIL = `
+<!DOCTYPE html>
+<html lang="en">
+<body>
+<main>
+  <h1>National Lottery Heritage Grants £10,000 to £250,000</h1>
+  <p>The National Lottery Heritage Fund finances initiatives that connect people and communities to the national, regional and local heritage of the UK.</p>
+  <p>Projects may address various heritage types including buildings, landscapes, cultures, museums, and community heritage. Eligible activities include volunteer expenses, staff training, and conservation work.</p>
+  <h2>Who can apply</h2>
+  <p>Not-for-profit organisations, charities, community groups, faith organisations, local authorities, and public sector bodies are eligible to apply.</p>
+  <p>Applicants must maintain a bank account, governing document, and at least two unrelated board members.</p>
+</main>
+</body>
+</html>`;
+
+describe("parseHeritageFundDetailPage", () => {
+  it("extracts multi-paragraph description", () => {
+    const result = parseHeritageFundDetailPage(FIXTURE_DETAIL);
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("National Lottery Heritage Fund");
+    expect(result.description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility from who can apply section", () => {
+    const result = parseHeritageFundDetailPage(FIXTURE_DETAIL);
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("Not-for-profit");
+  });
+});
+
+describe("normaliseHeritageFund", () => {
+  it("maps eligibility field", () => {
+    const raw = { title: "Grant", url: "https://example.com", description: "desc", eligibility: "Not-for-profit orgs" };
+    expect(normaliseHeritageFund(raw).eligibility).toBe("Not-for-profit orgs");
+  });
+
+  it("sets eligibility to null when not provided", () => {
+    const raw = { title: "Grant", url: "https://example.com", description: "desc", eligibility: null };
+    expect(normaliseHeritageFund(raw).eligibility).toBeNull();
+  });
+});
 
 describe("parseHeritageFundPage", () => {
   it("extracts all programme articles", () => {

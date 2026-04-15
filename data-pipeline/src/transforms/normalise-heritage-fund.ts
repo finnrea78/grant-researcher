@@ -6,6 +6,7 @@ export interface RawHeritageFundScheme {
   title: string;
   url: string;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseHeritageFund(raw: RawHeritageFundScheme): NormalisedOpportunity {
@@ -27,7 +28,7 @@ export function normaliseHeritageFund(raw: RawHeritageFundScheme): NormalisedOpp
     url: raw.url,
     funding_type: "grant",
     description: raw.description,
-    eligibility: null,
+    eligibility: raw.eligibility,
     scope: null,
     source: "heritage_fund",
     source_metadata: {},
