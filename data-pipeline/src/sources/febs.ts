@@ -45,13 +45,15 @@ export function parseFebsListingPage(html: string): string[] {
  * Parse an individual FEBS grant page.
  *
  * Title: <section.page_header h2.hero_item__title> or <h1>
+ * Description: paragraphs before first h2 section, or all p elements in content
+ * Eligibility: under <h2>ELIGIBILITY</h2> section
  * Amount: under <h2>BENEFITS</h2> → next sibling <p> containing <strong>€
  * Deadline: under <h2>APPLICATION</h2> → look for date patterns in prose
  */
 export function parseFebsGrantPage(
   html: string,
   url: string
-): Pick<RawFebsGrant, "title" | "amountRaw" | "deadlineRaw" | "status"> {
+): Pick<RawFebsGrant, "title" | "description" | "eligibility" | "amountRaw" | "deadlineRaw" | "status"> {
   const $ = cheerio.load(html);
 
   // Title from hero heading
@@ -63,13 +65,42 @@ export function parseFebsGrantPage(
 
   const $content = $("div.text_column--65, .entry-content, main article").first();
 
+  let description: string | null = null;
+  let eligibility: string | null = null;
   let amountRaw: string | null = null;
   let deadlineRaw: string | null = null;
   let status = "open";
 
-  // Walk h2 sections to find BENEFITS and APPLICATION
+  // Description: collect paragraphs before the first h2 section
+  const descParts: string[] = [];
+  $content.children().each((_i, el) => {
+    if ($(el).is("h2")) return false; // stop at first h2
+    const text = $(el).text().trim();
+    if (text.length > 60) descParts.push(text);
+  });
+  // If no pre-section description, collect all p tags in content
+  if (descParts.length === 0) {
+    $content.find("p").each((_i, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 60) descParts.push(text);
+    });
+  }
+  if (descParts.length > 0) description = descParts.join("\n\n").slice(0, 2000);
+
+  // Walk h2 sections to find ELIGIBILITY, BENEFITS, and APPLICATION
   $content.find("h2").each((_i, h2) => {
     const h2Text = $(h2).text().trim().toLowerCase();
+
+    if (/eligibility/i.test(h2Text) && !eligibility) {
+      const parts: string[] = [];
+      let $el = $(h2).next();
+      while ($el.length && !$el.is("h2")) {
+        const text = $el.text().trim();
+        if (text) parts.push(text);
+        $el = $el.next();
+      }
+      if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
+    }
 
     if (/benefits/i.test(h2Text) && !amountRaw) {
       // Collect following p siblings until next h2
@@ -111,7 +142,7 @@ export function parseFebsGrantPage(
     }
   });
 
-  return { title, amountRaw, deadlineRaw, status };
+  return { title, description, eligibility, amountRaw, deadlineRaw, status };
 }
 
 export async function fetchFebsGrants(): Promise<RawFebsGrant[]> {

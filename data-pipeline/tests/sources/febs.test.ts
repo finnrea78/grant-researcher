@@ -42,11 +42,12 @@ const GRANT_PAGE_FIXTURE = `
   </div>
 </section>
 <div class="text_column text_column--65">
+  <p>FEBS Short-Term Fellowships are awarded for the purpose of scientific collaboration, advanced training or employing techniques not available at the applicant's usual place of work. Visits cover stays of up to two or, in exceptional cases, three months.</p>
   <h2>BENEFITS</h2>
   <p><u>Stipend and travel costs</u></p>
   <p>The daily subsistence allowance amounts to <strong>€100 per day</strong>. Travel costs will provide for an economy flight up to a maximum of €300.</p>
   <h2>ELIGIBILITY</h2>
-  <p>Applicants must be early-career scientists.</p>
+  <p>Applicants must be early-career scientists holding a PhD earned within six years or currently pursuing a doctorate with at least one published paper as primary author.</p>
   <h2>APPLICATION</h2>
   <p>Applications may be made throughout the year but should be submitted at least three months before the proposed starting date.</p>
 </div>
@@ -125,6 +126,18 @@ describe("parseFebsGrantPage", () => {
     expect(result.title).toBe("Short-Term Fellowships");
   });
 
+  it("extracts description from paragraphs before first h2", () => {
+    const result = parseFebsGrantPage(GRANT_PAGE_FIXTURE, URL);
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("FEBS Short-Term Fellowships");
+  });
+
+  it("extracts eligibility from ELIGIBILITY section", () => {
+    const result = parseFebsGrantPage(GRANT_PAGE_FIXTURE, URL);
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("early-career scientists");
+  });
+
   it("extracts € amount from BENEFITS section strong tag", () => {
     const result = parseFebsGrantPage(GRANT_PAGE_FIXTURE, URL);
     expect(result.amountRaw).toContain("€100");
@@ -156,6 +169,8 @@ describe("normaliseFebs", () => {
     title: "Short-Term Fellowships",
     url: "https://www.febs.org/funding/fellowships/short-term-fellowships/",
     status: "open",
+    description: null,
+    eligibility: null,
     amountRaw: "€100 per day",
     deadlineRaw: null,
   };
@@ -190,8 +205,8 @@ describe("normaliseFebs", () => {
     expect(normaliseFebs(meetingRaw).funding_type).toBe("bursary");
   });
 
-  it("sets scope to biochemistry", () => {
-    expect(normaliseFebs(raw).scope).toContain("biochemistry");
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    expect(normaliseFebs(raw).scope).toBeNull();
   });
 
   it("generates a slug", () => {

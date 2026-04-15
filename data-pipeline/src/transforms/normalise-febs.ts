@@ -7,6 +7,8 @@ export interface RawFebsGrant {
   title: string;
   url: string;
   status: string;
+  description: string | null;
+  eligibility: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
 }
@@ -41,9 +43,9 @@ export function normaliseFebs(raw: RawFebsGrant): NormalisedOpportunity {
     amount_currency: currency,
     url: raw.url,
     funding_type: fundingType,
-    description: null,
-    eligibility: null,
-    scope: "biochemistry, molecular biology, life sciences",
+    description: raw.description,
+    eligibility: raw.eligibility,
+    scope: null,
     source: "febs",
     source_metadata: {},
   };
