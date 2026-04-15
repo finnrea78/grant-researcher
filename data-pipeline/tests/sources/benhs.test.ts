@@ -117,9 +117,10 @@ describe("parseBenhsGrantsPage", () => {
     expect(results.length).toBe(2);
   });
 
-  it("extracts description from first paragraph", () => {
+  it("extracts multi-paragraph description", () => {
     const results = parseBenhsGrantsPage(PAGE_FIXTURE);
     expect(results[0].description).toContain("entomological research");
+    expect(results[0].description!.length).toBeGreaterThan(80);
   });
 });
 
@@ -131,6 +132,7 @@ describe("normaliseBenhs", () => {
     description: "Supports entomological research into leaf miners and Diptera.",
     amountRaw: "up to £600",
     deadlineRaw: "30 April 2026",
+    eligibility: null,
   };
 
   it("sets source to benhs", () => {
@@ -158,8 +160,8 @@ describe("normaliseBenhs", () => {
     expect(normaliseBenhs(bursaryRaw).funding_type).toBe("bursary");
   });
 
-  it("sets scope to entomology", () => {
-    expect(normaliseBenhs(raw).scope).toContain("entomology");
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    expect(normaliseBenhs(raw).scope).toBeNull();
   });
 
   it("generates a slug", () => {

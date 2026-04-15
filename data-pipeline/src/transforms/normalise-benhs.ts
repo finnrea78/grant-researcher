@@ -10,6 +10,7 @@ export interface RawBenhsGrant {
   description: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseBenhs(raw: RawBenhsGrant): NormalisedOpportunity {
@@ -37,8 +38,8 @@ export function normaliseBenhs(raw: RawBenhsGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "entomology, invertebrates, natural history",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "benhs",
     source_metadata: {},
   };

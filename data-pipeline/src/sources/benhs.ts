@@ -80,8 +80,8 @@ export function parseBenhsGrantsPage(html: string): RawBenhsGrant[] {
         }
       }
 
-      // Description: take first non-empty paragraph
-      if (descParts.length === 0 && text.length > 20 && !text.match(/^\d{1,2}|closing date/i)) {
+      // Description: collect substantial paragraphs
+      if (text.length > 40 && !text.match(/closing date/i)) {
         descParts.push(text);
       }
     });
@@ -93,11 +93,23 @@ export function parseBenhsGrantsPage(html: string): RawBenhsGrant[] {
       if (!isNaN(parsed.getTime()) && parsed < new Date()) status = "closed";
     }
 
+    // Extract eligibility: look for "open to" or "awards are open" pattern
+    let eligibility: string | null = null;
+    for (const part of descParts) {
+      if (/open to|eligible|applicants must|awards are/i.test(part)) {
+        eligibility = part.slice(0, 500);
+        break;
+      }
+    }
+
+    const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
     grants.push({
       title,
       url: GRANTS_URL,
       status,
-      description: descParts[0] ?? null,
+      description,
+      eligibility,
       amountRaw: amountRaw ? `up to ${amountRaw}` : null,
       deadlineRaw,
     });
