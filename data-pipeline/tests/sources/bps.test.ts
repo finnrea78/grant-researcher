@@ -1,4 +1,4 @@
-import { parseBpsPage, extractBpsNextPage } from "../../src/sources/bps";
+import { parseBpsPage, extractBpsNextPage, parseBpsDetailPage } from "../../src/sources/bps";
 import { normaliseBps } from "../../src/transforms/normalise-bps";
 
 const BASE_URL = "https://www.bps.ac.uk";
@@ -202,5 +202,40 @@ describe("normaliseBps", () => {
     const raw = parseBpsPage(FIXTURE_PAGE1).find(r => r.category === "Prize")!;
     const result = normaliseBps(raw);
     expect(result.funding_type).toBe("prize");
+  });
+
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    const raw = parseBpsPage(FIXTURE_PAGE1)[0];
+    const result = normaliseBps(raw);
+    expect(result.scope).toBeNull();
+  });
+});
+
+const FIXTURE_DETAIL = `
+<!DOCTYPE html>
+<html lang="en">
+<body>
+<main>
+  <h1>Ambassadors Grant</h1>
+  <p>As an Ambassador you can apply for up to £250 a year to enable you to promote pharmacology and the Society within your organisation or institution.</p>
+  <p>Multiple ambassadors may combine their grants for larger initiatives. Successful applicants must submit a completion report within one year of the award.</p>
+  <h2>Eligibility</h2>
+  <p>Applicants must be a registered Ambassador of the British Pharmacological Society and be organising a pharmacology engagement activity.</p>
+</main>
+</body>
+</html>`;
+
+describe("parseBpsDetailPage", () => {
+  it("extracts multi-paragraph description", () => {
+    const result = parseBpsDetailPage(FIXTURE_DETAIL);
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("Ambassador");
+    expect(result.description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility from eligibility heading section", () => {
+    const result = parseBpsDetailPage(FIXTURE_DETAIL);
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("registered Ambassador");
   });
 });

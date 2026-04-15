@@ -1,6 +1,48 @@
 import * as cheerio from "cheerio";
 import { fetchWithRetry } from "../utils/fetchWithRetry.js";
+import { sleep } from "../utils/sleep.js";
 import type { RawBpsGrant } from "../transforms/normalise-bps.js";
+
+const DETAIL_DELAY_MS = 300;
+
+function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string | null {
+  let result: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (result !== null) return;
+    if (!headingPattern.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) result = parts.join("\n\n").slice(0, 1500);
+  });
+  return result;
+}
+
+export function parseBpsDetailPage(html: string): {
+  description: string | null;
+  eligibility: string | null;
+} {
+  const $ = cheerio.load(html);
+
+  const descParts: string[] = [];
+  const selectors = ["main p", "article p", ".article-body p", ".articlecontent p", ".content p", "body p"];
+  for (const sel of selectors) {
+    $(sel).each((_i, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 60) descParts.push(text);
+    });
+    if (descParts.length > 0) break;
+  }
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  const eligibility = extractSection($, /who can apply|eligibility|who is eligible/i);
+
+  return { description, eligibility };
+}
 
 const BASE_URL = "https://www.bps.ac.uk";
 const LISTING_BASE = `${BASE_URL}/membership-community/prizes-awards-grants-bursaries/prizes-awards-grants/`;
@@ -51,6 +93,7 @@ export function parseBpsPage(html: string): RawBpsGrant[] {
       deadlineIso,
       amountRaw,
       description: teaserText,
+      eligibility: null,
     });
   });
 
@@ -88,5 +131,25 @@ export async function fetchBpsGrants(): Promise<RawBpsGrant[]> {
   }
 
   console.log(`  Found ${allGrants.length} BPS grant entries`);
+
+  // Enrich with detail-page content
+  for (const grant of allGrants) {
+    if (!grant.url || grant.url === LISTING_BASE) continue;
+    await sleep(DETAIL_DELAY_MS);
+    try {
+      const detailRes = await fetchWithRetry(grant.url);
+      if (!detailRes.ok) {
+        console.warn(`  BPS detail fetch failed: ${detailRes.status} ${grant.url}`);
+        continue;
+      }
+      const detailHtml = await detailRes.text();
+      const enriched = parseBpsDetailPage(detailHtml);
+      if (enriched.description) grant.description = enriched.description;
+      if (enriched.eligibility) grant.eligibility = enriched.eligibility;
+    } catch {
+      // Skip failed detail fetches — listing data is still valid
+    }
+  }
+
   return allGrants;
 }

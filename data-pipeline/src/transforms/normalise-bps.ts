@@ -10,6 +10,7 @@ export interface RawBpsGrant {
   deadlineIso: string | null; // ISO date string "YYYY-MM-DD" or null
   amountRaw: string | null;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseBps(raw: RawBpsGrant): NormalisedOpportunity {
@@ -39,8 +40,8 @@ export function normaliseBps(raw: RawBpsGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "psychology, mental health, behavioural science",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "bps",
     source_metadata: {
       category: raw.category,
