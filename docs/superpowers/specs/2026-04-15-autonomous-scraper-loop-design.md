@@ -45,14 +45,22 @@ You are an autonomous grant scraper agent. Your job each iteration:
 1. Read git log and data-pipeline/SCRAPER_LOG.md to see what's already done or skipped.
 
 2. DATA QUALITY AUDIT — Before picking a new source, check if any already-implemented
-   scraper has poor data quality in the DB. For each source in the Implemented list, run:
-     SELECT source, count(*) as total,
+   scraper has poor data quality in the DB. Run:
+     SELECT source,
+            count(*) as total,
             count(amount_min) as has_amount,
-            count(deadline_date) as has_deadline
+            count(deadline_date) as has_deadline,
+            count(description) as has_desc,
+            count(eligibility) as has_eligibility,
+            avg(length(description)) as avg_desc_len
      FROM opportunities GROUP BY source;
-   If any implemented scraper has has_amount=0 OR has_deadline=0, AND the source page
-   actually contains that data (fetch the page to check), fix the transform first.
-   Commit the fix with: fix(data-pipeline): improve amount/deadline parsing for <slug>
+   Quality bar — fix these if the data exists on the source page:
+   - has_amount = 0 (and source page shows funding amounts)
+   - has_deadline = 0 (and source page shows deadlines)
+   - avg_desc_len < 100 (description is just a short snippet — fetch detail pages instead)
+   - has_eligibility = 0 (and source page has an eligibility/who-can-apply section)
+   Fetch the source page to confirm what data is actually available before deciding to fix.
+   Commit fixes as: fix(data-pipeline): improve description/eligibility extraction for <slug>
    Only move on to a new source once all fixable quality issues are resolved.
 
 3. Pick the next untried source from the seed list in the spec at
@@ -80,13 +88,21 @@ You are an autonomous grant scraper agent. Your job each iteration:
 7. Run: npm run ingest -w data-pipeline -- <slug> — must succeed.
 
 8. After ingest, verify data quality in the DB:
-     SELECT count(*) as total, count(amount_min) as has_amount, count(deadline_date) as has_deadline
+     SELECT count(*) as total,
+            count(amount_min) as has_amount,
+            count(deadline_date) as has_deadline,
+            count(description) as has_desc,
+            count(eligibility) as has_eligibility,
+            avg(length(description)) as avg_desc_len
      FROM opportunities WHERE source='<slug>';
-   If amounts or deadlines are all NULL but the source page has that data, improve the
-   transform and re-ingest before committing. The pipeline auto-removes closed opportunities —
-   only open ones should appear in the DB.
+   Quality bar:
+   - description: should be populated and avg >100 chars — if not, fetch detail pages
+   - eligibility: should be populated if the source page has an eligibility section
+   - amount_min / deadline_date: populate if the data exists on the page
+   Improve the transform and re-ingest before committing if any of these fail.
+   The pipeline auto-removes closed opportunities — only open ones appear in the DB.
 
-9. Update SCRAPER_LOG.md: note row count, how many have amount_min set, how many have deadline_date set.
+9. Update SCRAPER_LOG.md: note row count, desc quality (avg chars), eligibility %, amount %, deadline %.
 
 10. Commit everything with message: feat(data-pipeline): add <name> opportunity scraper
 
@@ -179,9 +195,33 @@ export function parse<Slug>Page(html: string): Raw<Slug>[] { ... }
 export async function fetch<Slug>Schemes(): Promise<Raw<Slug>[]> { ... }
 ```
 
+The `Raw<Slug>` interface must include `description`, `eligibility`, and `scope` fields.
+If the source has individual grant detail pages, fetch each one to populate these fields —
+do NOT leave them null when the data exists. See `data-pipeline/src/sources/ukri-finder.ts`
+for the detail-page enrichment pattern (`fetchOpportunityDetails` + `extractSection`).
+
+**Detail page enrichment (required when individual grant pages exist):**
+```typescript
+// After fetching the listing, enrich each item from its detail page:
+const DETAIL_DELAY_MS = 300; // be polite
+for (const item of items) {
+  await sleep(DETAIL_DELAY_MS);
+  const detail = await fetchDetailPage(item.url); // fetch + cheerio parse
+  item.description = detail.description;   // first substantial paragraph from main content
+  item.eligibility = detail.eligibility;   // "Who can apply" / "Eligibility" section
+  item.scope       = detail.scope;         // "What we're looking for" / "Scope" section
+  item.amountRaw   = detail.amountRaw ?? item.amountRaw;
+  item.deadlineRaw = detail.deadlineRaw ?? item.deadlineRaw;
+}
+```
+
+Use the `extractSection($, /heading pattern/i)` helper from `ukri-finder.ts` to pull
+content from named sections by heading text — it collects sibling text until the next
+heading of equal or higher level.
+
 ```typescript
 // transforms/normalise-<slug>.ts
-export interface Raw<Slug> { title, url, status, ... }
+export interface Raw<Slug> { title, url, status, description, eligibility, scope, ... }
 export function normalise<Slug>(raw: Raw<Slug>): NormalisedOpportunity { ... }
 ```
 
@@ -190,6 +230,13 @@ export function normalise<Slug>(raw: Raw<Slug>): NormalisedOpportunity { ... }
 1. `npm test -w data-pipeline` — unit tests must pass
 2. `npm run ingest -w data-pipeline -- <slug>` — ingest must succeed (no thrown errors)
 3. Check DB: at least 1 row with `source = '<slug>'` in `opportunities` table
+4. Check DB description quality:
+   ```sql
+   SELECT name, length(description) as desc_len, eligibility IS NOT NULL as has_elig
+   FROM opportunities WHERE source='<slug>' LIMIT 5;
+   ```
+   Descriptions should be >100 chars. Eligibility should be populated if the source page
+   has an eligibility section. If not, improve the detail-page fetch before committing.
 
 If step 1 fails: debug up to 2 attempts, then skip + log.
 If step 2 fails: skip + log (likely page structure changed or blocked).
