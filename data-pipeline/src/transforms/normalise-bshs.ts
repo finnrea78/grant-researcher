@@ -10,6 +10,7 @@ export interface RawBshsGrant {
   description: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseBshs(raw: RawBshsGrant): NormalisedOpportunity {
@@ -43,8 +44,8 @@ export function normaliseBshs(raw: RawBshsGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "history of science, technology, medicine",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "bshs",
     source_metadata: {},
   };

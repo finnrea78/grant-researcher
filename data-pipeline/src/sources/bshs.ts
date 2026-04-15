@@ -64,17 +64,30 @@ export function parseBshsPage(html: string): RawBshsGrant[] {
       if (!isNaN(parsed.getTime()) && parsed < new Date()) status = "closed";
     }
 
-    // Description: first meaningful paragraph
-    let description: string | null = null;
+    // Description: collect all meaningful paragraphs for multi-paragraph description
+    const descParts: string[] = [];
     $section.find("p").each((_j, p) => {
-      if (description) return;
       const text = $(p).text().trim();
-      if (text.length > 40 && !/contact:/i.test(text)) {
-        description = text;
+      if (text.length > 40 && !/contact:/i.test(text)) descParts.push(text);
+    });
+    const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+    // Eligibility: extract from any h2/h3/h4 heading matching "eligib" or "who can"
+    let eligibility: string | null = null;
+    $section.find("h2, h3, h4").each((_j, hel) => {
+      if (eligibility !== null) return;
+      if (!/eligib|who\s+can\s+apply/i.test($(hel).text().trim())) return;
+      const parts: string[] = [];
+      let sibling = $(hel).next();
+      while (sibling.length && !sibling.is("h2, h3, h4")) {
+        const text = sibling.text().trim();
+        if (text) parts.push(text);
+        sibling = sibling.next();
       }
+      if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
     });
 
-    grants.push({ title, url: GRANTS_URL, status, amountRaw, deadlineRaw, description });
+    grants.push({ title, url: GRANTS_URL, status, amountRaw, deadlineRaw, description, eligibility });
   });
 
   return grants;

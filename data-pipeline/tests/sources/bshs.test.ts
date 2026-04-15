@@ -197,6 +197,7 @@ describe("normaliseBshs", () => {
     description: "Up to 3 bursaries of £4,000 each for history of science students.",
     amountRaw: "£4,000",
     deadlineRaw: "15 May 2026",
+    eligibility: null,
   };
 
   it("sets source to bshs", () => {
@@ -238,8 +239,8 @@ describe("normaliseBshs", () => {
     expect(normaliseBshs(prizeRaw).funding_type).toBe("prize");
   });
 
-  it("sets scope to history of science", () => {
-    expect(normaliseBshs(raw).scope).toContain("history of science");
+  it("sets scope to null", () => {
+    expect(normaliseBshs(raw).scope).toBeNull();
   });
 
   it("generates a slug", () => {
