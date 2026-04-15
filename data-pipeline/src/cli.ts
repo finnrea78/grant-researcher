@@ -66,6 +66,8 @@ import { fetchRc1851Grants } from "./sources/royal-commission-1851.js";
 import { normaliseRc1851 } from "./transforms/normalise-royal-commission-1851.js";
 import { fetchAsabGrants } from "./sources/asab.js";
 import { normaliseAsab } from "./transforms/normalise-asab.js";
+import { fetchSciGrants } from "./sources/sci.js";
+import { normaliseSci } from "./transforms/normalise-sci.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -421,6 +423,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "asab",
     fetch: () => fetchAsabGrants().then(r => r.map(normaliseAsab)),
   },
+  {
+    displayName: "SCI awards",
+    source: "sci",
+    funderSlug: "sci",
+    fetch: () => fetchSciGrants().then(r => r.map(normaliseSci)),
+  },
 ];
 
 program
@@ -552,6 +560,18 @@ program
       source: "asab",
       funderSlug: "asab",
       fetch: () => fetchAsabGrants().then(r => r.map(normaliseAsab)),
+    });
+  });
+
+program
+  .command("sci")
+  .description("Ingest award schemes from the Society of Chemical Industry")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "SCI awards",
+      source: "sci",
+      funderSlug: "sci",
+      fetch: () => fetchSciGrants().then(r => r.map(normaliseSci)),
     });
   });
 
