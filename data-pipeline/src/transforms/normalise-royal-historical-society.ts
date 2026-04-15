@@ -10,6 +10,7 @@ export interface RawRhsGrant {
   description: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseRhs(raw: RawRhsGrant): NormalisedOpportunity {
@@ -39,8 +40,8 @@ export function normaliseRhs(raw: RawRhsGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "history, historical research",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "royal_historical_society",
     source_metadata: {},
   };

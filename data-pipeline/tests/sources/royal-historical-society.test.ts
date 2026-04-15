@@ -121,6 +121,7 @@ describe("normaliseRhs", () => {
     description: "Provide funding of either £500 or £1000 to postgraduate researchers.",
     amountRaw: "£500 or £1000",
     deadlineRaw: "5 June 2026",
+    eligibility: null,
   };
 
   it("sets source to royal_historical_society", () => {

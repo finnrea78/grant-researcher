@@ -79,7 +79,7 @@ export function parseRhsPage(html: string): RawRhsGrant[] {
         .replace(/\s+/g, " ")
         .trim() || null;
 
-      grants.push({ title, url, status, description, amountRaw, deadlineRaw });
+      grants.push({ title, url, status, description, amountRaw, deadlineRaw, eligibility: null });
     });
   });
 
