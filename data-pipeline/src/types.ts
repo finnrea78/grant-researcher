@@ -21,7 +21,8 @@ export type OpportunitySource =
   | "action_medical"
   | "vivensa_foundation"
   | "embo"
-  | "hfsp";
+  | "hfsp"
+  | "biochemical_society";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {

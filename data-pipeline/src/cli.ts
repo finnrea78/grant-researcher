@@ -32,6 +32,8 @@ import { fetchEmboGrants } from "./sources/embo.js";
 import { normaliseEmbo } from "./transforms/normalise-embo.js";
 import { fetchHfspGrants } from "./sources/hfsp.js";
 import { normaliseHfsp } from "./transforms/normalise-hfsp.js";
+import { fetchBiochemGrants } from "./sources/biochemical-society.js";
+import { normaliseBiochem } from "./transforms/normalise-biochemical-society.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -285,7 +287,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "hfsp",
     fetch: () => fetchHfspGrants().then(r => r.map(normaliseHfsp)),
   },
+  {
+    displayName: "Biochemical Society grants",
+    source: "biochemical_society",
+    funderSlug: "biochemical-society",
+    fetch: () => fetchBiochemGrants().then(r => r.map(normaliseBiochem)),
+  },
 ];
+
+program
+  .command("biochemical-society")
+  .description("Ingest grants and bursaries from the Biochemical Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Biochemical Society grants",
+      source: "biochemical_society",
+      funderSlug: "biochemical-society",
+      fetch: () => fetchBiochemGrants().then(r => r.map(normaliseBiochem)),
+    });
+  });
 
 program
   .command("hfsp")
