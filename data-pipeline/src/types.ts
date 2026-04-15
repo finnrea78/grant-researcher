@@ -14,7 +14,9 @@ export type OpportunitySource =
   | "msca"
   | "hias_hamburg"
   | "netias"
-  | "innovate_uk";
+  | "innovate_uk"
+  | "blood_cancer_uk"
+  | "newton_fellowship";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {

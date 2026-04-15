@@ -18,6 +18,10 @@ import { fetchHIASSchemes } from "./sources/hias-hamburg.js";
 import { fetchNETIASSchemes } from "./sources/netias.js";
 import { fetchInnovateUKCompetitions } from "./sources/innovate-uk.js";
 import { normaliseInnovateUK } from "./transforms/normalise-innovate-uk.js";
+import { fetchBloodCancerUKSchemes } from "./sources/blood-cancer-uk.js";
+import { normaliseBloodCancerUK } from "./transforms/normalise-blood-cancer-uk.js";
+import { fetchNewtonFellowship } from "./sources/newton-fellowship.js";
+import { normaliseNewton } from "./transforms/normalise-newton.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -229,7 +233,43 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "innovate-uk",
     fetch: () => fetchInnovateUKCompetitions().then(r => r.map(normaliseInnovateUK)),
   },
+  {
+    displayName: "Blood Cancer UK funding schemes",
+    source: "blood_cancer_uk",
+    funderSlug: "blood-cancer-uk",
+    fetch: () => fetchBloodCancerUKSchemes().then(r => r.map(normaliseBloodCancerUK)),
+  },
+  {
+    displayName: "Newton International Fellowships",
+    source: "newton_fellowship",
+    funderSlug: "royal-society",
+    fetch: () => fetchNewtonFellowship().then(r => r.map(normaliseNewton)),
+  },
 ];
+
+program
+  .command("blood-cancer-uk")
+  .description("Ingest funding schemes from Blood Cancer UK")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Blood Cancer UK funding schemes",
+      source: "blood_cancer_uk",
+      funderSlug: "blood-cancer-uk",
+      fetch: () => fetchBloodCancerUKSchemes().then(r => r.map(normaliseBloodCancerUK)),
+    });
+  });
+
+program
+  .command("newton-fellowship")
+  .description("Ingest Newton International Fellowship from Royal Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Newton International Fellowships",
+      source: "newton_fellowship",
+      funderSlug: "royal-society",
+      fetch: () => fetchNewtonFellowship().then(r => r.map(normaliseNewton)),
+    });
+  });
 
 program
   .command("innovate-uk")
