@@ -16,6 +16,8 @@ import { fetchERCSchemes } from "./sources/erc.js";
 import { fetchMSCASchemes } from "./sources/msca.js";
 import { fetchHIASSchemes } from "./sources/hias-hamburg.js";
 import { fetchNETIASSchemes } from "./sources/netias.js";
+import { fetchInnovateUKCompetitions } from "./sources/innovate-uk.js";
+import { normaliseInnovateUK } from "./transforms/normalise-innovate-uk.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -221,7 +223,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "netias",
     fetch: () => fetchNETIASSchemes().then(r => r.map(normaliseNETIAS)),
   },
+  {
+    displayName: "Innovate UK competitions",
+    source: "innovate_uk",
+    funderSlug: "innovate-uk",
+    fetch: () => fetchInnovateUKCompetitions().then(r => r.map(normaliseInnovateUK)),
+  },
 ];
+
+program
+  .command("innovate-uk")
+  .description("Ingest open competitions from Innovate UK innovation funding service")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Innovate UK competitions",
+      source: "innovate_uk",
+      funderSlug: "innovate-uk",
+      fetch: () => fetchInnovateUKCompetitions().then(r => r.map(normaliseInnovateUK)),
+    });
+  });
 
 program
   .command("netias")
