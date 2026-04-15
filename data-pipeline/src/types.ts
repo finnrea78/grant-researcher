@@ -39,7 +39,8 @@ export type OpportunitySource =
   | "royal_historical_society"
   | "royal_commission_1851"
   | "asab"
-  | "sci";
+  | "sci"
+  | "sal";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
