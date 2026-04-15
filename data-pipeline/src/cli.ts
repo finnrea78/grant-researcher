@@ -30,6 +30,8 @@ import { fetchVivensaGrants } from "./sources/vivensa.js";
 import { normaliseVivensa } from "./transforms/normalise-vivensa.js";
 import { fetchEmboGrants } from "./sources/embo.js";
 import { normaliseEmbo } from "./transforms/normalise-embo.js";
+import { fetchHfspGrants } from "./sources/hfsp.js";
+import { normaliseHfsp } from "./transforms/normalise-hfsp.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -277,7 +279,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "embo",
     fetch: () => fetchEmboGrants().then(r => r.map(normaliseEmbo)),
   },
+  {
+    displayName: "HFSP funding programmes",
+    source: "hfsp",
+    funderSlug: "hfsp",
+    fetch: () => fetchHfspGrants().then(r => r.map(normaliseHfsp)),
+  },
 ];
+
+program
+  .command("hfsp")
+  .description("Ingest HFSP funding programmes (Human Frontier Science Program)")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "HFSP funding programmes",
+      source: "hfsp",
+      funderSlug: "hfsp",
+      fetch: () => fetchHfspGrants().then(r => r.map(normaliseHfsp)),
+    });
+  });
 
 program
   .command("embo")

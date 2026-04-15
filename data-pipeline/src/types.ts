@@ -20,7 +20,8 @@ export type OpportunitySource =
   | "rse"
   | "action_medical"
   | "vivensa_foundation"
-  | "embo";
+  | "embo"
+  | "hfsp";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
