@@ -58,6 +58,8 @@ import { fetchImaGrants } from "./sources/ima.js";
 import { normaliseIma } from "./transforms/normalise-ima.js";
 import { fetchEsebGrants } from "./sources/eseb.js";
 import { normaliseEseb } from "./transforms/normalise-eseb.js";
+import { fetchEndocrinologyGrants } from "./sources/endocrinology.js";
+import { normaliseEndocrinology } from "./transforms/normalise-endocrinology.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -389,6 +391,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "eseb",
     fetch: () => fetchEsebGrants().then(r => r.map(normaliseEseb)),
   },
+  {
+    displayName: "Society for Endocrinology grants",
+    source: "endocrinology",
+    funderSlug: "society-for-endocrinology",
+    fetch: () => fetchEndocrinologyGrants().then(r => r.map(normaliseEndocrinology)),
+  },
 ];
 
 program
@@ -472,6 +480,18 @@ program
       source: "eseb",
       funderSlug: "eseb",
       fetch: () => fetchEsebGrants().then(r => r.map(normaliseEseb)),
+    });
+  });
+
+program
+  .command("endocrinology")
+  .description("Ingest grant schemes from the Society for Endocrinology")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Society for Endocrinology grants",
+      source: "endocrinology",
+      funderSlug: "society-for-endocrinology",
+      fetch: () => fetchEndocrinologyGrants().then(r => r.map(normaliseEndocrinology)),
     });
   });
 
