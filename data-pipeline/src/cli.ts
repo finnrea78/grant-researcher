@@ -11,6 +11,7 @@ import { fetchNuffieldSchemes } from "./sources/nuffield.js";
 import { fetchWolfsonSchemes } from "./sources/wolfson.js";
 import { fetchHeritageFundSchemes } from "./sources/heritage-fund.js";
 import { fetchCarnegieTrustSchemes } from "./sources/carnegie-trust.js";
+import { fetchHenryMooreSchemes } from "./sources/henry-moore.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -21,6 +22,7 @@ import { normaliseNuffield } from "./transforms/normalise-nuffield.js";
 import { normaliseWolfson } from "./transforms/normalise-wolfson.js";
 import { normaliseHeritageFund } from "./transforms/normalise-heritage-fund.js";
 import { normaliseCarnegie } from "./transforms/normalise-carnegie-trust.js";
+import { normaliseHenryMoore } from "./transforms/normalise-henry-moore.js";
 import { upsertGrants } from "./loaders/upsert-grants.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
 import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
@@ -181,7 +183,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "carnegie-trust",
     fetch: () => fetchCarnegieTrustSchemes().then(r => r.map(normaliseCarnegie)),
   },
+  {
+    displayName: "Henry Moore Foundation grants",
+    source: "henry_moore",
+    funderSlug: "henry-moore-foundation",
+    fetch: () => fetchHenryMooreSchemes().then(r => r.map(normaliseHenryMoore)),
+  },
 ];
+
+program
+  .command("henry-moore")
+  .description("Ingest grant categories from Henry Moore Foundation")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Henry Moore Foundation grants",
+      source: "henry_moore",
+      funderSlug: "henry-moore-foundation",
+      fetch: () => fetchHenryMooreSchemes().then(r => r.map(normaliseHenryMoore)),
+    });
+  });
 
 program
   .command("carnegie-trust")
