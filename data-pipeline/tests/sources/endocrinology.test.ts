@@ -1,4 +1,4 @@
-import { parseEndocrinologyPage } from "../../src/sources/endocrinology";
+import { parseEndocrinologyPage, parseEndocrinologyDetailPage } from "../../src/sources/endocrinology";
 import { normaliseEndocrinology } from "../../src/transforms/normalise-endocrinology";
 
 const FIXTURE = `
@@ -61,6 +61,21 @@ const FIXTURE_EMPTY = `
 <!DOCTYPE html>
 <html><body><main><div class="row"></div></main></body></html>`;
 
+const FIXTURE_DETAIL = `
+<!DOCTYPE html>
+<html>
+<body>
+<main>
+  <h1>Travel Grant</h1>
+  <p>The Society for Endocrinology Travel Grant provides up to £500 to support members attending endocrine conferences and educational meetings worldwide.</p>
+  <p>Grants are available for UK-based members wishing to attend major international or national endocrinology meetings where they are presenting work.</p>
+  <h3>Eligibility</h3>
+  <p>Applicants must be full members of the Society for Endocrinology and based at a UK institution.</p>
+  <p>Deadline: 1 March 2026. Applications submitted via the online portal.</p>
+</main>
+</body>
+</html>`;
+
 describe("parseEndocrinologyPage", () => {
   it("parses grant-type div entries", () => {
     const results = parseEndocrinologyPage(FIXTURE);
@@ -98,7 +113,6 @@ describe("parseEndocrinologyPage", () => {
   });
 
   it("de-duplicates repeated entries", () => {
-    // Same URL appearing twice should only produce one entry
     const results = parseEndocrinologyPage(FIXTURE);
     const urls = results.map(r => r.url);
     expect(urls.length).toBe(new Set(urls).size);
@@ -109,13 +123,39 @@ describe("parseEndocrinologyPage", () => {
   });
 });
 
+describe("parseEndocrinologyDetailPage", () => {
+  it("extracts multi-paragraph description", () => {
+    const result = parseEndocrinologyDetailPage(FIXTURE_DETAIL);
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("Travel Grant provides");
+  });
+
+  it("extracts eligibility from eligibility heading section", () => {
+    const result = parseEndocrinologyDetailPage(FIXTURE_DETAIL);
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("full members of the Society");
+  });
+
+  it("extracts amount from body text", () => {
+    const result = parseEndocrinologyDetailPage(FIXTURE_DETAIL);
+    expect(result.amountRaw).toContain("£500");
+  });
+
+  it("extracts deadline from body text", () => {
+    const result = parseEndocrinologyDetailPage(FIXTURE_DETAIL);
+    expect(result.deadlineRaw).toContain("March 2026");
+  });
+});
+
 describe("normaliseEndocrinology", () => {
   const raw = {
     title: "Travel Grant",
     url: "https://www.endocrinology.org/grants-and-awards/grants/travel-grant/",
     status: "open",
     description: "To support members' travel to endocrine conferences.",
+    eligibility: "Must be a full member of the Society for Endocrinology.",
     amountRaw: null,
+    deadlineRaw: null,
   };
 
   it("sets source to endocrinology", () => {
@@ -138,11 +178,15 @@ describe("normaliseEndocrinology", () => {
     expect(normaliseEndocrinology(raw).amount_max).toBeNull();
   });
 
-  it("sets scope to include endocrinology", () => {
-    expect(normaliseEndocrinology(raw).scope).toContain("endocrinology");
+  it("sets scope to null", () => {
+    expect(normaliseEndocrinology(raw).scope).toBeNull();
   });
 
   it("generates a slug from the title", () => {
     expect(normaliseEndocrinology(raw).slug).toBe("travel-grant");
+  });
+
+  it("maps eligibility field", () => {
+    expect(normaliseEndocrinology(raw).eligibility).toContain("full member");
   });
 });
