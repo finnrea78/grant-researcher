@@ -1,9 +1,60 @@
 import * as cheerio from "cheerio";
 import { fetchWithRetry } from "../utils/fetchWithRetry.js";
+import { sleep } from "../utils/sleep.js";
 import type { RawRoyEnSocGrant } from "../transforms/normalise-royensoc.js";
 
 const BASE_URL = "https://www.royensoc.co.uk";
 const GRANTS_URL = `${BASE_URL}/membership-and-community/awards-and-grants/`;
+const DETAIL_DELAY_MS = 300;
+
+function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string | null {
+  let result: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (result !== null) return;
+    if (!headingPattern.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) result = parts.join("\n\n").slice(0, 1500);
+  });
+  return result;
+}
+
+export function parseRoyEnSocDetailPage(html: string): {
+  description: string | null;
+  eligibility: string | null;
+  deadlineRaw: string | null;
+} {
+  const $ = cheerio.load(html);
+
+  // Description: substantial paragraphs from main/article content
+  const descParts: string[] = [];
+  const selectors = ["article p", "main p", ".entry-content p", ".wp-block-post-content p", "body p"];
+  for (const sel of selectors) {
+    $(sel).each((_i, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 60) descParts.push(text);
+    });
+    if (descParts.length > 0) break;
+  }
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  // Eligibility
+  const eligibility = extractSection($, /eligibility|who can apply|who is eligible/i);
+
+  // Deadline
+  const bodyText = $("body").text();
+  const deadlineMatch = bodyText.match(
+    /(?:deadline|closing date|applications?\s+close)[:\s]+([A-Za-z0-9 ,]+(?:\d{4})?)/i
+  );
+  const deadlineRaw = deadlineMatch ? deadlineMatch[1].trim().slice(0, 100) : null;
+
+  return { description, eligibility, deadlineRaw };
+}
 
 /**
  * Parse the Royal Entomological Society awards & grants page.
@@ -72,7 +123,7 @@ export function parseRoyEnSocPage(html: string): RawRoyEnSocGrant[] {
         }
       });
 
-      grants.push({ title, url, status, description, amountRaw });
+      grants.push({ title, url, status, description, eligibility: null, deadlineRaw: null, amountRaw });
     }
   });
 
@@ -89,5 +140,26 @@ export async function fetchRoyEnSocGrants(): Promise<RawRoyEnSocGrant[]> {
   const html = await response.text();
   const grants = parseRoyEnSocPage(html);
   console.log(`  Found ${grants.length} Royal Entomological Society grant entries`);
+
+  // Enrich each grant with detail-page content
+  for (const item of grants) {
+    if (!item.url || item.url === GRANTS_URL) continue;
+    await sleep(DETAIL_DELAY_MS);
+    try {
+      const detailRes = await fetchWithRetry(item.url);
+      if (!detailRes.ok) {
+        console.warn(`  RoyEnSoc detail fetch failed: ${detailRes.status} ${item.url}`);
+        continue;
+      }
+      const detailHtml = await detailRes.text();
+      const enriched = parseRoyEnSocDetailPage(detailHtml);
+      if (enriched.description) item.description = enriched.description;
+      if (enriched.eligibility) item.eligibility = enriched.eligibility;
+      if (enriched.deadlineRaw) item.deadlineRaw = enriched.deadlineRaw;
+    } catch {
+      // Skip failed detail fetches — listing data is still valid
+    }
+  }
+
   return grants;
 }

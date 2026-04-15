@@ -1,4 +1,4 @@
-import { parseRoyEnSocPage } from "../../src/sources/royensoc";
+import { parseRoyEnSocPage, parseRoyEnSocDetailPage } from "../../src/sources/royensoc";
 import { normaliseRoyEnSoc } from "../../src/transforms/normalise-royensoc";
 
 const GRANTS_URL = "https://www.royensoc.co.uk/membership-and-community/awards-and-grants/";
@@ -134,12 +134,51 @@ describe("parseRoyEnSocPage", () => {
   });
 });
 
+const DETAIL_FIXTURE = `
+<!DOCTYPE html>
+<html>
+<body>
+<main>
+<article>
+  <p>The Small Project Grants support high-quality, innovative and standalone research projects in entomology. Projects must have a primary focus on insect science, though other terrestrial and freshwater arthropods will be considered.</p>
+  <p>All awards are made for a maximum period of 12 months and must meet the highest publishable and international standard.</p>
+  <h3>Eligibility</h3>
+  <p>Applicants must hold RES Fellow, Member, or Student Member status. The society welcomes applications from entomologists at all career stages, particularly students and early career researchers.</p>
+  <h3>Application deadline</h3>
+  <p>Applications close on 15 January 2026.</p>
+</article>
+</main>
+</body>
+</html>`;
+
+describe("parseRoyEnSocDetailPage", () => {
+  it("extracts description from article paragraphs", () => {
+    const result = parseRoyEnSocDetailPage(DETAIL_FIXTURE);
+    expect(result.description).not.toBeNull();
+    expect(result.description).toContain("Small Project Grants");
+  });
+
+  it("extracts eligibility section", () => {
+    const result = parseRoyEnSocDetailPage(DETAIL_FIXTURE);
+    expect(result.eligibility).not.toBeNull();
+    expect(result.eligibility).toContain("RES Fellow");
+  });
+
+  it("returns null for missing fields on sparse pages", () => {
+    const result = parseRoyEnSocDetailPage("<html><body><p>Short.</p></body></html>");
+    expect(result.description).toBeNull();
+    expect(result.eligibility).toBeNull();
+  });
+});
+
 describe("normaliseRoyEnSoc", () => {
   const raw = {
     title: "Small Project Grants",
     url: "https://www.royensoc.co.uk/small-project-grants/",
     status: "open",
     description: "Supports research projects in entomology.",
+    eligibility: null,
+    deadlineRaw: null,
     amountRaw: "RES Fellows and Members can apply for up to £3,000.",
   };
 
@@ -172,5 +211,9 @@ describe("normaliseRoyEnSoc", () => {
 
   it("generates a slug from the title", () => {
     expect(normaliseRoyEnSoc(raw).slug).toBe("small-project-grants");
+  });
+
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    expect(normaliseRoyEnSoc(raw).scope).toBeNull();
   });
 });
