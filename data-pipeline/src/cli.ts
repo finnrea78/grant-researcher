@@ -13,6 +13,7 @@ import { fetchHeritageFundSchemes } from "./sources/heritage-fund.js";
 import { fetchCarnegieTrustSchemes } from "./sources/carnegie-trust.js";
 import { fetchHenryMooreSchemes } from "./sources/henry-moore.js";
 import { fetchERCSchemes } from "./sources/erc.js";
+import { fetchMSCASchemes } from "./sources/msca.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -25,6 +26,7 @@ import { normaliseHeritageFund } from "./transforms/normalise-heritage-fund.js";
 import { normaliseCarnegie } from "./transforms/normalise-carnegie-trust.js";
 import { normaliseHenryMoore } from "./transforms/normalise-henry-moore.js";
 import { normaliseERC } from "./transforms/normalise-erc.js";
+import { normaliseMSCA } from "./transforms/normalise-msca.js";
 import { upsertGrants } from "./loaders/upsert-grants.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
 import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
@@ -197,7 +199,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "european-research-council",
     fetch: () => fetchERCSchemes().then(r => r.map(normaliseERC)),
   },
+  {
+    displayName: "Marie Skłodowska-Curie Actions",
+    source: "msca",
+    funderSlug: "european-commission",
+    fetch: () => fetchMSCASchemes().then(r => r.map(normaliseMSCA)),
+  },
 ];
+
+program
+  .command("msca")
+  .description("Ingest MSCA action types from Marie Skłodowska-Curie Actions")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Marie Skłodowska-Curie Actions",
+      source: "msca",
+      funderSlug: "european-commission",
+      fetch: () => fetchMSCASchemes().then(r => r.map(normaliseMSCA)),
+    });
+  });
 
 program
   .command("erc")
