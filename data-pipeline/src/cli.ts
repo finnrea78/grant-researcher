@@ -80,6 +80,8 @@ import { fetchPalassGrants } from "./sources/palass.js";
 import { normalisePalass } from "./transforms/normalise-palass.js";
 import { fetchChallengerSocietyGrants } from "./sources/challenger-society.js";
 import { normaliseChallengerSociety } from "./transforms/normalise-challenger-society.js";
+import { fetchBouGrants } from "./sources/bou.js";
+import { normaliseBou } from "./transforms/normalise-bou.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -692,6 +694,18 @@ program
       source: "challenger_society",
       funderSlug: "challenger-society",
       fetch: () => fetchChallengerSocietyGrants().then(r => r.map(normaliseChallengerSociety)),
+    });
+  });
+
+program
+  .command("bou")
+  .description("Ingest grant schemes from the British Ornithological Union")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "British Ornithological Union grants",
+      source: "bou",
+      funderSlug: "british-ornithological-union",
+      fetch: () => fetchBouGrants().then(r => r.map(normaliseBou)),
     });
   });
 
