@@ -50,6 +50,8 @@ import { fetchMicrobiologySocietyGrants } from "./sources/microbiology-society.j
 import { normaliseMicrobiologySociety } from "./transforms/normalise-microbiology-society.js";
 import { fetchRoyEnSocGrants } from "./sources/royensoc.js";
 import { normaliseRoyEnSoc } from "./transforms/normalise-royensoc.js";
+import { fetchLmsGrants } from "./sources/lms.js";
+import { normaliseLms } from "./transforms/normalise-lms.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -357,6 +359,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "royal-entomological-society",
     fetch: () => fetchRoyEnSocGrants().then(r => r.map(normaliseRoyEnSoc)),
   },
+  {
+    displayName: "London Mathematical Society grants",
+    source: "lms",
+    funderSlug: "london-mathematical-society",
+    fetch: () => fetchLmsGrants().then(r => r.map(normaliseLms)),
+  },
 ];
 
 program
@@ -392,6 +400,18 @@ program
       source: "royensoc",
       funderSlug: "royal-entomological-society",
       fetch: () => fetchRoyEnSocGrants().then(r => r.map(normaliseRoyEnSoc)),
+    });
+  });
+
+program
+  .command("lms")
+  .description("Ingest grant schemes from the London Mathematical Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "London Mathematical Society grants",
+      source: "lms",
+      funderSlug: "london-mathematical-society",
+      fetch: () => fetchLmsGrants().then(r => r.map(normaliseLms)),
     });
   });
 
