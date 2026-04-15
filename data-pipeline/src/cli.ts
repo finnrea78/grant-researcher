@@ -24,6 +24,8 @@ import { fetchNewtonFellowship } from "./sources/newton-fellowship.js";
 import { normaliseNewton } from "./transforms/normalise-newton.js";
 import { fetchRSEAwards } from "./sources/rse.js";
 import { normaliseRSE } from "./transforms/normalise-rse.js";
+import { fetchActionMedicalGrants } from "./sources/action-medical.js";
+import { normaliseActionMedical } from "./transforms/normalise-action-medical.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -253,7 +255,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "royal-society-of-edinburgh",
     fetch: () => fetchRSEAwards().then(r => r.map(normaliseRSE)),
   },
+  {
+    displayName: "Action Medical Research grants",
+    source: "action_medical",
+    funderSlug: "action-medical-research",
+    fetch: () => fetchActionMedicalGrants().then(r => r.map(normaliseActionMedical)),
+  },
 ];
+
+program
+  .command("action-medical")
+  .description("Ingest open grant calls from Action Medical Research")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Action Medical Research grants",
+      source: "action_medical",
+      funderSlug: "action-medical-research",
+      fetch: () => fetchActionMedicalGrants().then(r => r.map(normaliseActionMedical)),
+    });
+  });
 
 program
   .command("rse")
