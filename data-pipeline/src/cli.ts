@@ -40,6 +40,8 @@ import { fetchGeolsocGrants } from "./sources/geolsoc.js";
 import { normaliseGeolsoc } from "./transforms/normalise-geolsoc.js";
 import { fetchAcMedSciGrants } from "./sources/acmedsci.js";
 import { normaliseAcMedSci } from "./transforms/normalise-acmedsci.js";
+import { fetchRgsGrants } from "./sources/rgs.js";
+import { normaliseRgs } from "./transforms/normalise-rgs.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -317,7 +319,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "academy-of-medical-sciences",
     fetch: () => fetchAcMedSciGrants().then(r => r.map(normaliseAcMedSci)),
   },
+  {
+    displayName: "Royal Geographical Society grants",
+    source: "rgs",
+    funderSlug: "royal-geographical-society",
+    fetch: () => fetchRgsGrants().then(r => r.map(normaliseRgs)),
+  },
 ];
+
+program
+  .command("rgs")
+  .description("Ingest grant deadlines from Royal Geographical Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Royal Geographical Society grants",
+      source: "rgs",
+      funderSlug: "royal-geographical-society",
+      fetch: () => fetchRgsGrants().then(r => r.map(normaliseRgs)),
+    });
+  });
 
 program
   .command("acmedsci")
