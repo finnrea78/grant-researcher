@@ -5,7 +5,13 @@ const mockUpdate = jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({
 const mockSingle = jest.fn();
 const mockSelect = jest.fn().mockReturnValue({ single: mockSingle });
 const mockUpsert = jest.fn().mockReturnValue({ select: mockSelect });
-const mockFrom = jest.fn().mockReturnValue({ upsert: mockUpsert, update: mockUpdate });
+// delete chain: .delete() → .eq() → .not() resolves with { error: null, count: 0 }
+const mockDeleteNot = jest.fn().mockResolvedValue({ error: null, count: 0 });
+const mockDeleteEq = jest.fn().mockReturnValue({ not: mockDeleteNot });
+// For the all-closed case, .eq() is called last and returns a promise directly
+mockDeleteEq.mockImplementation(() => ({ not: mockDeleteNot, then: mockDeleteNot }));
+const mockDelete = jest.fn().mockReturnValue({ eq: mockDeleteEq });
+const mockFrom = jest.fn().mockReturnValue({ upsert: mockUpsert, update: mockUpdate, delete: mockDelete });
 
 jest.mock("@grant-researcher/db", () => ({
   supabase: { from: mockFrom },
@@ -47,9 +53,12 @@ const FUNDER_MAP = new Map([["ahrc", { id: "funder-uuid", name: "AHRC" }]]);
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockFrom.mockReturnValue({ upsert: mockUpsert, update: mockUpdate });
+  mockFrom.mockReturnValue({ upsert: mockUpsert, update: mockUpdate, delete: mockDelete });
   mockUpsert.mockReturnValue({ select: mockSelect });
   mockUpdate.mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
+  mockDelete.mockReturnValue({ eq: mockDeleteEq });
+  mockDeleteEq.mockImplementation(() => ({ not: mockDeleteNot, then: mockDeleteNot }));
+  mockDeleteNot.mockResolvedValue({ error: null, count: 0 });
 });
 
 describe("upsertOpportunities with embedding", () => {
