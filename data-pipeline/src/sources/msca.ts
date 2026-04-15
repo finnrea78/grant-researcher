@@ -12,23 +12,43 @@ const MSCA_ACTIONS = [
   { title: "MSCA COFUND", slug: "cofund" },
 ] as const;
 
-async function fetchActionDescription(slug: string): Promise<string | null> {
+function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string | null {
+  let result: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (result !== null) return;
+    if (!headingPattern.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) result = parts.join("\n\n").slice(0, 1500);
+  });
+  return result;
+}
+
+async function fetchActionDetails(slug: string): Promise<{ description: string | null; eligibility: string | null }> {
   const url = `${BASE_URL}/actions/${slug}`;
   try {
     const response = await fetchWithRetry(url);
-    if (!response.ok) return null;
+    if (!response.ok) return { description: null, eligibility: null };
     const html = await response.text();
     const $ = cheerio.load(html);
-    let description: string | null = null;
-    $("main p, .ecl-paragraph, .field--name-body p").each((_i, el) => {
+
+    const descParts: string[] = [];
+    $("main p, .ecl-paragraph, .field--name-body p, article p").each((_i, el) => {
       const text = $(el).text().replace(/\s+/g, " ").trim();
-      if (text && text.length > 60 && !description) {
-        description = text;
-      }
+      if (text.length > 60) descParts.push(text);
     });
-    return description;
+    const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+    const eligibility = extractSection($, /eligibility|who can apply|who is eligible|requirements|participation/i);
+
+    return { description, eligibility };
   } catch {
-    return null;
+    return { description: null, eligibility: null };
   }
 }
 
@@ -41,15 +61,16 @@ export async function fetchMSCASchemes(): Promise<RawMSCAScheme[]> {
     throw new Error(`MSCA error: ${checkResp.status} ${checkResp.statusText}`);
   }
 
-  // Fetch descriptions for all actions in parallel
+  // Fetch descriptions and eligibility for all actions in parallel
   const results = await Promise.all(
     MSCA_ACTIONS.map(async (action) => {
-      const description = await fetchActionDescription(action.slug);
+      const { description, eligibility } = await fetchActionDetails(action.slug);
       return {
         title: action.title,
         url: `${BASE_URL}/actions/${action.slug}`,
         status: "open" as const,
         description,
+        eligibility,
       };
     })
   );

@@ -6,6 +6,7 @@ export interface RawMSCAScheme {
   url: string;
   status: string;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseMSCA(raw: RawMSCAScheme): NormalisedOpportunity {
@@ -24,7 +25,7 @@ export function normaliseMSCA(raw: RawMSCAScheme): NormalisedOpportunity {
     url: raw.url,
     funding_type: "fellowship",
     description: raw.description,
-    eligibility: null,
+    eligibility: raw.eligibility,
     scope: null,
     source: "msca",
     source_metadata: {

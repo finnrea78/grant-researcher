@@ -10,6 +10,7 @@ const SAMPLE_RAW: RawMSCAScheme = {
   url: "https://marie-sklodowska-curie-actions.ec.europa.eu/actions/postdoctoral-fellowships",
   status: "open",
   description: "The objective of PFs is to support researchers' careers and foster excellence in research.",
+  eligibility: "Researchers must have a doctoral degree or at least 4 years of full-time research experience.",
 };
 
 describe("normaliseMSCA", () => {
@@ -44,5 +45,19 @@ describe("normaliseMSCA", () => {
   it("maps description", () => {
     const result = normaliseMSCA(SAMPLE_RAW);
     expect(result.description).toContain("researchers' careers");
+  });
+
+  it("passes through eligibility", () => {
+    const result = normaliseMSCA(SAMPLE_RAW);
+    expect(result.eligibility).toContain("doctoral degree");
+  });
+
+  it("passes through null eligibility", () => {
+    const noElig = { ...SAMPLE_RAW, eligibility: null };
+    expect(normaliseMSCA(noElig).eligibility).toBeNull();
+  });
+
+  it("sets scope to null", () => {
+    expect(normaliseMSCA(SAMPLE_RAW).scope).toBeNull();
   });
 });
