@@ -40,7 +40,8 @@ export type OpportunitySource =
   | "royal_commission_1851"
   | "asab"
   | "sci"
-  | "sal";
+  | "sal"
+  | "bshs";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {

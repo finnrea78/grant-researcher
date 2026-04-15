@@ -70,6 +70,8 @@ import { fetchSciGrants } from "./sources/sci.js";
 import { normaliseSci } from "./transforms/normalise-sci.js";
 import { fetchSalGrants } from "./sources/sal.js";
 import { normaliseSal } from "./transforms/normalise-sal.js";
+import { fetchBshsGrants } from "./sources/bshs.js";
+import { normaliseBshs } from "./transforms/normalise-bshs.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -437,6 +439,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "society-of-antiquaries-london",
     fetch: () => fetchSalGrants().then(r => r.map(normaliseSal)),
   },
+  {
+    displayName: "BSHS grants",
+    source: "bshs",
+    funderSlug: "bshs",
+    fetch: () => fetchBshsGrants().then(r => r.map(normaliseBshs)),
+  },
 ];
 
 program
@@ -592,6 +600,18 @@ program
       source: "sal",
       funderSlug: "society-of-antiquaries-london",
       fetch: () => fetchSalGrants().then(r => r.map(normaliseSal)),
+    });
+  });
+
+program
+  .command("bshs")
+  .description("Ingest grants from the British Society for the History of Science")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "BSHS grants",
+      source: "bshs",
+      funderSlug: "bshs",
+      fetch: () => fetchBshsGrants().then(r => r.map(normaliseBshs)),
     });
   });
 
