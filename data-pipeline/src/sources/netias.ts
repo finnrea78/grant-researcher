@@ -40,11 +40,15 @@ export function parseNETIASPage(html: string): RawNETIASScheme[] {
       }
     });
 
-    // Description from first paragraph in .content
-    const description =
-      $el.find(".content p").first().text().replace(/\s+/g, " ").trim() || null;
+    // Description: collect multiple paragraphs from .content for richer text
+    const descParts: string[] = [];
+    $el.find(".content p").each((_j, p) => {
+      const text = $(p).text().replace(/\s+/g, " ").trim();
+      if (text.length > 60) descParts.push(text);
+    });
+    const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
 
-    schemes.push({ title, ias, url, status, deadlineRaw, deadlineDatetime, description });
+    schemes.push({ title, ias, url, status, deadlineRaw, deadlineDatetime, description, eligibility: null });
   });
 
   if (schemes.length === 0) {

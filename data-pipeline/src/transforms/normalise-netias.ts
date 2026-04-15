@@ -9,6 +9,7 @@ export interface RawNETIASScheme {
   deadlineRaw: string | null;
   deadlineDatetime: string | null;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseNETIAS(raw: RawNETIASScheme): NormalisedOpportunity {
@@ -32,7 +33,7 @@ export function normaliseNETIAS(raw: RawNETIASScheme): NormalisedOpportunity {
     url: raw.url,
     funding_type: "fellowship",
     description: raw.description,
-    eligibility: null,
+    eligibility: raw.eligibility,
     scope: null,
     source: "netias",
     source_metadata: {

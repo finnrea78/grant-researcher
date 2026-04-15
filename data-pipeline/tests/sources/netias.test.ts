@@ -127,6 +127,7 @@ describe("normaliseNETIAS", () => {
     deadlineRaw: "15.07.2026 (12.00am Paris Time)",
     deadlineDatetime: "2026-07-14T22:00:00Z",
     description: "The HWK offers fellowships for outstanding researchers.",
+    eligibility: null,
   };
 
   it("maps funder_slug to netias", () => {
