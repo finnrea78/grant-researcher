@@ -74,6 +74,8 @@ import { fetchBshsGrants } from "./sources/bshs.js";
 import { normaliseBshs } from "./transforms/normalise-bshs.js";
 import { fetchBsbiGrants } from "./sources/bsbi.js";
 import { normaliseBsbi } from "./transforms/normalise-bsbi.js";
+import { fetchFebsGrants } from "./sources/febs.js";
+import { normaliseFebs } from "./transforms/normalise-febs.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -453,6 +455,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "bsbi",
     fetch: () => fetchBsbiGrants().then(r => r.map(normaliseBsbi)),
   },
+  {
+    displayName: "FEBS grants",
+    source: "febs",
+    funderSlug: "febs",
+    fetch: () => fetchFebsGrants().then(r => r.map(normaliseFebs)),
+  },
 ];
 
 program
@@ -632,6 +640,18 @@ program
       source: "bsbi",
       funderSlug: "bsbi",
       fetch: () => fetchBsbiGrants().then(r => r.map(normaliseBsbi)),
+    });
+  });
+
+program
+  .command("febs")
+  .description("Ingest grant schemes from the Federation of European Biochemical Societies")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "FEBS grants",
+      source: "febs",
+      funderSlug: "febs",
+      fetch: () => fetchFebsGrants().then(r => r.map(normaliseFebs)),
     });
   });
 
