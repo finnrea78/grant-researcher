@@ -26,6 +26,8 @@ import { fetchRSEAwards } from "./sources/rse.js";
 import { normaliseRSE } from "./transforms/normalise-rse.js";
 import { fetchActionMedicalGrants } from "./sources/action-medical.js";
 import { normaliseActionMedical } from "./transforms/normalise-action-medical.js";
+import { fetchVivensaGrants } from "./sources/vivensa.js";
+import { normaliseVivensa } from "./transforms/normalise-vivensa.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -261,7 +263,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "action-medical-research",
     fetch: () => fetchActionMedicalGrants().then(r => r.map(normaliseActionMedical)),
   },
+  {
+    displayName: "Vivensa Foundation grants",
+    source: "vivensa_foundation",
+    funderSlug: "vivensa-foundation",
+    fetch: () => fetchVivensaGrants().then(r => r.map(normaliseVivensa)),
+  },
 ];
+
+program
+  .command("vivensa-foundation")
+  .description("Ingest grant opportunities from Vivensa Foundation (formerly Dunhill Medical Trust)")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Vivensa Foundation grants",
+      source: "vivensa_foundation",
+      funderSlug: "vivensa-foundation",
+      fetch: () => fetchVivensaGrants().then(r => r.map(normaliseVivensa)),
+    });
+  });
 
 program
   .command("action-medical")
