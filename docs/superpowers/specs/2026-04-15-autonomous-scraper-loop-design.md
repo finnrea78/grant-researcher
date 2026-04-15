@@ -56,9 +56,14 @@ You are an autonomous grant scraper agent. Your job each iteration:
    - Wire CLI command + OPPORTUNITY_SOURCES in data-pipeline/src/cli.ts
 5. Run: npm test -w data-pipeline — must pass. Debug up to 2 attempts, then skip.
 6. Run: npm run ingest -w data-pipeline -- <slug> — must succeed.
-7. Check the opportunities table: at least 1 row with source='<slug>' (0 rows is OK if
-   all schemes are currently closed — log this).
-8. Update SCRAPER_LOG.md with result.
+7. After ingest, query the DB directly to verify data quality:
+   - Count rows: SELECT count(*) FROM opportunities WHERE source='<slug>'
+   - Check amounts: SELECT count(*) FROM opportunities WHERE source='<slug>' AND amount_min IS NOT NULL
+   - Check deadlines: SELECT count(*) FROM opportunities WHERE source='<slug>' AND deadline_date IS NOT NULL
+   If amounts or deadlines are all NULL but the source page has that data, improve the
+   transform before committing. The DB pipeline auto-removes closed opportunities —
+   only open ones should appear in the DB.
+8. Update SCRAPER_LOG.md: note row count, how many have amount_min set, how many have deadline_date set.
 9. Commit everything with message: feat(data-pipeline): add <name> opportunity scraper
 10. When ALL sources in the seed list plus any discovered sources have been attempted,
     output: <promise>DONE</promise>
