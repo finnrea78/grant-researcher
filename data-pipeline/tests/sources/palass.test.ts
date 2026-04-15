@@ -1,4 +1,4 @@
-import { parsePalassPage } from "../../src/sources/palass";
+import { parsePalassPage, parsePalassDetailPage } from "../../src/sources/palass";
 import { normalisePalass } from "../../src/transforms/normalise-palass";
 
 const YEAR = new Date().getFullYear();
@@ -130,6 +130,40 @@ describe("parsePalassPage", () => {
   it("returns empty array when no accordion headings", () => {
     expect(parsePalassPage(FIXTURE_EMPTY)).toHaveLength(0);
   });
+
+  it("sets eligibility to null initially (populated by detail fetch)", () => {
+    const results = parsePalassPage(FIXTURE);
+    results.forEach(r => expect(r.eligibility).toBeNull());
+  });
+});
+
+const FIXTURE_DETAIL = `
+<!DOCTYPE html>
+<html>
+<body>
+<main>
+  <h1>Research Grants</h1>
+  <p>The Palaeontological Association Research Grants scheme offers awards to assist research in palaeontology and related fields.</p>
+  <p>Awards are up to a maximum of £10,000 per project and are available to researchers at all career stages.</p>
+  <h2>Eligibility</h2>
+  <p>Applicants must be members of the Palaeontological Association at the time of application. Grants are available to researchers at all career stages, including postgraduate students and established academics.</p>
+  <h2>How to Apply</h2>
+  <p>Applications must be submitted via the online portal by the stated deadline.</p>
+</main>
+</body>
+</html>`;
+
+describe("parsePalassDetailPage", () => {
+  it("extracts multi-paragraph description", () => {
+    const result = parsePalassDetailPage(FIXTURE_DETAIL);
+    expect(result.description).toContain("Palaeontological Association");
+    expect(result.description!.length).toBeGreaterThan(100);
+  });
+
+  it("extracts eligibility section", () => {
+    const result = parsePalassDetailPage(FIXTURE_DETAIL);
+    expect(result.eligibility).toContain("members of the Palaeontological Association");
+  });
 });
 
 describe("normalisePalass", () => {
@@ -140,6 +174,7 @@ describe("normalisePalass", () => {
     description: "Awards to assist palaeontological research up to £10,000 per award.",
     amountRaw: "£10,000 GBP",
     deadlineRaw: `1 March ${MARCH_YEAR}`,
+    eligibility: null,
   };
 
   it("sets source to palass", () => {
@@ -172,8 +207,13 @@ describe("normalisePalass", () => {
     expect(normalisePalass(studentRaw).funding_type).toBe("bursary");
   });
 
-  it("sets scope to palaeontology", () => {
-    expect(normalisePalass(raw).scope).toContain("palaeontology");
+  it("sets scope to null (not hardcoded subject labels)", () => {
+    expect(normalisePalass(raw).scope).toBeNull();
+  });
+
+  it("passes through eligibility when set", () => {
+    const withElig = { ...raw, eligibility: "Open to PalAss members only." };
+    expect(normalisePalass(withElig).eligibility).toContain("PalAss members");
   });
 
   it("generates a slug", () => {

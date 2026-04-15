@@ -10,6 +10,7 @@ export interface RawPalassGrant {
   description: string | null;
   amountRaw: string | null;
   deadlineRaw: string | null;
+  eligibility: string | null;
 }
 
 export function normalisePalass(raw: RawPalassGrant): NormalisedOpportunity {
@@ -43,8 +44,8 @@ export function normalisePalass(raw: RawPalassGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
-    scope: "palaeontology, palaeobiology, Earth science",
+    eligibility: raw.eligibility,
+    scope: null,
     source: "palass",
     source_metadata: {},
   };

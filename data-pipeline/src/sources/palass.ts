@@ -1,11 +1,14 @@
 import * as cheerio from "cheerio";
 import { fetchWithRetry } from "../utils/fetchWithRetry.js";
+import { sleep } from "../utils/sleep.js";
 import type { RawPalassGrant } from "../transforms/normalise-palass.js";
 
 const BASE_URL = "https://www.palass.org";
 const GRANTS_URL = `${BASE_URL}/awards-grants/grants`;
 
 const MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December";
+
+const DETAIL_DELAY_MS = 300;
 
 /**
  * Resolve an annually-recurring deadline to the next upcoming date.
@@ -20,6 +23,38 @@ function resolveAnnualDeadline(dayMonth: string): string | null {
   const thisYear = new Date(`${day} ${month} ${now.getFullYear()}`);
   if (thisYear >= now) return `${day} ${month} ${now.getFullYear()}`;
   return `${day} ${month} ${now.getFullYear() + 1}`;
+}
+
+function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string | null {
+  let result: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (result !== null) return;
+    if (!headingPattern.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) result = parts.join("\n\n").slice(0, 1500);
+  });
+  return result;
+}
+
+export function parsePalassDetailPage(html: string): { description: string | null; eligibility: string | null } {
+  const $ = cheerio.load(html);
+
+  const descParts: string[] = [];
+  $("main p, article p, .field--body p, .layout-container p").each((_i, el) => {
+    const text = $(el).text().trim();
+    if (text.length > 60) descParts.push(text);
+  });
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  const eligibility = extractSection($, /eligibility|who can apply|who is eligible|criteria/i);
+
+  return { description, eligibility };
 }
 
 /**
@@ -87,17 +122,17 @@ export function parsePalassPage(html: string): RawPalassGrant[] {
       if (!isNaN(parsed.getTime()) && parsed < new Date()) status = "closed";
     }
 
-    // Description: first full prose paragraph (not the deadline)
-    let description: string | null = null;
+    // Description: collect prose paragraphs (not deadline strong paragraphs)
+    const descParts: string[] = [];
     $panel.find("p").each((_j, p) => {
-      if (description) return;
       const $p = $(p);
-      if ($p.find("strong").length) return; // skip deadline strong paragraph
+      if ($p.find("strong").length && /deadline/i.test($p.text())) return; // skip deadline paragraph
       const text = $p.text().trim();
-      if (text.length > 20) description = text;
+      if (text.length > 20) descParts.push(text);
     });
+    const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
 
-    grants.push({ title, url, status, amountRaw, deadlineRaw, description });
+    grants.push({ title, url, status, amountRaw, deadlineRaw, description, eligibility: null });
   });
 
   return grants;
@@ -113,5 +148,24 @@ export async function fetchPalassGrants(): Promise<RawPalassGrant[]> {
   const html = await response.text();
   const grants = parsePalassPage(html);
   console.log(`  Found ${grants.length} PalAss grant entries`);
+
+  // Enrich from detail pages
+  for (const item of grants) {
+    if (!item.url || item.url === GRANTS_URL) continue;
+    await sleep(DETAIL_DELAY_MS);
+    try {
+      const res = await fetchWithRetry(item.url);
+      if (!res.ok) continue;
+      const detailHtml = await res.text();
+      const { description, eligibility } = parsePalassDetailPage(detailHtml);
+      if (description && description.length > (item.description?.length ?? 0)) {
+        item.description = description;
+      }
+      if (eligibility) item.eligibility = eligibility;
+    } catch {
+      // Skip failed detail fetches — listing data is still valid
+    }
+  }
+
   return grants;
 }
