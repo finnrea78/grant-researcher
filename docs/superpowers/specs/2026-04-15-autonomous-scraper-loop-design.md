@@ -8,7 +8,7 @@
 
 ## Goal
 
-Run an autonomous agent (ralph loop) that discovers UK and EU grant opportunity sources, writes a working scraper for each, verifies data lands in Supabase, and commits — without manual intervention. The user kicks it off, leaves it running, and comes back to a populated `feat/new-scrapers` branch.
+Run an autonomous agent (ralph loop) that discovers UK and EU grant opportunity sources across **all academic disciplines** (STEM, medicine, social sciences, humanities, engineering, arts — everything), writes a working scraper for each, verifies data lands in Supabase, and commits — without manual intervention. The user kicks it off, leaves it running, and comes back to a populated `feat/new-scrapers` branch.
 
 ---
 
@@ -57,7 +57,13 @@ You are an autonomous grant scraper agent. Your job each iteration:
 
 3. Pick the next untried source from the seed list in the spec at
    docs/superpowers/specs/2026-04-15-autonomous-scraper-loop-design.md.
-   If the seed list is exhausted, run a WebSearch for more UK/EU grant opportunity sources.
+   The seed list is never truly exhausted — after working through it, run WebSearch to
+   discover more. The target audience is ALL UK/EU academics regardless of discipline:
+   STEM, medicine, engineering, social sciences, humanities, arts, interdisciplinary.
+   Run at least 5 WebSearch queries per discovery sweep, covering different disciplines
+   and source types (research councils, medical charities, foundations, EU programmes,
+   learned societies, professional bodies). Add any promising finds to SCRAPER_LOG.md
+   under "## Discovered" before probing them.
 
 4. Probe the source: fetch the page, check it returns 200 HTML with visible grant listings.
    If blocked or JS-only: log it in SCRAPER_LOG.md as skipped with reason, commit, done.
@@ -139,10 +145,17 @@ The agent starts here, then uses WebSearch to discover more once this list is ex
 - Royal Society Newton International Fellowships (`royalsociety.org/grants/newton-international/`) — separate from main Royal Society scraper
 - Commonwealth Scholarship Commission (`cscuk.fcdo.gov.uk/apply/`) — annual call, Oct deadline
 
-**Discovery:** After the seed list, run WebSearch queries like:
-- `"UK research grant" "apply now" "open call" site:.ac.uk OR site:.org.uk`
-- `"EU research fellowship" "open call" 2026 humanities social science`
-- `"open funding round" 2026 site:.org.uk research`
+**Discovery:** The seed list is a starting point. Run WebSearch queries across all disciplines once the seed list is exhausted. Run at least 5 queries per sweep — one per discipline cluster:
+
+- **STEM / engineering:** `"open call" "apply now" UK research grant 2026 engineering physics chemistry site:org.uk OR site:ac.uk`
+- **Medicine / health:** `"open funding round" 2026 UK medical research charity grant "apply now"`
+- **Social sciences:** `"open call" 2026 UK "social science" OR "economics" OR "psychology" research grant fund`
+- **Humanities / arts:** `"open call" 2026 UK humanities OR arts OR history OR literature research grant`
+- **EU / international:** `"open call" 2026 EU fellowship OR grant "UK eligible" researcher`
+- **Learned societies / professional bodies:** `UK learned society OR professional body "research grant" OR "fellowship" "open" 2026`
+- **Interdisciplinary / cross-council:** `"cross-council" OR "interdisciplinary" UK research grant "open call" 2026`
+
+Add every discovered source to SCRAPER_LOG.md under `## Discovered` before probing.
 
 ---
 
