@@ -44,6 +44,8 @@ import { fetchRgsGrants } from "./sources/rgs.js";
 import { normaliseRgs } from "./transforms/normalise-rgs.js";
 import { fetchBpsGrants } from "./sources/bps.js";
 import { normaliseBps } from "./transforms/normalise-bps.js";
+import { fetchGeneticsSocietyGrants } from "./sources/genetics-society.js";
+import { normaliseGeneticsSociety } from "./transforms/normalise-genetics-society.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -333,7 +335,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "british-psychological-society",
     fetch: () => fetchBpsGrants().then(r => r.map(normaliseBps)),
   },
+  {
+    displayName: "Genetics Society grants",
+    source: "genetics_society",
+    funderSlug: "genetics-society",
+    fetch: () => fetchGeneticsSocietyGrants().then(r => r.map(normaliseGeneticsSociety)),
+  },
 ];
+
+program
+  .command("genetics-society")
+  .description("Ingest grant schemes from the Genetics Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Genetics Society grants",
+      source: "genetics_society",
+      funderSlug: "genetics-society",
+      fetch: () => fetchGeneticsSocietyGrants().then(r => r.map(normaliseGeneticsSociety)),
+    });
+  });
 
 program
   .command("bps")

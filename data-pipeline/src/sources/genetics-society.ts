@@ -1,0 +1,120 @@
+import * as cheerio from "cheerio";
+import { fetchWithRetry } from "../utils/fetchWithRetry.js";
+import type { RawGeneticsSocietyGrant } from "../transforms/normalise-genetics-society.js";
+
+const BASE_URL = "https://genetics.org.uk";
+
+/**
+ * Genetics Society grant scheme pages.
+ * Title, deadline, and amount are embedded in plain <p>/<li> prose — no
+ * structured HTML wrappers.  Schemes 4 and 11 share the same URL.
+ */
+const SCHEME_PAGES = [
+  `${BASE_URL}/grants/junior-scientist-conference-grants/`,
+  `${BASE_URL}/grants/training-grant/`,
+  `${BASE_URL}/grants/heredity-fieldwork-grant/`,
+  `${BASE_URL}/grants/summer-studentships/`,
+  `${BASE_URL}/grants/research-access-placements/`,
+  `${BASE_URL}/grants/comm-your-sci/`,
+  `${BASE_URL}/grants/carers-award/`,
+  `${BASE_URL}/grants/one-off-meeting-grant/`,
+  `${BASE_URL}/grants/public-engement-grant/`,
+  `${BASE_URL}/grants/new-special-interest-group/`,
+];
+
+/** Strip ordinal suffixes: "1st" → "1", "15th" → "15" */
+function stripOrdinal(s: string): string {
+  return s.replace(/(\d+)(?:st|nd|rd|th)\b/gi, "$1");
+}
+
+export function parseGeneticsSocietyPage(
+  html: string,
+  pageUrl: string
+): RawGeneticsSocietyGrant | null {
+  const $ = cheerio.load(html);
+
+  // Title: most pages use <h2> as the main heading; fall back to <h1>
+  const title = $("h1, h2").first().text().trim();
+  if (!title) return null;
+
+  // Description: first substantial <p> not containing just a heading word
+  let description: string | null = null;
+  $("p").each((_i, el) => {
+    if (description) return;
+    const text = $(el).text().trim();
+    if (text.length > 30 && !/^(grants?|apply|eligib)/i.test(text)) {
+      description = text;
+    }
+  });
+
+  // Deadline: first <p> containing "deadline" with a parseable date
+  let deadlineRaw: string | null = null;
+  $("p, li").each((_i, el) => {
+    if (deadlineRaw) return;
+    const text = $(el).text();
+    if (!/deadline/i.test(text)) return;
+    // Match "1st February 2024", "31st March 2026", etc.
+    const match = text.match(/(\d{1,2}(?:st|nd|rd|th)?\s+\w+\s+\d{4})/i);
+    if (match) {
+      deadlineRaw = stripOrdinal(match[1]);
+    }
+    // Also match "1st February" without year (rolling deadlines)
+    if (!deadlineRaw) {
+      const partialMatch = text.match(/(\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December))/i);
+      if (partialMatch) {
+        deadlineRaw = stripOrdinal(partialMatch[1]); // no year → parseDate will return null
+      }
+    }
+  });
+
+  // Amount: first £ figure in <p> or <li>
+  let amountRaw: string | null = null;
+  $("p, li").each((_i, el) => {
+    if (amountRaw) return;
+    const text = $(el).text().trim();
+    const match = text.match(/(?:up\s+to\s+|of\s+|awards?\s+of\s+)?(£[\d,]+(?:\/week)?)/i);
+    if (match) amountRaw = match[0];
+  });
+
+  // Status: infer from deadline date compared to today
+  let status = "open";
+  if (deadlineRaw) {
+    // If the raw date contains a year, compare to today
+    const yearMatch = deadlineRaw.match(/\d{4}/);
+    if (yearMatch) {
+      const deadlineDate = new Date(deadlineRaw);
+      if (!isNaN(deadlineDate.getTime()) && deadlineDate < new Date()) {
+        status = "closed";
+      }
+    }
+    // No year → treat as rolling (open)
+  }
+
+  return {
+    title,
+    url: pageUrl,
+    status,
+    deadlineRaw,
+    amountRaw,
+    description,
+  };
+}
+
+export async function fetchGeneticsSocietyGrants(): Promise<RawGeneticsSocietyGrant[]> {
+  const grants: RawGeneticsSocietyGrant[] = [];
+
+  for (const url of SCHEME_PAGES) {
+    console.log(`  Fetching Genetics Society scheme: ${url}`);
+    const response = await fetchWithRetry(url);
+    if (!response.ok) {
+      console.warn(`  Genetics Society: ${url} returned ${response.status} — skipping`);
+      continue;
+    }
+    const html = await response.text();
+    const grant = parseGeneticsSocietyPage(html, url);
+    if (grant) grants.push(grant);
+  }
+
+  console.log(`  Found ${grants.length} Genetics Society grant entries`);
+  return grants;
+}

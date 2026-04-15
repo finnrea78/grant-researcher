@@ -27,7 +27,8 @@ export type OpportunitySource =
   | "geolsoc"
   | "acmedsci"
   | "rgs"
-  | "bps";
+  | "bps"
+  | "genetics_society";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
