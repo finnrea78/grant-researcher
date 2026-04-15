@@ -12,6 +12,7 @@ import { fetchWolfsonSchemes } from "./sources/wolfson.js";
 import { fetchHeritageFundSchemes } from "./sources/heritage-fund.js";
 import { fetchCarnegieTrustSchemes } from "./sources/carnegie-trust.js";
 import { fetchHenryMooreSchemes } from "./sources/henry-moore.js";
+import { fetchERCSchemes } from "./sources/erc.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -23,6 +24,7 @@ import { normaliseWolfson } from "./transforms/normalise-wolfson.js";
 import { normaliseHeritageFund } from "./transforms/normalise-heritage-fund.js";
 import { normaliseCarnegie } from "./transforms/normalise-carnegie-trust.js";
 import { normaliseHenryMoore } from "./transforms/normalise-henry-moore.js";
+import { normaliseERC } from "./transforms/normalise-erc.js";
 import { upsertGrants } from "./loaders/upsert-grants.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
 import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
@@ -189,7 +191,25 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     funderSlug: "henry-moore-foundation",
     fetch: () => fetchHenryMooreSchemes().then(r => r.map(normaliseHenryMoore)),
   },
+  {
+    displayName: "European Research Council grants",
+    source: "erc",
+    funderSlug: "european-research-council",
+    fetch: () => fetchERCSchemes().then(r => r.map(normaliseERC)),
+  },
 ];
+
+program
+  .command("erc")
+  .description("Ingest ERC grant types from European Research Council")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "European Research Council grants",
+      source: "erc",
+      funderSlug: "european-research-council",
+      fetch: () => fetchERCSchemes().then(r => r.map(normaliseERC)),
+    });
+  });
 
 program
   .command("henry-moore")

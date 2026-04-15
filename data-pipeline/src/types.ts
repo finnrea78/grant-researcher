@@ -9,7 +9,8 @@ export type OpportunitySource =
   | "wolfson"
   | "heritage_fund"
   | "carnegie_trust"
-  | "henry_moore";
+  | "henry_moore"
+  | "erc";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
