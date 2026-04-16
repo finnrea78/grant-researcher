@@ -336,6 +336,7 @@ Updated each iteration. Format:
 - **royal_society** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
 - **netias** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
 - **action_medical** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+- **leverhulme** ✅ Improved (2026-04-16) — detail-page fetch added (Drupal accordion), desc 2000 chars, eligibility 1500 chars; all schemes currently closed so 0 rows in DB but scraper ready for next open round
 
 ---
 
