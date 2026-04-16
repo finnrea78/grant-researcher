@@ -1,6 +1,44 @@
 import * as cheerio from "cheerio";
 import { fetchWithRetry } from "../utils/fetchWithRetry.js";
+import { sleep } from "../utils/sleep.js";
 import type { RawRgsGrant } from "../transforms/normalise-rgs.js";
+
+const DETAIL_DELAY_MS = 300;
+
+function extractSection($: cheerio.CheerioAPI, headingPattern: RegExp): string | null {
+  let result: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (result !== null) return;
+    if (!headingPattern.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) result = parts.join("\n\n").slice(0, 1500);
+  });
+  return result;
+}
+
+export function parseRgsDetailPage(html: string): {
+  description: string | null;
+  eligibility: string | null;
+} {
+  const $ = cheerio.load(html);
+
+  const descParts: string[] = [];
+  $("main p, article p, [class*='RichTextstyles'] p").each((_i, el) => {
+    const text = $(el).text().trim();
+    if (text.length > 60) descParts.push(text);
+  });
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  const eligibility = extractSection($, /eligibilit|who\s+can\s+apply|who\s+is\s+eligible/i);
+
+  return { description, eligibility };
+}
 
 const BASE_URL = "https://www.rgs.org";
 const DEADLINES_URL = `${BASE_URL}/exploration/grants/grant-deadlines/`;
@@ -69,7 +107,7 @@ export function parseRgsPage(html: string): RawRgsGrant[] {
       const url = href
         ? href.startsWith("http") ? href : `${BASE_URL}${href}`
         : DEADLINES_URL;
-      grants.push({ name, url, status, deadlineRaw, description: null });
+      grants.push({ name, url, status, deadlineRaw, description: null, eligibility: null });
     };
 
     $ul.children("li").each((_j, li) => {
@@ -109,5 +147,27 @@ export async function fetchRgsGrants(): Promise<RawRgsGrant[]> {
   const html = await response.text();
   const grants = parseRgsPage(html);
   console.log(`  Found ${grants.length} RGS grant entries`);
+
+  // Enrich with detail-page descriptions and eligibility (skip if URL is the deadlines listing)
+  const seen = new Set<string>();
+  for (const grant of grants) {
+    if (!grant.url || grant.url === DEADLINES_URL || seen.has(grant.url)) continue;
+    seen.add(grant.url);
+    await sleep(DETAIL_DELAY_MS);
+    try {
+      const res = await fetchWithRetry(grant.url);
+      if (!res.ok) continue;
+      const detailHtml = await res.text();
+      const { description, eligibility } = parseRgsDetailPage(detailHtml);
+      // Apply to all grants sharing the same URL
+      for (const g of grants) {
+        if (g.url === grant.url) {
+          if (description) g.description = description;
+          if (eligibility) g.eligibility = eligibility;
+        }
+      }
+    } catch { /* skip on error */ }
+  }
+
   return grants;
 }

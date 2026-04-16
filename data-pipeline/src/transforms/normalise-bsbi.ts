@@ -9,6 +9,8 @@ export interface RawBsbiGrant {
   status: string;
   amountRaw: string | null;
   deadlineRaw: string | null;
+  description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseBsbi(raw: RawBsbiGrant): NormalisedOpportunity {
@@ -39,9 +41,9 @@ export function normaliseBsbi(raw: RawBsbiGrant): NormalisedOpportunity {
     amount_currency: currency,
     url: raw.url,
     funding_type: fundingType,
-    description: null,
-    eligibility: null,
-    scope: "botany, botanical recording, plant science",
+    description: raw.description || null,
+    eligibility: raw.eligibility || null,
+    scope: null,
     source: "bsbi",
     source_metadata: {},
   };

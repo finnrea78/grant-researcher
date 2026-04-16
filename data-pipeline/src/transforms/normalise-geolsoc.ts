@@ -32,7 +32,7 @@ export function normaliseGeolsoc(raw: RawGeolsocGrant): NormalisedOpportunity {
     funding_type: "grant",
     description: raw.description,
     eligibility: null,
-    scope: "geology, earth sciences, geoscience",
+    scope: null,
     source: "geolsoc",
     source_metadata: {},
   };

@@ -6,6 +6,7 @@ export interface RawBloodCancerUKScheme {
   url: string;
   status: string; // "open" | "closed"
   description: string | null;
+  eligibility: string | null;
   nextCallRaw: string | null;
 }
 
@@ -27,8 +28,8 @@ export function normaliseBloodCancerUK(raw: RawBloodCancerUKScheme): NormalisedO
     url: raw.url.startsWith("http") ? raw.url : `${BASE_URL}${raw.url}`,
     funding_type: "grant",
     description: raw.description,
-    eligibility: null,
-    scope: "blood cancer research",
+    eligibility: raw.eligibility || null,
+    scope: null,
     source: "blood_cancer_uk",
     source_metadata: {
       next_call: raw.nextCallRaw,

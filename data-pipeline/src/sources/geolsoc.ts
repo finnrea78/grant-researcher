@@ -55,8 +55,13 @@ export function parseGeolsocPage(html: string): RawGeolsocGrant[] {
 
     const $body = $item.find(".accordion-body");
 
-    // Description: first non-empty <p>
-    const description = $body.find("p").first().text().trim() || null;
+    // Description: multi-paragraph from accordion body
+    const descParts: string[] = [];
+    $body.find("p").each((_j, p) => {
+      const text = $(p).text().trim();
+      if (text.length > 30) descParts.push(text);
+    });
+    const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
 
     // Amount: regex on description or full body text
     const bodyText = $body.text();

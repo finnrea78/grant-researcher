@@ -1,4 +1,4 @@
-import { parseBsbiPage } from "../../src/sources/bsbi";
+import { parseBsbiPage, parseBsbiDetailPage } from "../../src/sources/bsbi";
 import { normaliseBsbi } from "../../src/transforms/normalise-bsbi";
 
 const FIXTURE = `
@@ -154,11 +154,47 @@ describe("normaliseBsbi", () => {
     expect(normaliseBsbi(raw).funding_type).toBe("grant");
   });
 
-  it("sets scope to botany", () => {
-    expect(normaliseBsbi(raw).scope).toContain("botany");
+  it("sets scope to null (not hardcoded subject string)", () => {
+    expect(normaliseBsbi(raw).scope).toBeNull();
   });
 
   it("generates a slug", () => {
     expect(normaliseBsbi(raw).slug).toBe("training-grants");
+  });
+});
+
+const DETAIL_FIXTURE = `
+<!DOCTYPE html>
+<html>
+<body>
+<main>
+  <article class="page-content">
+    <p>The BSBI offers annual grants of up to £250 for aspiring botanists who wish to undertake training courses from external providers. You do not need to be a BSBI member to apply, although members are favoured in the award process.</p>
+    <p>Typical applicants include recent graduates looking to start a career in botany and amateur botanists interested in botanical recording.</p>
+    <h3>Eligibility</h3>
+    <p>Open to anyone with an interest in botany. Members are given priority in the selection process. Applicants must be based in Britain or Ireland.</p>
+  </article>
+</main>
+</body>
+</html>`;
+
+describe("parseBsbiDetailPage", () => {
+  it("extracts multi-paragraph description", () => {
+    const { description } = parseBsbiDetailPage(DETAIL_FIXTURE);
+    expect(description).not.toBeNull();
+    expect(description).toContain("aspiring botanists");
+    expect(description).toContain("Typical applicants");
+  });
+
+  it("extracts eligibility from Eligibility heading", () => {
+    const { eligibility } = parseBsbiDetailPage(DETAIL_FIXTURE);
+    expect(eligibility).not.toBeNull();
+    expect(eligibility).toContain("Members are given priority");
+  });
+
+  it("returns nulls for empty page", () => {
+    const { description, eligibility } = parseBsbiDetailPage("<html><body><main></main></body></html>");
+    expect(description).toBeNull();
+    expect(eligibility).toBeNull();
   });
 });

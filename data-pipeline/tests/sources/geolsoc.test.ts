@@ -157,4 +157,10 @@ describe("normaliseGeolsoc", () => {
     const result = normaliseGeolsoc(raw);
     expect(result.amount_max).toBe(300_000); // £3,000 in pence
   });
+
+  it("sets scope to null (not hardcoded subject string)", () => {
+    const raw = parseGeolsocPage(FIXTURE_CLOSED)[0];
+    const result = normaliseGeolsoc(raw);
+    expect(result.scope).toBeNull();
+  });
 });
