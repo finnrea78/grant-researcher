@@ -7,6 +7,7 @@ function makeScheme(overrides: Partial<RawRoyalSocietyScheme> = {}): RawRoyalSoc
     status: "open",
     deadlineText: "05 August 2026",
     description: "Awards for excellent scientists to pursue novel interdisciplinary research.",
+    eligibility: null,
     ...overrides,
   };
 }

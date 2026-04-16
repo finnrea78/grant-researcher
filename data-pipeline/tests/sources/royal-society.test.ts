@@ -1,4 +1,4 @@
-import { parseRoyalSocietyPage } from "../../src/sources/royal-society";
+import { parseRoyalSocietyPage, parseRoyalSocietyGrantPage } from "../../src/sources/royal-society";
 
 // Fixture matches real Royal Society card HTML structure
 const FIXTURE_HTML = `
@@ -97,5 +97,48 @@ describe("parseRoyalSocietyPage", () => {
   it("throws when no grant cards found", () => {
     expect(() => parseRoyalSocietyPage("<html><body><div></div></body></html>"))
       .toThrow();
+  });
+});
+
+describe("parseRoyalSocietyGrantPage", () => {
+  const GRANT_PAGE_HTML = `
+<!DOCTYPE html>
+<html>
+<body>
+<main>
+  <p>The Royal Society is a self-governing Fellowship of many of the world's most distinguished scientists.</p>
+  <div class="section__body">
+    <p>The International Exchanges scheme enables researchers to develop new collaborations and strengthen existing ones with scientists at leading institutions worldwide. Funding covers travel and subsistence costs for short research visits.</p>
+    <p>Applications are accepted from UK-based researchers at all career stages.</p>
+  </div>
+  <h3>Eligibility</h3>
+  <p>Applicants must be based at a UK institution and hold a PhD or equivalent.</p>
+</main>
+</body>
+</html>`;
+
+  it("returns description containing substantive non-boilerplate paragraph", () => {
+    const result = parseRoyalSocietyGrantPage(GRANT_PAGE_HTML);
+    expect(result.description).toContain("International Exchanges scheme");
+  });
+
+  it("skips boilerplate paragraphs in description", () => {
+    const result = parseRoyalSocietyGrantPage(GRANT_PAGE_HTML);
+    expect(result.description).not.toContain("self-governing Fellowship");
+  });
+
+  it("returns null description when no substantive paragraphs found", () => {
+    const result = parseRoyalSocietyGrantPage("<html><body><p>Short.</p></body></html>");
+    expect(result.description).toBeNull();
+  });
+
+  it("extracts eligibility from Eligibility heading section", () => {
+    const result = parseRoyalSocietyGrantPage(GRANT_PAGE_HTML);
+    expect(result.eligibility).toContain("UK institution");
+  });
+
+  it("returns null eligibility when no eligibility heading found", () => {
+    const result = parseRoyalSocietyGrantPage("<html><body><main><p>Some description content here that is long enough.</p></main></body></html>");
+    expect(result.eligibility).toBeNull();
   });
 });

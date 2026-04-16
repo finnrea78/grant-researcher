@@ -5,6 +5,10 @@ import type { RawRoyalSocietyScheme } from "../transforms/normalise-royal-societ
 const GRANTS_URL = "https://royalsociety.org/grants/search/grant-listings/";
 const BASE_URL = "https://royalsociety.org";
 
+// Boilerplate patterns present on every Royal Society page — skip these paragraphs
+const BOILERPLATE_RE =
+  /Royal Society is a self-governing|Royal Society provides a range|independent scientific academy|cookies on this|privacy policy/i;
+
 export interface RoyalSocietyPageData {
   schemes: RawRoyalSocietyScheme[];
   /** Total grants on the site (pagination not yet supported — AJAX endpoint unknown). */
@@ -38,7 +42,7 @@ export function parseRoyalSocietyPage(html: string): RoyalSocietyPageData {
       if (match) deadlineText = match[1].trim();
     }
 
-    schemes.push({ title, url, status, deadlineText, description });
+    schemes.push({ title, url, status, deadlineText, description, eligibility: null });
   });
 
   if (schemes.length === 0) {
@@ -52,6 +56,58 @@ export function parseRoyalSocietyPage(html: string): RoyalSocietyPageData {
   if (countMatch) totalCount = parseInt(countMatch[1], 10);
 
   return { schemes, totalCount };
+}
+
+/**
+ * Parse a Royal Society individual grant page for a fuller description and eligibility.
+ * The listing cards truncate descriptions with "…"; sub-pages have the full content.
+ */
+export function parseRoyalSocietyGrantPage(html: string): {
+  description: string | null;
+  eligibility: string | null;
+} {
+  const $ = cheerio.load(html);
+
+  // Multi-paragraph description from content areas
+  const selectors = [
+    ".section__body p",
+    ".grant-detail__body p",
+    ".grant-description p",
+    ".content-section p",
+    "main .wysiwyg p",
+    "main article p",
+    "main p",
+  ];
+
+  let description: string | null = null;
+  for (const selector of selectors) {
+    const parts: string[] = [];
+    $(selector).each((_i, el) => {
+      const text = $(el).text().trim();
+      if (text.length >= 60 && !BOILERPLATE_RE.test(text)) parts.push(text);
+    });
+    if (parts.length > 0) {
+      description = parts.join("\n\n").slice(0, 2000);
+      break;
+    }
+  }
+
+  // Eligibility from heading sections
+  let eligibility: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (eligibility !== null) return;
+    if (!/eligib|who\s+can\s+apply|who\s+is\s+eligible/i.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
+    }
+    if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
+  });
+
+  return { description, eligibility };
 }
 
 export async function fetchRoyalSocietySchemes(): Promise<RawRoyalSocietyScheme[]> {
@@ -76,5 +132,28 @@ export async function fetchRoyalSocietySchemes(): Promise<RawRoyalSocietyScheme[
     console.log(`  Found ${schemes.length} grants from Royal Society`);
   }
 
-  return schemes;
+  // Enrich truncated descriptions and add eligibility from individual grant pages
+  const enriched: RawRoyalSocietyScheme[] = [];
+  for (const scheme of schemes) {
+    const isTruncated = scheme.description.endsWith("…") || scheme.description.endsWith("...") || scheme.description.length < 150;
+    if (scheme.url) {
+      const subRes = await fetchWithRetry(scheme.url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+      });
+      if (subRes.ok) {
+        const subHtml = await subRes.text();
+        const { description: richer, eligibility } = parseRoyalSocietyGrantPage(subHtml);
+        const updatedDescription = (isTruncated && richer && richer.length > scheme.description.length)
+          ? richer
+          : scheme.description;
+        enriched.push({ ...scheme, description: updatedDescription, eligibility });
+        continue;
+      }
+    }
+    enriched.push(scheme);
+  }
+
+  return enriched;
 }

@@ -114,13 +114,15 @@ async function fetchOpportunityDetails(url: string): Promise<Pick<RawUkriOpportu
   const html = await response.text();
   const $ = cheerio.load(html);
 
-  // Description: first substantial paragraph in the main content area
-  let description: string | null = null;
+  // Description: collect all substantial paragraphs up to ~2,000 chars
+  const descParts: string[] = [];
   $("main p, .entry-content p, article p").each((_i, el) => {
-    if (description) return;
     const text = $(el).text().trim();
-    if (text.length > 80) description = text;
+    if (text.length > 80) descParts.push(text);
   });
+  const description = descParts.length > 0
+    ? descParts.join("\n\n").slice(0, 2000)
+    : null;
 
   // Funding type: look for "Grant", "Fellowship", "Loan", "Contract" near metadata
   let fundingType: string | null = null;

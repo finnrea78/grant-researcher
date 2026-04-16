@@ -14,6 +14,7 @@ export interface RawWellcomeScheme {
   location: string;
   description: string;
   frequency: string;
+  eligibility: string | null;
 }
 
 const WELLCOME_BASE = "https://wellcome.org";
@@ -42,7 +43,7 @@ export function normaliseWellcome(raw: RawWellcomeScheme): NormalisedOpportunity
     url,
     funding_type: null,
     description: raw.description || null,
-    eligibility: null,
+    eligibility: raw.eligibility,
     scope: null,
     source: "wellcome",
     source_metadata: {
