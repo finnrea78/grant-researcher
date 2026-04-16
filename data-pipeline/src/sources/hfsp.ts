@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import type { Element } from "domhandler";
 import { fetchWithRetry } from "../utils/fetchWithRetry.js";
 import type { RawHfspGrant } from "../transforms/normalise-hfsp.js";
 
@@ -28,7 +29,7 @@ const PROGRAMME_PAGES = [
  */
 function extractDeadlines(
   $: ReturnType<typeof cheerio.load>,
-  $h4: cheerio.Cheerio<cheerio.Element>
+  $h4: cheerio.Cheerio<Element>
 ): { deadlineRaw: string | null; allDates: string[] } {
   const allDates: string[] = [];
 

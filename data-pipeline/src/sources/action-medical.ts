@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import type { Element } from "domhandler";
 import { fetchWithRetry } from "../utils/fetchWithRetry.js";
 import type { RawActionMedicalGrant } from "../transforms/normalise-action-medical.js";
 
@@ -57,7 +58,7 @@ export function parseActionMedicalPage(
   // Collect open call sections: only those appearing BEFORE #past-calls in DOM order.
   // Past calls may be siblings (not descendants) of #past-calls, so we use document
   // position rather than DOM ancestor checks.
-  const openSections: Array<{ title: string; $section: cheerio.Cheerio<cheerio.Element> }> = [];
+  const openSections: Array<{ title: string; $section: cheerio.Cheerio<Element> }> = [];
   let pastCallsSeen = false;
 
   $("section[id]").each((_i, el) => {

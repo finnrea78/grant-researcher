@@ -64,21 +64,23 @@ export function parseGeneticsSocietyPage(
 
   // Deadline: first <p> containing "deadline" with a parseable date
   let deadlineRaw: string | null = null;
+  let deadlineFound = false;
   $("p, li").each((_i, el) => {
-    if (deadlineRaw) return;
+    if (deadlineFound) return;
     const text = $(el).text();
     if (!/deadline/i.test(text)) return;
     // Match "1st February 2024", "31st March 2026", etc.
     const match = text.match(/(\d{1,2}(?:st|nd|rd|th)?\s+\w+\s+\d{4})/i);
     if (match) {
       deadlineRaw = stripOrdinal(match[1]);
+      deadlineFound = true;
+      return;
     }
     // Also match "1st February" without year (rolling deadlines)
-    if (!deadlineRaw) {
-      const partialMatch = text.match(/(\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December))/i);
-      if (partialMatch) {
-        deadlineRaw = stripOrdinal(partialMatch[1]); // no year → parseDate will return null
-      }
+    const partialMatch = text.match(/(\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December))/i);
+    if (partialMatch) {
+      deadlineRaw = stripOrdinal(partialMatch[1]); // no year → parseDate will return null
+      deadlineFound = true;
     }
   });
 
@@ -92,12 +94,14 @@ export function parseGeneticsSocietyPage(
   });
 
   // Status: infer from deadline date compared to today
+  // Note: cast required — TS 5.9 narrows closure-assigned lets to initializer type (null).
+  const deadlineForStatus = deadlineRaw as string | null;
   let status = "open";
-  if (deadlineRaw) {
+  if (deadlineForStatus) {
     // If the raw date contains a year, compare to today
-    const yearMatch = deadlineRaw.match(/\d{4}/);
+    const yearMatch = deadlineForStatus.match(/\d{4}/);
     if (yearMatch) {
-      const deadlineDate = new Date(deadlineRaw);
+      const deadlineDate = new Date(deadlineForStatus);
       if (!isNaN(deadlineDate.getTime()) && deadlineDate < new Date()) {
         status = "closed";
       }

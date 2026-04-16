@@ -12,6 +12,7 @@ function makeScheme(overrides: Partial<RawWellcomeScheme> = {}): RawWellcomeSche
     location: "UK-based researchers",
     description: "Funding for curiosity-driven research across biomedical science.",
     frequency: "Annual",
+    eligibility: null,
     ...overrides,
   };
 }

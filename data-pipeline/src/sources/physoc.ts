@@ -135,7 +135,7 @@ export async function fetchPhysocGrants(): Promise<RawPhysocGrant[]> {
     const resp = await fetchWithRetry(entry.url);
     if (!resp.ok) {
       console.warn(`  Physoc: ${entry.url} returned ${resp.status} — skipping`);
-      grants.push({ ...entry, amountRaw: null, deadlineRaw: null, status: "open" });
+      grants.push({ ...entry, amountRaw: null, deadlineRaw: null, status: "open", eligibility: null });
       continue;
     }
     const html = await resp.text();
