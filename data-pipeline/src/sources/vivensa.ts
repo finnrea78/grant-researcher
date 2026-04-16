@@ -5,33 +5,35 @@ import type { RawVivensaGrant } from "../transforms/normalise-vivensa.js";
 const BASE_URL = "https://vivensafoundation.org.uk";
 const GRANTS_URL = `${BASE_URL}/apply-for-funding/`;
 
+const SKIP_HEADINGS = /^(open calls and deadlines|regular and closed|apply now|check our deadlines|eligibility q&a|provide an orcid|apply online|where experts|find out about call|support and resources|read about some|find out about our team)$/i;
+
 /**
  * Extract grants from the Vivensa Foundation apply-for-funding page.
  *
- * The page structure is flat WordPress prose under an #open-calls-and-deadlines
- * anchor.  Each grant occupies an <h3> heading followed by sibling <p> tags
- * until the next <h3>.  The first <p><strong> contains status + deadline text;
- * any <p> containing "£" contains the amount.
+ * The page uses Gutenberg block containers (gb-container). Each grant
+ * has an <h2> title inside a narrow header sub-container; the full grant
+ * content (description, status, amount) is in the grandparent container.
+ * Status is in the first <strong>; description in subsequent <p>s.
  */
 export function parseVivensaPage(html: string): RawVivensaGrant[] {
   const $ = cheerio.load(html);
   const grants: RawVivensaGrant[] = [];
+  const seen = new Set<string>();
 
-  $("h3").each((_i, el) => {
-    const $h3 = $(el);
-    const title = $h3.text().trim();
-    if (!title) return;
+  $("h2, h3").each((_i, el) => {
+    const title = $(el).text().trim();
+    if (!title || seen.has(title) || SKIP_HEADINGS.test(title) || title.length > 100) return;
+    seen.add(title);
 
-    // Collect sibling elements until the next h3 (or end of parent)
-    const $siblings = $h3.nextUntil("h3, h2");
+    // Walk up to find the container that holds the full grant content
+    // h2 -> parent (narrow header container) -> parent (full grant container)
+    const container = $(el).parent().parent();
 
-    // Status / deadline: first <strong> text in the sibling set
-    const statusRaw = $siblings.find("strong").first().text().trim();
-    const status = /now open/i.test(statusRaw) ? "open" : "closed";
+    // Status / deadline from first <strong>
+    const statusRaw = container.find("strong").first().text().trim();
+    const status = /now open|rolling/i.test(statusRaw) ? "open" : "closed";
 
-    // Deadline: extract date from statusRaw for open grants
-    // Pattern: "Now open – deadline for applications 5pm on 22 May 2026"
-    //          "Now open – deadline for nominations 5pm on 22 May 2026"
+    // Deadline: extract from statusRaw
     let deadlineRaw: string | null = null;
     const deadlineMatch = statusRaw.match(
       /deadline[^:]*?(?:5pm\s+on\s+|by\s+)?(\d{1,2}\s+\w+\s+\d{4})/i
@@ -42,34 +44,51 @@ export function parseVivensaPage(html: string): RawVivensaGrant[] {
       deadlineRaw = "Rolling";
     }
 
-    // Amount: first <p> containing "£" in the siblings
+    // Amount: first <p> containing £
     let amountRaw: string | null = null;
-    $siblings.filter("p, li").each((_j, p) => {
+    container.find("p").each((_j, p) => {
       if (amountRaw) return;
       const pText = $(p).text().trim();
       if (pText.includes("£")) {
-        // Expand shorthand M → million so parseAmount handles it
         amountRaw = pText.replace(/£([\d.]+)M\b/g, "£$1 million");
       }
     });
 
-    // Description: first <p> that is NOT the status paragraph
-    let description: string | null = null;
-    $siblings.filter("p").each((_j, p) => {
-      if (description) return;
+    // Description: collect substantial paragraphs, skip browser-notice and status paras
+    const descParts: string[] = [];
+    container.find("p").each((_j, p) => {
       const pText = $(p).text().trim();
-      if (!pText || $(p).find("strong").length > 0) return; // skip status para
-      description = pText.length > 20 ? pText : null;
+      if (pText.length < 50) return;
+      if (/if your browser|drop-down|dropdown/i.test(pText)) return;
+      if ($(p).find("strong").length > 0 && /now open|now closed|deadline/i.test(pText)) return;
+      descParts.push(pText);
     });
+    const description = descParts.length > 0
+      ? descParts.join("\n\n").slice(0, 2000)
+      : null;
+
+    // Eligibility: paragraphs that specifically mention eligibility criteria / who can apply
+    const eligParts: string[] = [];
+    container.find("p").each((_j, p) => {
+      const pText = $(p).text().trim();
+      if (pText.length < 50) return;
+      if (/eligib|who\s+(will|can)\s+(we\s+)?fund|who\s+is\s+eligible|career\s+stage.*year|years.*postdoctoral.*experience/i.test(pText)) {
+        if (!eligParts.includes(pText)) eligParts.push(pText);
+      }
+    });
+    const eligibility = eligParts.length > 0
+      ? eligParts.join("\n\n").slice(0, 1500)
+      : null;
 
     grants.push({
       title,
       url: GRANTS_URL,
       status,
-      statusRaw,
+      statusRaw: statusRaw || null,
       deadlineRaw,
       amountRaw,
       description,
+      eligibility,
     });
   });
 

@@ -337,6 +337,7 @@ Updated each iteration. Format:
 - **netias** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
 - **action_medical** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
 - **leverhulme** ✅ Improved (2026-04-16) — detail-page fetch added (Drupal accordion), desc 2000 chars, eligibility 1500 chars; all schemes currently closed so 0 rows in DB but scraper ready for next open round
+- **vivensa_foundation** ✅ Improved (2026-04-16) — rewritten for new Gutenberg-block structure (h3→h2), multi-para desc 2000 chars, eligibility extracted, scope hardcode removed; 2 rows in DB
 
 ---
 

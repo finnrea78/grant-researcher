@@ -3,30 +3,53 @@ import { normaliseVivensa } from "../../src/transforms/normalise-vivensa";
 
 const PAGE_URL = "https://vivensafoundation.org.uk/apply-for-funding/";
 
+// Fixtures reflect the Gutenberg-block structure used by the live page:
+// h2 title is in a narrow container (parent), which is itself inside a full grant container (grandparent).
 const FIXTURE_OPEN = `
 <!DOCTYPE html>
 <html lang="en">
 <body>
 <main>
   <h1>Apply for funding</h1>
-  <h2 id="open-calls-and-deadlines">Open calls and deadlines</h2>
 
-  <h3>Early Career Postdoctoral Fellowship Scheme</h3>
-  <p><strong>Now open – deadline for applications 5pm on 22 May 2026</strong></p>
-  <p>Supports exceptional early career researchers to develop their independent research career in ageing.</p>
-  <p>Funding of up to £350,000 over three years full-time.</p>
+  <!-- "Open calls and deadlines" section header — should be skipped -->
+  <div class="gb-container">
+    <div class="gb-container">
+      <h2>Open calls and deadlines</h2>
+    </div>
+  </div>
 
-  <h3>Academy Ignition Fund</h3>
-  <p><strong>Now open – applications accepted on a rolling basis with quarterly review deadlines</strong></p>
-  <p>Small awards to help researchers build collaborations and test new ideas.</p>
-  <p>Awards of up to £5,000 per application.</p>
+  <!-- Early Career grant: h2 in parent container inside grandparent -->
+  <div class="gb-container">
+    <div class="gb-container">
+      <h2>Early Career Postdoctoral Fellowship Scheme</h2>
+    </div>
+    <p><strong>Now open – deadline for applications 5pm on 22 May 2026</strong></p>
+    <p>Supports exceptional early career researchers to develop their independent research career in ageing.</p>
+    <p>This scheme is for early career postdoctoral researchers who have one to three years postdoctoral research experience at the time of the application deadline and have demonstrated excellence.</p>
+    <p>Funding of up to £350,000 over three years full-time.</p>
+  </div>
 
-  <h2 id="closed-calls">Closed calls</h2>
+  <!-- Academy Ignition Fund grant -->
+  <div class="gb-container">
+    <div class="gb-container">
+      <h2>Academy Ignition Fund</h2>
+    </div>
+    <p><strong>Now open – applications accepted on a rolling basis</strong></p>
+    <p>Small awards to help researchers build collaborations and test new ideas.</p>
+    <p>Awards of up to £5,000 per application.</p>
+  </div>
 
-  <h3>Starter Grants for Clinical Lecturers</h3>
-  <p><strong>Now closed</strong></p>
-  <p>Run in partnership with the Academy of Medical Sciences.</p>
-  <p>Maximum grant available is £40,000.</p>
+  <!-- Starter Grants — closed -->
+  <div class="gb-container">
+    <div class="gb-container">
+      <h2>Starter Grants for Clinical Lecturers</h2>
+    </div>
+    <p><strong>Now closed</strong></p>
+    <p>Run in partnership with the Academy of Medical Sciences.</p>
+    <p>Maximum grant available is £40,000.</p>
+  </div>
+
 </main>
 </body>
 </html>`;
@@ -36,9 +59,13 @@ const FIXTURE_ROLLING = `
 <html lang="en">
 <body>
 <main>
-  <h3>Vivensa Foundation PhD by Publication funding</h3>
-  <p><strong>Now open – applications accepted on a rolling basis</strong></p>
-  <p>Covers registration fees and printing costs for PhD by Publication candidates.</p>
+  <div class="gb-container">
+    <div class="gb-container">
+      <h2>Vivensa Foundation PhD by Publication funding</h2>
+    </div>
+    <p><strong>Now open – applications are accepted on a rolling basis</strong></p>
+    <p>Covers registration fees and printing costs for PhD by Publication candidates.</p>
+  </div>
 </main>
 </body>
 </html>`;
@@ -78,7 +105,7 @@ describe("parseVivensaPage", () => {
     expect(fellowship?.amountRaw).toContain("£350,000");
   });
 
-  it("extracts grant title from h3", () => {
+  it("extracts grant title from h2", () => {
     const result = parseVivensaPage(FIXTURE_OPEN);
     expect(result[0].title).toBe("Early Career Postdoctoral Fellowship Scheme");
   });
@@ -86,6 +113,26 @@ describe("parseVivensaPage", () => {
   it("sets url to the apply-for-funding page", () => {
     const result = parseVivensaPage(FIXTURE_OPEN);
     expect(result[0].url).toContain("apply-for-funding");
+  });
+
+  it("extracts multi-paragraph description", () => {
+    const result = parseVivensaPage(FIXTURE_OPEN);
+    const fellowship = result.find(r => r.title.includes("Early Career"));
+    expect(fellowship?.description).not.toBeNull();
+    expect(fellowship?.description).toContain("exceptional early career");
+  });
+
+  it("extracts eligibility from paragraphs mentioning eligibility criteria", () => {
+    const result = parseVivensaPage(FIXTURE_OPEN);
+    const fellowship = result.find(r => r.title.includes("Early Career"));
+    expect(fellowship?.eligibility).not.toBeNull();
+    expect(fellowship?.eligibility).toContain("postdoctoral researchers");
+  });
+
+  it("skips Open calls and deadlines section header", () => {
+    const result = parseVivensaPage(FIXTURE_OPEN);
+    const skipEntry = result.find(r => r.title === "Open calls and deadlines");
+    expect(skipEntry).toBeUndefined();
   });
 });
 
@@ -125,5 +172,17 @@ describe("normaliseVivensa", () => {
     const raw = parseVivensaPage(FIXTURE_OPEN).find(r => r.title.includes("Starter Grants"))!;
     const result = normaliseVivensa(raw);
     expect(result.status).toBe("closed");
+  });
+
+  it("maps eligibility from raw", () => {
+    const raw = parseVivensaPage(FIXTURE_OPEN).find(r => r.title.includes("Early Career"))!;
+    const result = normaliseVivensa(raw);
+    expect(result.eligibility).not.toBeNull();
+  });
+
+  it("sets scope to null (not hardcoded subject string)", () => {
+    const raw = parseVivensaPage(FIXTURE_OPEN)[0];
+    const result = normaliseVivensa(raw);
+    expect(result.scope).toBeNull();
   });
 });
