@@ -42,14 +42,14 @@ Assistant message content lives at `message.message.content` (nested BetaMessage
 - `match` route must never include `WebFetch` or `WebSearch` in `allowedTools`
 
 ## Session start
-Read `research-docs/Codebase Index.md` at the start of any session where you need codebase orientation. It's a 2-minute wikilink graph covering all modules, key paths, and hard constraints — avoids full codebase re-exploration.
+Read `research-docs/wiki/codebase/Codebase Index.md` at the start of any session where you need codebase orientation. It's a 2-minute wikilink graph covering all modules, key paths, and hard constraints — avoids full codebase re-exploration.
 
 ## Deeper context
-- `research-docs/Codebase Index.md` — module map + wikilinks to detail notes
-- `research-docs/Pipeline Agents.md` — the 5 Claude agents
-- `research-docs/Database Schema.md` — Supabase tables + RLS + embeddings
-- `research-docs/Retrieval Strategy.md` — hybrid pgvector + tsvector
-- `research-docs/Grant Ingestion CLI.md` — data-pipeline CLI commands
+- `research-docs/wiki/codebase/Codebase Index.md` — module map + wikilinks to detail notes
+- `research-docs/wiki/codebase/Pipeline Agents.md` — the 5 Claude agents
+- `research-docs/wiki/codebase/Database Schema.md` — Supabase tables + RLS + embeddings
+- `research-docs/wiki/codebase/Retrieval Strategy.md` — hybrid pgvector + tsvector
+- `research-docs/wiki/codebase/Grant Ingestion CLI.md` — data-pipeline CLI commands
 - `.claude/CONTEXT.md` — product vision, target user, current milestone
 - `.claude/DECISIONS.md` — why we chose this stack and architecture
 
