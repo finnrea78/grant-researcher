@@ -14,6 +14,7 @@ Invoke these skills before acting — not after.
 - `superpowers:dispatching-parallel-agents` — when 2+ independent tasks can be worked without shared state
 - `superpowers:test-driven-development` — before writing implementation code for any feature or bugfix
 - `create-migration` — before scaffolding any Supabase schema change
+- `scrape-grants` — discover and ingest new grant funders via Claude web search (runs from phone via `/loop`)
 
 ## Review & finishing
 - `simplify` — after completing a logical chunk of code, before committing

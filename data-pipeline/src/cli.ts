@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { resolve } from "path";
+import { readFileSync } from "fs";
 import { supabase } from "@grant-researcher/db";
 import { fetchGtrProjects, GTR_COUNCIL_NAMES } from "./sources/gtr.js";
 import { fetchUkriOpportunities } from "./sources/ukri-finder.js";
@@ -19,7 +20,7 @@ import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
 import { embedBackfill } from "./commands/embed-backfill.js";
 import { runOpportunitySource, ensureFunders, type SourceConfig } from "./commands/run-source.js";
 import { runCleanup, runPurge } from "./commands/cleanup.js";
-import type { NormalisedGrant } from "./types.js";
+import type { NormalisedGrant, NormalisedOpportunity } from "./types.js";
 
 const program = new Command();
 program.name("ingest").description("Grant data ingestion pipeline").version("0.1.0");
@@ -269,6 +270,60 @@ program
     } catch (err) {
       console.error(`  Error: ${err instanceof Error ? err.message : err}`);
       process.exit(1);
+    }
+  });
+
+program
+  .command("claude-extract")
+  .description("Ingest opportunities extracted by Claude from web (JSON file)")
+  .requiredOption("--file <path>", "Path to JSON file with extracted opportunities")
+  .action(async (opts) => {
+    const filePath = resolve(process.cwd(), opts.file);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(readFileSync(filePath, "utf-8"));
+    } catch (err) {
+      console.error(`Failed to read ${filePath}: ${err instanceof Error ? err.message : err}`);
+      process.exit(1);
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      console.error("JSON file must contain a non-empty array of opportunities");
+      process.exit(1);
+    }
+
+    const opportunities = parsed as Record<string, unknown>[];
+    for (const item of opportunities) {
+      if (!item.name || !item.funder_slug) {
+        console.error(`Invalid opportunity: missing name or funder_slug — ${JSON.stringify(item).slice(0, 120)}`);
+        process.exit(1);
+      }
+      if (!item.source) item.source = "claude_web_extract";
+      if (!item.slug) item.slug = (item.name as string).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "");
+      if (!item.amount_currency) item.amount_currency = "GBP";
+      if (!item.source_metadata) item.source_metadata = {};
+    }
+
+    await runOpportunitySource({
+      displayName: `Claude web extract (${opportunities.length} opportunities)`,
+      source: "claude_web_extract",
+      discoveredBy: "agentic_scan",
+      fetch: async () => opportunities as unknown as NormalisedOpportunity[],
+    });
+  });
+
+program
+  .command("list-funders")
+  .description("List all known funder slugs (used by scrape-grants skill)")
+  .action(async () => {
+    const { data, error } = await supabase
+      .from("funders")
+      .select("slug, name, source_url, discovered_by")
+      .order("slug");
+    if (error) { console.error(error.message); process.exit(1); }
+    if (!data || data.length === 0) { console.log("No funders found."); return; }
+    for (const f of data) {
+      console.log(`${f.slug} | ${f.name} | ${f.source_url ?? ""} | ${f.discovered_by ?? ""}`);
     }
   });
 

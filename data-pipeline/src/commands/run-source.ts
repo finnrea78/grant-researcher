@@ -8,22 +8,24 @@ export interface SourceConfig {
   displayName: string;
   source: string;
   funderSlug?: string;
+  discoveredBy?: "manual" | "pipeline" | "agentic_scan";
   fetch: () => Promise<NormalisedOpportunity[]>;
 }
 
 export async function ensureFunders(
-  items: Array<{ funder_slug: string; funder_name?: string | null }>
+  items: Array<{ funder_slug: string; funder_name?: string | null; url?: string | null }>,
+  discoveredBy?: "manual" | "pipeline" | "agentic_scan"
 ): Promise<Map<string, { id: string; name: string }>> {
-  const seen = new Map<string, string | null>();
+  const seen = new Map<string, { name: string | null; url: string | null }>();
   for (const item of items) {
     if (!seen.has(item.funder_slug)) {
-      seen.set(item.funder_slug, item.funder_name ?? null);
+      seen.set(item.funder_slug, { name: item.funder_name ?? null, url: item.url ?? null });
     }
   }
 
   const map = new Map<string, { id: string; name: string }>();
-  for (const [slug, funderName] of seen) {
-    const name = funderName ?? slug.toUpperCase().replace(/-/g, " ");
+  for (const [slug, info] of seen) {
+    const name = info.name ?? slug.toUpperCase().replace(/-/g, " ");
     const id = await upsertFunder({
       slug,
       name,
@@ -33,6 +35,11 @@ export async function ensureFunders(
         : null,
       disciplines: [],
       source_metadata: {},
+      ...(discoveredBy && {
+        discovered_by: discoveredBy,
+        source_url: info.url,
+        last_harvested_at: new Date().toISOString(),
+      }),
     });
     map.set(slug, { id, name });
   }
@@ -48,7 +55,7 @@ export async function runOpportunitySource(config: SourceConfig): Promise<{
   const runId = await startRun(config.source, config.funderSlug);
   try {
     const opportunities = await config.fetch();
-    const funderMap = await ensureFunders(opportunities);
+    const funderMap = await ensureFunders(opportunities, config.discoveredBy);
     const counters = await upsertOpportunities(opportunities, funderMap);
     console.log(`  Done: ${counters.created} created, ${counters.updated} updated, ${counters.skipped} skipped`);
     await completeRun(runId, "success", counters);
