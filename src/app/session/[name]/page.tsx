@@ -87,6 +87,60 @@ export default function SessionPage({ params }: { params: { name: string } }) {
     runningRef.current = true;
     dispatch({ type: "START", stage });
 
+    // Baseline for propose — completion = new proposal row appears
+    const proposalCountBefore = state.proposals.length;
+
+    async function loadPostStageData() {
+      if (stage === "match") {
+        const matchesRes = await fetch(`/api/session/${name}/matches`);
+        const data = await matchesRes.json();
+        dispatch({ type: "SET_MATCHES", matches: rowsToMatches(data.matches ?? []) });
+      }
+      if (stage === "propose") {
+        const proposalRes = await fetch(`/api/session/${name}/proposal`);
+        const { proposals } = await proposalRes.json();
+        dispatch({ type: "SET_PROPOSALS", proposals });
+      }
+      if (stage === "enrich") {
+        const statusRes = await fetch(`/api/session/${name}/status`);
+        const status = await statusRes.json();
+        if (status.scholarCandidate) {
+          dispatch({ type: "SET_SCHOLAR_CANDIDATE", candidate: status.scholarCandidate });
+        }
+      }
+    }
+
+    // When the browser backgrounds a tab (e.g. switching to another app on
+    // mobile) the SSE connection is usually killed, but the server keeps
+    // running the agent and persists completion to pipeline_state. Poll
+    // until the stage flips to complete on the server, or time out.
+    async function pollForServerCompletion(): Promise<boolean> {
+      const deadline = Date.now() + 10 * 60 * 1000;
+      const pollIntervalMs = 3000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, pollIntervalMs));
+        try {
+          if (stage === "propose") {
+            const res = await fetch(`/api/session/${name}/proposal`);
+            if (res.ok) {
+              const data = await res.json();
+              const proposals = Array.isArray(data.proposals) ? data.proposals : [];
+              if (proposals.length > proposalCountBefore) return true;
+            }
+          } else {
+            const res = await fetch(`/api/session/${name}/status`);
+            if (res.ok) {
+              const status = await res.json();
+              if (status[stage] === true) return true;
+            }
+          }
+        } catch {
+          // Network still flaky — keep polling until deadline.
+        }
+      }
+      return false;
+    }
+
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -102,7 +156,6 @@ export default function SessionPage({ params }: { params: { name: string } }) {
         } catch {}
         dispatch({ type: "LOG", event: { type: "error", message: msg } });
         dispatch({ type: "ERROR", stage });
-        runningRef.current = false;
         return;
       }
 
@@ -127,7 +180,6 @@ export default function SessionPage({ params }: { params: { name: string } }) {
               dispatch({ type: "LOG", event });
               if (event.type === "error") {
                 dispatch({ type: "ERROR", stage });
-                runningRef.current = false;
                 return;
               }
             }
@@ -138,27 +190,36 @@ export default function SessionPage({ params }: { params: { name: string } }) {
       }
 
       dispatch({ type: "COMPLETE", stage });
+      await loadPostStageData();
+    } catch (err) {
+      const isNetworkError =
+        err instanceof TypeError ||
+        /network|fetch|failed to fetch|load failed/i.test(String(err));
 
-      // After stage completes, load any new data
-      if (stage === "match") {
-        const matchesRes = await fetch(`/api/session/${name}/matches`);
-        const data = await matchesRes.json();
-        dispatch({ type: "SET_MATCHES", matches: rowsToMatches(data.matches ?? []) });
-      }
-      if (stage === "propose") {
-        const proposalRes = await fetch(`/api/session/${name}/proposal`);
-        const { proposals } = await proposalRes.json();
-        dispatch({ type: "SET_PROPOSALS", proposals });
-      }
-      // After enrich completes, re-check status for a scholar candidate
-      if (stage === "enrich") {
-        const statusRes = await fetch(`/api/session/${name}/status`);
-        const status = await statusRes.json();
-        if (status.scholarCandidate) {
-          dispatch({ type: "SET_SCHOLAR_CANDIDATE", candidate: status.scholarCandidate });
+      if (isNetworkError) {
+        dispatch({
+          type: "LOG",
+          event: {
+            type: "text",
+            text: "Connection dropped (likely switched apps) — checking the server for progress…",
+          },
+        });
+        const completed = await pollForServerCompletion();
+        if (completed) {
+          dispatch({
+            type: "LOG",
+            event: { type: "text", text: "Reconnected — stage completed on the server." },
+          });
+          dispatch({ type: "COMPLETE", stage });
+          try {
+            await loadPostStageData();
+          } catch {
+            // Best-effort — surfacing this as an error would be more confusing than helpful.
+          }
+          return;
         }
       }
-    } catch (err) {
+
       dispatch({ type: "LOG", event: { type: "error", message: String(err) } });
       dispatch({ type: "ERROR", stage });
     } finally {
