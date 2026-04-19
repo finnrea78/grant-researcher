@@ -16,7 +16,6 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
     const urlError = params.get("error_description") ?? params.get("error");
 
     if (urlError) {
@@ -24,19 +23,14 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) {
-          setError("Invalid or expired reset link. Please request a new one.");
-        } else {
-          setReady(true);
-        }
-      });
-    }
+    // The /auth/callback route already exchanged the code server-side.
+    // Check for an active session and listen for PASSWORD_RECOVERY.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true);
+    });
 
-    // Fallback for hash-based flow (no ?code in URL)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         setReady(true);
       }
     });
