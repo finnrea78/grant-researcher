@@ -51,7 +51,8 @@ export type OpportunitySource =
   | "benhs"
   | "raeng"
   | "rsc"
-  | "iolanthe";
+  | "iolanthe"
+  | "bhf";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {

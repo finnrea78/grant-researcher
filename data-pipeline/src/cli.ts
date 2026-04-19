@@ -92,6 +92,8 @@ import { fetchRscGrants } from "./sources/rsc.js";
 import { normaliseRsc } from "./transforms/normalise-rsc.js";
 import { fetchIolantheAwards } from "./sources/iolanthe.js";
 import { normaliseIolanthe } from "./transforms/normalise-iolanthe.js";
+import { fetchBhfSchemes } from "./sources/bhf.js";
+import { normaliseBhf } from "./transforms/normalise-bhf.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -506,6 +508,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     source: "iolanthe",
     funderSlug: "iolanthe-midwifery-trust",
     fetch: () => fetchIolantheAwards().then(r => r.map(normaliseIolanthe)),
+  },
+  {
+    displayName: "British Heart Foundation schemes",
+    source: "bhf",
+    funderSlug: "british-heart-foundation",
+    fetch: () => fetchBhfSchemes().then(r => r.map(normaliseBhf)),
   },
 ];
 
