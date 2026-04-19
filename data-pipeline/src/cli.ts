@@ -96,6 +96,8 @@ import { fetchBhfSchemes } from "./sources/bhf.js";
 import { normaliseBhf } from "./transforms/normalise-bhf.js";
 import { fetchNatgeoGrants } from "./sources/natgeo.js";
 import { normaliseNatgeo } from "./transforms/normalise-natgeo.js";
+import { fetchGerdaHenkelSchemes } from "./sources/gerda-henkel.js";
+import { normaliseGerdaHenkel } from "./transforms/normalise-gerda-henkel.js";
 import { fetchDiabetesUkSchemes } from "./sources/diabetes-uk.js";
 import { normaliseDiabetesUk } from "./transforms/normalise-diabetes-uk.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
@@ -524,6 +526,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     source: "natgeo",
     funderSlug: "national-geographic-society",
     fetch: () => fetchNatgeoGrants().then(r => r.map(normaliseNatgeo)),
+  },
+  {
+    displayName: "Gerda Henkel Foundation programmes",
+    source: "gerda_henkel",
+    funderSlug: "gerda-henkel-foundation",
+    fetch: () => fetchGerdaHenkelSchemes().then(r => r.map(normaliseGerdaHenkel)),
   },
   {
     displayName: "Diabetes UK funding schemes",
@@ -1211,6 +1219,18 @@ program
       source: "natgeo",
       funderSlug: "national-geographic-society",
       fetch: () => fetchNatgeoGrants().then(r => r.map(normaliseNatgeo)),
+    });
+  });
+
+program
+  .command("gerda-henkel")
+  .description("Ingest research grant programmes from the Gerda Henkel Foundation")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Gerda Henkel Foundation programmes",
+      source: "gerda_henkel",
+      funderSlug: "gerda-henkel-foundation",
+      fetch: () => fetchGerdaHenkelSchemes().then(r => r.map(normaliseGerdaHenkel)),
     });
   });
 

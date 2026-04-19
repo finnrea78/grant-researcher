@@ -54,6 +54,7 @@ export type OpportunitySource =
   | "iolanthe"
   | "bhf"
   | "natgeo"
+  | "gerda_henkel"
   | "diabetes_uk";
 
 /** Shape written to the opportunities table (open funding calls). */
