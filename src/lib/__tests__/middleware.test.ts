@@ -83,4 +83,24 @@ describe("middleware", () => {
     expect(mockRedirect).not.toHaveBeenCalled();
     expect((result as unknown as { _isNext: boolean })._isNext).toBe(true);
   });
+
+  it("allows unauthenticated access to /auth/reset-password", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
+    const { middleware } = await import("@/middleware");
+
+    const result = await middleware(makeReq("/auth/reset-password") as never);
+
+    expect(mockRedirect).not.toHaveBeenCalled();
+    expect((result as unknown as { _isNext: boolean })._isNext).toBe(true);
+  });
+
+  it("allows unauthenticated access to /auth/callback", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
+    const { middleware } = await import("@/middleware");
+
+    const result = await middleware(makeReq("/auth/callback") as never);
+
+    expect(mockRedirect).not.toHaveBeenCalled();
+    expect((result as unknown as { _isNext: boolean })._isNext).toBe(true);
+  });
 });
