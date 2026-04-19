@@ -96,6 +96,8 @@ import { fetchBhfSchemes } from "./sources/bhf.js";
 import { normaliseBhf } from "./transforms/normalise-bhf.js";
 import { fetchNatgeoGrants } from "./sources/natgeo.js";
 import { normaliseNatgeo } from "./transforms/normalise-natgeo.js";
+import { fetchDiabetesUkSchemes } from "./sources/diabetes-uk.js";
+import { normaliseDiabetesUk } from "./transforms/normalise-diabetes-uk.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -522,6 +524,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     source: "natgeo",
     funderSlug: "national-geographic-society",
     fetch: () => fetchNatgeoGrants().then(r => r.map(normaliseNatgeo)),
+  },
+  {
+    displayName: "Diabetes UK funding schemes",
+    source: "diabetes_uk",
+    funderSlug: "diabetes-uk",
+    fetch: () => fetchDiabetesUkSchemes().then(r => r.map(normaliseDiabetesUk)),
   },
 ];
 
@@ -1203,6 +1211,18 @@ program
       source: "natgeo",
       funderSlug: "national-geographic-society",
       fetch: () => fetchNatgeoGrants().then(r => r.map(normaliseNatgeo)),
+    });
+  });
+
+program
+  .command("diabetes-uk")
+  .description("Ingest funding schemes from Diabetes UK")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Diabetes UK funding schemes",
+      source: "diabetes_uk",
+      funderSlug: "diabetes-uk",
+      fetch: () => fetchDiabetesUkSchemes().then(r => r.map(normaliseDiabetesUk)),
     });
   });
 

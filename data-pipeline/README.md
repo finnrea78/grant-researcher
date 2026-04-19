@@ -93,6 +93,7 @@ npm run embed -w data-pipeline
 | `iolanthe` | Iolanthe Midwifery Trust |
 | `bhf` | British Heart Foundation |
 | `natgeo` | National Geographic Society |
+| `diabetes-uk` | Diabetes UK |
 
 ## Testing
 

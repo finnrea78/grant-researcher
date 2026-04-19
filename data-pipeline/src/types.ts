@@ -53,7 +53,8 @@ export type OpportunitySource =
   | "rsc"
   | "iolanthe"
   | "bhf"
-  | "natgeo";
+  | "natgeo"
+  | "diabetes_uk";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {
