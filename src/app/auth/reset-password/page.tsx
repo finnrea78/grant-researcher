@@ -17,6 +17,13 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
+    const urlError = params.get("error_description") ?? params.get("error");
+
+    if (urlError) {
+      setError("Invalid or expired reset link. Please request a new one.");
+      return;
+    }
+
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
         if (error) {
@@ -83,7 +90,19 @@ export default function ResetPasswordPage() {
     return (
       <main className="flex flex-col items-center justify-center min-h-screen px-4">
         <div className="w-full max-w-sm text-center">
-          <p className="text-slate-400 text-sm">Verifying reset link…</p>
+          {error ? (
+            <>
+              <p className="text-red-400 text-sm">{error}</p>
+              <button
+                onClick={() => window.location.href = "/login"}
+                className="mt-4 text-slate-500 hover:text-slate-300 text-xs transition-colors"
+              >
+                Back to sign in
+              </button>
+            </>
+          ) : (
+            <p className="text-slate-400 text-sm">Verifying reset link…</p>
+          )}
         </div>
       </main>
     );
