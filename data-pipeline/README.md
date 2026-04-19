@@ -91,6 +91,8 @@ npm run embed -w data-pipeline
 | `raeng` | Royal Academy of Engineering |
 | `rsc` | Royal Society of Chemistry |
 | `iolanthe` | Iolanthe Midwifery Trust |
+| `bhf` | British Heart Foundation |
+| `natgeo` | National Geographic Society |
 
 ## Testing
 

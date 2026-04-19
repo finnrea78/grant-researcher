@@ -94,6 +94,8 @@ import { fetchIolantheAwards } from "./sources/iolanthe.js";
 import { normaliseIolanthe } from "./transforms/normalise-iolanthe.js";
 import { fetchBhfSchemes } from "./sources/bhf.js";
 import { normaliseBhf } from "./transforms/normalise-bhf.js";
+import { fetchNatgeoGrants } from "./sources/natgeo.js";
+import { normaliseNatgeo } from "./transforms/normalise-natgeo.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -514,6 +516,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     source: "bhf",
     funderSlug: "british-heart-foundation",
     fetch: () => fetchBhfSchemes().then(r => r.map(normaliseBhf)),
+  },
+  {
+    displayName: "National Geographic Society grants",
+    source: "natgeo",
+    funderSlug: "national-geographic-society",
+    fetch: () => fetchNatgeoGrants().then(r => r.map(normaliseNatgeo)),
   },
 ];
 
@@ -1183,6 +1191,18 @@ program
       source: "raeng",
       funderSlug: "royal-academy-of-engineering",
       fetch: () => fetchRaengGrants().then(r => r.map(normaliseRaeng)),
+    });
+  });
+
+program
+  .command("natgeo")
+  .description("Ingest open grant calls from National Geographic Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "National Geographic Society grants",
+      source: "natgeo",
+      funderSlug: "national-geographic-society",
+      fetch: () => fetchNatgeoGrants().then(r => r.map(normaliseNatgeo)),
     });
   });
 
