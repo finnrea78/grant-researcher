@@ -41,6 +41,9 @@ data-pipeline/.env
 # Git worktrees
 .worktrees/
 
+# Agent-produced JSON files (written during live discovery runs)
+data-pipeline/tmp/
+
 # Supabase CLI cache
 supabase/.temp/
 db/supabase/.temp/
