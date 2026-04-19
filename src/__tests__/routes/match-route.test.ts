@@ -186,6 +186,26 @@ describe("POST /api/session/[name]/match (DB-first)", () => {
     expect(queryCall.options.allowedTools).not.toContain("Write");
   });
 
+  it("uses Haiku model for cost reduction", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    const res = await POST(makeRequest(), { params: { name: "jane-smith" } });
+    await drainStream(res);
+
+    const queryCall = mockQuery.mock.calls[0][0];
+    expect(queryCall.options.model).toBe("claude-haiku-4-5-20251001");
+  });
+
+  it("uses maxTurns: 1 for single-pass scoring", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    const res = await POST(makeRequest(), { params: { name: "jane-smith" } });
+    await drainStream(res);
+
+    const queryCall = mockQuery.mock.calls[0][0];
+    expect(queryCall.options.maxTurns).toBe(1);
+  });
+
   it("does not use mkdirSync", async () => {
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
 

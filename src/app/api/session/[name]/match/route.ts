@@ -83,8 +83,8 @@ export async function POST(
             options: {
               systemPrompt: MATCHER_PROMPT,
               allowedTools: [],
-              model: "claude-sonnet-4-6",
-              maxTurns: 5,
+              model: "claude-haiku-4-5-20251001",
+              maxTurns: 1,
             },
           })) {
             if (message.type === "assistant") {
