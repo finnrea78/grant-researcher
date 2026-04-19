@@ -11,6 +11,7 @@ export interface RawVivensaGrant {
   deadlineRaw: string | null;
   amountRaw: string | null;
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseVivensa(raw: RawVivensaGrant): NormalisedOpportunity {
@@ -35,8 +36,8 @@ export function normaliseVivensa(raw: RawVivensaGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: "grant",
     description: raw.description,
-    eligibility: null,
-    scope: "ageing, dementia, older people",
+    eligibility: raw.eligibility || null,
+    scope: null,
     source: "vivensa_foundation",
     source_metadata: {
       status_raw: raw.statusRaw,

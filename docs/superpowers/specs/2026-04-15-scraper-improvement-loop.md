@@ -336,6 +336,14 @@ Updated each iteration. Format:
 - **royal_society** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
 - **netias** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
 - **action_medical** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+- **leverhulme** ✅ Improved (2026-04-16) — detail-page fetch added (Drupal accordion), desc 2000 chars, eligibility 1500 chars; all schemes currently closed so 0 rows in DB but scraper ready for next open round
+- **vivensa_foundation** ✅ Improved (2026-04-16) — rewritten for new Gutenberg-block structure (h3→h2), multi-para desc 2000 chars, eligibility extracted, scope hardcode removed; 2 rows in DB
+- **geolsoc** ✅ Improved (2026-04-16) — multi-para desc from accordion body, scope null; all schemes currently closed (0 DB rows) but scraper ready
+- **bsbi** ✅ Improved (2026-04-16) — detail-page fetch added, desc + elig extraction, scope null; all closed (0 DB rows)
+- **rgs** ✅ Improved (2026-04-16) — detail-page fetch added (deduped by URL), desc + elig extraction, scope null; all closed (0 DB rows)
+- **blood_cancer_uk** ✅ Improved (2026-04-16) — detail-page fetch added, desc + elig extraction, scope null; all closed (0 DB rows)
+- **newton_fellowship** ✅ Improved (2026-04-16) — multi-para desc, eligibility extraction, scope null; currently closed (0 DB rows)
+- **rse** ✅ Improved (2026-04-16) — multi-para desc, eligibility extraction, scope null; all closed (0 DB rows)
 
 ---
 

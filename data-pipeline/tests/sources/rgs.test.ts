@@ -1,4 +1,4 @@
-import { parseRgsPage } from "../../src/sources/rgs";
+import { parseRgsPage, parseRgsDetailPage } from "../../src/sources/rgs";
 import { normaliseRgs } from "../../src/transforms/normalise-rgs";
 
 // Fixture with a future deadline (open) and past deadline (closed)
@@ -134,5 +134,46 @@ describe("normaliseRgs", () => {
     const result = normaliseRgs(raw);
     expect(result.amount_min).toBeNull();
     expect(result.amount_max).toBeNull();
+  });
+
+  it("sets scope to null (not hardcoded subject string)", () => {
+    const raw = parseRgsPage(FIXTURE)[0];
+    const result = normaliseRgs(raw);
+    expect(result.scope).toBeNull();
+  });
+});
+
+const RGS_DETAIL_FIXTURE = `
+<!DOCTYPE html>
+<html>
+<body>
+<main>
+  <section>
+    <p>The Society offers awards of up to £2,500 for PhD students undertaking fieldwork and data collection to advance geographical knowledge. The programme was established to support postgraduate research.</p>
+    <p>Named awards within this scheme include the Albert Reckitt Awards and the Dudley Stamp Memorial Award.</p>
+    <h3>Eligibility</h3>
+    <p>Applicants must be registered PhD students at UK Higher Education Institutions. Preference is given to students who do not receive full funding from a research council or university for fieldwork.</p>
+  </section>
+</main>
+</body>
+</html>`;
+
+describe("parseRgsDetailPage", () => {
+  it("extracts multi-paragraph description", () => {
+    const { description } = parseRgsDetailPage(RGS_DETAIL_FIXTURE);
+    expect(description).not.toBeNull();
+    expect(description).toContain("fieldwork and data collection");
+  });
+
+  it("extracts eligibility from Eligibility heading", () => {
+    const { eligibility } = parseRgsDetailPage(RGS_DETAIL_FIXTURE);
+    expect(eligibility).not.toBeNull();
+    expect(eligibility).toContain("PhD students at UK Higher Education");
+  });
+
+  it("returns nulls for empty page", () => {
+    const { description, eligibility } = parseRgsDetailPage("<html><body><main></main></body></html>");
+    expect(description).toBeNull();
+    expect(eligibility).toBeNull();
   });
 });

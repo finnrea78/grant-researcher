@@ -86,6 +86,20 @@ import { fetchClassicalAssocGrants } from "./sources/classical-association.js";
 import { normaliseClassicalAssoc } from "./transforms/normalise-classical-association.js";
 import { fetchBenhsGrants } from "./sources/benhs.js";
 import { normaliseBenhs } from "./transforms/normalise-benhs.js";
+import { fetchRaengGrants } from "./sources/raeng.js";
+import { normaliseRaeng } from "./transforms/normalise-raeng.js";
+import { fetchRscGrants } from "./sources/rsc.js";
+import { normaliseRsc } from "./transforms/normalise-rsc.js";
+import { fetchIolantheAwards } from "./sources/iolanthe.js";
+import { normaliseIolanthe } from "./transforms/normalise-iolanthe.js";
+import { fetchBhfSchemes } from "./sources/bhf.js";
+import { normaliseBhf } from "./transforms/normalise-bhf.js";
+import { fetchNatgeoGrants } from "./sources/natgeo.js";
+import { normaliseNatgeo } from "./transforms/normalise-natgeo.js";
+import { fetchGerdaHenkelSchemes } from "./sources/gerda-henkel.js";
+import { normaliseGerdaHenkel } from "./transforms/normalise-gerda-henkel.js";
+import { fetchDiabetesUkSchemes } from "./sources/diabetes-uk.js";
+import { normaliseDiabetesUk } from "./transforms/normalise-diabetes-uk.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -482,6 +496,48 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     source: "challenger_society",
     funderSlug: "challenger-society",
     fetch: () => fetchChallengerSocietyGrants().then(r => r.map(normaliseChallengerSociety)),
+  },
+  {
+    displayName: "Royal Academy of Engineering programmes",
+    source: "raeng",
+    funderSlug: "royal-academy-of-engineering",
+    fetch: () => fetchRaengGrants().then(r => r.map(normaliseRaeng)),
+  },
+  {
+    displayName: "Royal Society of Chemistry grants",
+    source: "rsc",
+    funderSlug: "royal-society-of-chemistry",
+    fetch: () => fetchRscGrants().then(r => r.map(normaliseRsc)),
+  },
+  {
+    displayName: "Iolanthe Midwifery Trust awards",
+    source: "iolanthe",
+    funderSlug: "iolanthe-midwifery-trust",
+    fetch: () => fetchIolantheAwards().then(r => r.map(normaliseIolanthe)),
+  },
+  {
+    displayName: "British Heart Foundation schemes",
+    source: "bhf",
+    funderSlug: "british-heart-foundation",
+    fetch: () => fetchBhfSchemes().then(r => r.map(normaliseBhf)),
+  },
+  {
+    displayName: "National Geographic Society grants",
+    source: "natgeo",
+    funderSlug: "national-geographic-society",
+    fetch: () => fetchNatgeoGrants().then(r => r.map(normaliseNatgeo)),
+  },
+  {
+    displayName: "Gerda Henkel Foundation programmes",
+    source: "gerda_henkel",
+    funderSlug: "gerda-henkel-foundation",
+    fetch: () => fetchGerdaHenkelSchemes().then(r => r.map(normaliseGerdaHenkel)),
+  },
+  {
+    displayName: "Diabetes UK funding schemes",
+    source: "diabetes_uk",
+    funderSlug: "diabetes-uk",
+    fetch: () => fetchDiabetesUkSchemes().then(r => r.map(normaliseDiabetesUk)),
   },
 ];
 
@@ -1116,6 +1172,78 @@ program
       console.error(`  Error: ${msg}`);
       process.exit(1);
     }
+  });
+
+program
+  .command("iolanthe")
+  .description("Ingest award schemes from the Iolanthe Midwifery Trust")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Iolanthe Midwifery Trust awards",
+      source: "iolanthe",
+      funderSlug: "iolanthe-midwifery-trust",
+      fetch: () => fetchIolantheAwards().then(r => r.map(normaliseIolanthe)),
+    });
+  });
+
+program
+  .command("rsc")
+  .description("Ingest grant schemes from the Royal Society of Chemistry")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Royal Society of Chemistry grants",
+      source: "rsc",
+      funderSlug: "royal-society-of-chemistry",
+      fetch: () => fetchRscGrants().then(r => r.map(normaliseRsc)),
+    });
+  });
+
+program
+  .command("raeng")
+  .description("Ingest research programmes from the Royal Academy of Engineering")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Royal Academy of Engineering programmes",
+      source: "raeng",
+      funderSlug: "royal-academy-of-engineering",
+      fetch: () => fetchRaengGrants().then(r => r.map(normaliseRaeng)),
+    });
+  });
+
+program
+  .command("natgeo")
+  .description("Ingest open grant calls from National Geographic Society")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "National Geographic Society grants",
+      source: "natgeo",
+      funderSlug: "national-geographic-society",
+      fetch: () => fetchNatgeoGrants().then(r => r.map(normaliseNatgeo)),
+    });
+  });
+
+program
+  .command("gerda-henkel")
+  .description("Ingest research grant programmes from the Gerda Henkel Foundation")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Gerda Henkel Foundation programmes",
+      source: "gerda_henkel",
+      funderSlug: "gerda-henkel-foundation",
+      fetch: () => fetchGerdaHenkelSchemes().then(r => r.map(normaliseGerdaHenkel)),
+    });
+  });
+
+program
+  .command("diabetes-uk")
+  .description("Ingest funding schemes from Diabetes UK")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Diabetes UK funding schemes",
+      source: "diabetes_uk",
+      funderSlug: "diabetes-uk",
+      fetch: () => fetchDiabetesUkSchemes().then(r => r.map(normaliseDiabetesUk)),
+    });
   });
 
 program

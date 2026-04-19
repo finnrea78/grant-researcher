@@ -8,6 +8,7 @@ export interface RawRgsGrant {
   status: string;
   deadlineRaw: string | null; // "DD Month YYYY"
   description: string | null;
+  eligibility: string | null;
 }
 
 export function normaliseRgs(raw: RawRgsGrant): NormalisedOpportunity {
@@ -28,8 +29,8 @@ export function normaliseRgs(raw: RawRgsGrant): NormalisedOpportunity {
     url: raw.url,
     funding_type: raw.name.toLowerCase().includes("fellowship") ? "fellowship" : "grant",
     description: raw.description,
-    eligibility: null,
-    scope: "geography, exploration, fieldwork, environment",
+    eligibility: raw.eligibility || null,
+    scope: null,
     source: "rgs",
     source_metadata: {},
   };

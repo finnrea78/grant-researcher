@@ -12,6 +12,7 @@ export interface RawLeverhulmeScheme {
   value: string;
   duration: string;
   description: string;
+  eligibility: string | null;
 }
 
 export function normaliseLeverhulme(raw: RawLeverhulmeScheme): NormalisedOpportunity {
@@ -38,7 +39,7 @@ export function normaliseLeverhulme(raw: RawLeverhulmeScheme): NormalisedOpportu
     url: raw.url,
     funding_type: null,
     description: raw.description || null,
-    eligibility: null,
+    eligibility: raw.eligibility || null,
     scope: null,
     source: "leverhulme",
     source_metadata: {

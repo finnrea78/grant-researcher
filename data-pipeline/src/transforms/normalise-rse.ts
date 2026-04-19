@@ -8,6 +8,7 @@ export interface RawRSEAward {
   url: string;
   status: string; // "open" | "closed"
   description: string | null;
+  eligibility: string | null;
   deadlineRaw: string | null;
   valueRaw: string | null;
   durationRaw: string | null;
@@ -32,8 +33,8 @@ export function normaliseRSE(raw: RawRSEAward): NormalisedOpportunity {
     url: raw.url,
     funding_type: "grant",
     description: raw.description,
-    eligibility: null,
-    scope: "Scotland-affiliated researchers",
+    eligibility: raw.eligibility || null,
+    scope: null,
     source: "rse",
     source_metadata: {
       duration: raw.durationRaw,

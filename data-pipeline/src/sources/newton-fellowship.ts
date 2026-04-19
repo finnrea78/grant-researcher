@@ -39,13 +39,27 @@ export function parseNewtonPage(html: string): RawNewtonFellowship[] {
     }
   });
 
-  // Description: first non-empty paragraph in main content
-  let description: string | null = null;
+  // Description: multi-paragraph from main content
+  const descParts: string[] = [];
   $("main p, article p, .page-content p").each((_i, el) => {
     const text = $(el).text().trim();
-    if (text.length > 30 && !description) {
-      description = text;
+    if (text.length > 60) descParts.push(text);
+  });
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  // Eligibility: extract from heading section
+  let eligibility: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (eligibility !== null) return;
+    if (!/eligibilit|who\s+can\s+apply/i.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
     }
+    if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
   });
 
   // Title from <h1>
@@ -57,6 +71,7 @@ export function parseNewtonPage(html: string): RawNewtonFellowship[] {
       url: FELLOWSHIP_URL,
       status,
       description,
+      eligibility,
       amountRaw,
       openDateRaw,
       closeDateRaw,

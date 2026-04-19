@@ -8,6 +8,7 @@ export interface RawNewtonFellowship {
   url: string;
   status: string; // "open" | "closed"
   description: string | null;
+  eligibility: string | null;
   amountRaw: string | null;
   openDateRaw: string | null;
   closeDateRaw: string | null;
@@ -33,8 +34,8 @@ export function normaliseNewton(raw: RawNewtonFellowship): NormalisedOpportunity
     url: raw.url,
     funding_type: "fellowship",
     description: raw.description,
-    eligibility: null,
-    scope: "international researchers moving to UK",
+    eligibility: raw.eligibility || null,
+    scope: null,
     source: "newton_fellowship",
     source_metadata: {
       open_date: raw.openDateRaw,

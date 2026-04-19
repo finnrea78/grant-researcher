@@ -48,7 +48,14 @@ export type OpportunitySource =
   | "challenger_society"
   | "bou"
   | "classical_association"
-  | "benhs";
+  | "benhs"
+  | "raeng"
+  | "rsc"
+  | "iolanthe"
+  | "bhf"
+  | "natgeo"
+  | "gerda_henkel"
+  | "diabetes_uk";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {

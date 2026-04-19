@@ -3,24 +3,35 @@ import { slugify } from "./slugify.js";
 import { parseDate } from "./parse-dates.js";
 import { parseAmount } from "./parse-amounts.js";
 
-export interface RawGeolsocGrant {
-  name: string;
+export interface RawIolantheAward {
+  title: string;
   url: string;
   status: string;
   description: string | null;
+  eligibility: string | null;
   amountRaw: string | null;
-  deadlineRaw: string | null; // global cycle deadline
+  deadlineRaw: string | null;
 }
 
-export function normaliseGeolsoc(raw: RawGeolsocGrant): NormalisedOpportunity {
+export function normaliseIolanthe(raw: RawIolantheAward): NormalisedOpportunity {
   const { min, max, currency } = parseAmount(raw.amountRaw, "GBP");
   const deadlineDate = raw.deadlineRaw ? parseDate(raw.deadlineRaw) : null;
 
+  const titleLower = raw.title.toLowerCase();
+  let fundingType: string;
+  if (titleLower.includes("fellowship")) {
+    fundingType = "fellowship";
+  } else if (titleLower.includes("bursary") || titleLower.includes("travel")) {
+    fundingType = "bursary";
+  } else {
+    fundingType = "grant";
+  }
+
   return {
-    funder_slug: "geological-society-of-london",
-    funder_name: "Geological Society of London",
-    name: raw.name,
-    slug: slugify(raw.name),
+    funder_slug: "iolanthe-midwifery-trust",
+    funder_name: "Iolanthe Midwifery Trust",
+    name: raw.title,
+    slug: slugify(raw.title),
     status: raw.status,
     deadline_raw: raw.deadlineRaw,
     deadline_date: deadlineDate,
@@ -29,11 +40,11 @@ export function normaliseGeolsoc(raw: RawGeolsocGrant): NormalisedOpportunity {
     amount_max: max,
     amount_currency: currency,
     url: raw.url,
-    funding_type: "grant",
+    funding_type: fundingType,
     description: raw.description,
-    eligibility: null,
+    eligibility: raw.eligibility,
     scope: null,
-    source: "geolsoc",
+    source: "iolanthe",
     source_metadata: {},
   };
 }

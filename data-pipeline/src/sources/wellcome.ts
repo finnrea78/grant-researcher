@@ -126,11 +126,20 @@ export async function fetchWellcomeSchemes(): Promise<RawWellcomeScheme[]> {
 
   const response = await fetchWithRetry(SCHEMES_URL);
   if (!response.ok) {
-    throw new Error(`Wellcome error: ${response.status} ${response.statusText}`);
+    console.warn(`  Wellcome: HTTP ${response.status} — site may be blocking automated requests. Skipping.`);
+    return [];
   }
 
   const html = await response.text();
-  const schemes = parseWellcomePage(html);
+
+  let schemes: RawWellcomeScheme[];
+  try {
+    schemes = parseWellcomePage(html);
+  } catch (err) {
+    console.warn(`  Wellcome: failed to parse listing page (${(err as Error).message}) — site may have changed or added bot protection. Skipping.`);
+    return [];
+  }
+
   console.log(`  Found ${schemes.length} schemes from Wellcome`);
 
   // Enrich from detail pages

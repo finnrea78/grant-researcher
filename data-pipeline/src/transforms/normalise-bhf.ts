@@ -3,24 +3,26 @@ import { slugify } from "./slugify.js";
 import { parseDate } from "./parse-dates.js";
 import { parseAmount } from "./parse-amounts.js";
 
-export interface RawGeolsocGrant {
-  name: string;
+export interface RawBhfScheme {
+  title: string;
   url: string;
+  fundingType: string;
   status: string;
   description: string | null;
+  eligibility: string | null;
   amountRaw: string | null;
-  deadlineRaw: string | null; // global cycle deadline
+  deadlineRaw: string | null;
 }
 
-export function normaliseGeolsoc(raw: RawGeolsocGrant): NormalisedOpportunity {
+export function normaliseBhf(raw: RawBhfScheme): NormalisedOpportunity {
   const { min, max, currency } = parseAmount(raw.amountRaw, "GBP");
   const deadlineDate = raw.deadlineRaw ? parseDate(raw.deadlineRaw) : null;
 
   return {
-    funder_slug: "geological-society-of-london",
-    funder_name: "Geological Society of London",
-    name: raw.name,
-    slug: slugify(raw.name),
+    funder_slug: "british-heart-foundation",
+    funder_name: "British Heart Foundation",
+    name: raw.title,
+    slug: slugify(raw.title),
     status: raw.status,
     deadline_raw: raw.deadlineRaw,
     deadline_date: deadlineDate,
@@ -29,11 +31,11 @@ export function normaliseGeolsoc(raw: RawGeolsocGrant): NormalisedOpportunity {
     amount_max: max,
     amount_currency: currency,
     url: raw.url,
-    funding_type: "grant",
+    funding_type: raw.fundingType,
     description: raw.description,
-    eligibility: null,
+    eligibility: raw.eligibility,
     scope: null,
-    source: "geolsoc",
+    source: "bhf",
     source_metadata: {},
   };
 }

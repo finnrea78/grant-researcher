@@ -19,13 +19,27 @@ export function parseRSEAwardPage(html: string, url: string): RawRSEAward {
     $("h1.page-title, h1").first().text().trim() ||
     "RSE Award";
 
-  // Description from first meaningful paragraph in main content
-  let description: string | null = null;
+  // Description: multi-paragraph from main content
+  const descParts: string[] = [];
   $("main p, .entry-content p, article p").each((_i, el) => {
     const text = $(el).text().trim();
-    if (text.length > 40 && !description) {
-      description = text;
+    if (text.length > 60) descParts.push(text);
+  });
+  const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+  // Eligibility: extract from heading section
+  let eligibility: string | null = null;
+  $("h2, h3, h4").each((_i, el) => {
+    if (eligibility !== null) return;
+    if (!/eligibilit|who\s+can\s+apply|who\s+is\s+eligible/i.test($(el).text().trim())) return;
+    const parts: string[] = [];
+    let sibling = $(el).next();
+    while (sibling.length && !sibling.is("h2, h3, h4")) {
+      const text = sibling.text().trim();
+      if (text) parts.push(text);
+      sibling = sibling.next();
     }
+    if (parts.length > 0) eligibility = parts.join("\n\n").slice(0, 1500);
   });
 
   // Sidebar metadata: .sidebar-image.event-data .data-item
@@ -51,7 +65,7 @@ export function parseRSEAwardPage(html: string, url: string): RawRSEAward {
     /now closed/i.test($("main").text());
   const status = isClosed ? "closed" : "open";
 
-  return { title, url, status, description, deadlineRaw, valueRaw, durationRaw };
+  return { title, url, status, description, eligibility, deadlineRaw, valueRaw, durationRaw };
 }
 
 export async function fetchRSEAwards(): Promise<RawRSEAward[]> {
