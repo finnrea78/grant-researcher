@@ -336,6 +336,14 @@ Updated each iteration. Format:
 - **royal_society** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
 - **netias** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
 - **action_medical** ✅ Improved (2026-04-16) — richer descriptions from detail pages, eligibility extraction, scope null
+- **leverhulme** ✅ Already good (2026-04-19) — all 12 schemes currently closed (next opening 2026–2027); scraper confirmed correct, 0 active rows expected
+- **blood_cancer_uk** ✅ Already good (2026-04-19) — no open calls at time of check; scraper ingests 0 rows correctly
+- **newton_fellowship** ✅ Already good (2026-04-19) — cycle closed March 2026; scraper confirmed correct, next window opens January 2027
+- **rse** ✅ Already good (2026-04-19) — all awards currently closed; scraper confirmed correct
+- **geolsoc** ✅ Already good (2026-04-19) — grants cycle closed February 2026, reopens autumn 2026; scraper confirmed correct
+- **rgs** ✅ Already good (2026-04-19) — all 2025/2026 deadlines passed; scraper confirmed correct
+- **bsbi** ✅ Already good (2026-04-19) — all 2026 programmes closed, next intake December 2026; scraper confirmed correct
+- **vivensa_foundation** ✅ Already good (2026-04-19) — avg_desc 2000, 2/2 elig; already at quality ceiling
 
 ---
 

@@ -105,6 +105,7 @@ import { upsertGrants } from "./loaders/upsert-grants.js";
 import { startRun, completeRun } from "./loaders/log-run.js";
 import { seedSourcesFromUrlList } from "./loaders/upsert-discovered-source.js";
 import { embedBackfill } from "./commands/embed-backfill.js";
+import { ingestFromJson } from "./loaders/ingest-json.js";
 import { runOpportunitySource, ensureFunders, type SourceConfig } from "./commands/run-source.js";
 import { runCleanup, runPurge } from "./commands/cleanup.js";
 import type { NormalisedGrant } from "./types.js";
@@ -1119,6 +1120,18 @@ program
   });
 
 program
+  .command("ingest:json <path>")
+  .description("Ingest opportunities from an agent-produced JSON file")
+  .action(async (filePath) => {
+    try {
+      await ingestFromJson(resolve(process.cwd(), filePath));
+    } catch (err) {
+      console.error(`  Error: ${err instanceof Error ? err.message : err}`);
+      process.exit(1);
+    }
+  });
+
+program
   .command("embed")
   .description("Compute and store embeddings for all opportunities missing them")
   .option("--batch <n>", "Batch size (default 100)", parseInt)
@@ -1134,4 +1147,4 @@ program
     }
   });
 
-program.parse();
+program.parse(process.argv);
