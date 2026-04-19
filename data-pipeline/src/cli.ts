@@ -86,6 +86,8 @@ import { fetchClassicalAssocGrants } from "./sources/classical-association.js";
 import { normaliseClassicalAssoc } from "./transforms/normalise-classical-association.js";
 import { fetchBenhsGrants } from "./sources/benhs.js";
 import { normaliseBenhs } from "./transforms/normalise-benhs.js";
+import { fetchRaengGrants } from "./sources/raeng.js";
+import { normaliseRaeng } from "./transforms/normalise-raeng.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -482,6 +484,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     source: "challenger_society",
     funderSlug: "challenger-society",
     fetch: () => fetchChallengerSocietyGrants().then(r => r.map(normaliseChallengerSociety)),
+  },
+  {
+    displayName: "Royal Academy of Engineering programmes",
+    source: "raeng",
+    funderSlug: "royal-academy-of-engineering",
+    fetch: () => fetchRaengGrants().then(r => r.map(normaliseRaeng)),
   },
 ];
 
@@ -1116,6 +1124,18 @@ program
       console.error(`  Error: ${msg}`);
       process.exit(1);
     }
+  });
+
+program
+  .command("raeng")
+  .description("Ingest research programmes from the Royal Academy of Engineering")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Royal Academy of Engineering programmes",
+      source: "raeng",
+      funderSlug: "royal-academy-of-engineering",
+      fetch: () => fetchRaengGrants().then(r => r.map(normaliseRaeng)),
+    });
   });
 
 program
