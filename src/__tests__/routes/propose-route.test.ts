@@ -168,4 +168,14 @@ describe("POST /api/session/[name]/propose (DB-first)", () => {
     const res = await POST(makeRequest(), { params: { name: "jane-smith" } });
     expect(res.status).toBe(401);
   });
+
+  it("uses maxTurns: 5 for single-document generation", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    const res = await POST(makeRequest(), { params: { name: "jane-smith" } });
+    await drainStream(res);
+
+    const queryCall = mockQuery.mock.calls[0][0];
+    expect(queryCall.options.maxTurns).toBe(5);
+  });
 });
