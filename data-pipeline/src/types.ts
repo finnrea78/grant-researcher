@@ -49,7 +49,8 @@ export type OpportunitySource =
   | "bou"
   | "classical_association"
   | "benhs"
-  | "raeng";
+  | "raeng"
+  | "rsc";
 
 /** Shape written to the opportunities table (open funding calls). */
 export interface NormalisedOpportunity {

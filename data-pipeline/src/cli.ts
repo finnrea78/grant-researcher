@@ -88,6 +88,8 @@ import { fetchBenhsGrants } from "./sources/benhs.js";
 import { normaliseBenhs } from "./transforms/normalise-benhs.js";
 import { fetchRaengGrants } from "./sources/raeng.js";
 import { normaliseRaeng } from "./transforms/normalise-raeng.js";
+import { fetchRscGrants } from "./sources/rsc.js";
+import { normaliseRsc } from "./transforms/normalise-rsc.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -490,6 +492,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     source: "raeng",
     funderSlug: "royal-academy-of-engineering",
     fetch: () => fetchRaengGrants().then(r => r.map(normaliseRaeng)),
+  },
+  {
+    displayName: "Royal Society of Chemistry grants",
+    source: "rsc",
+    funderSlug: "royal-society-of-chemistry",
+    fetch: () => fetchRscGrants().then(r => r.map(normaliseRsc)),
   },
 ];
 
@@ -1124,6 +1132,18 @@ program
       console.error(`  Error: ${msg}`);
       process.exit(1);
     }
+  });
+
+program
+  .command("rsc")
+  .description("Ingest grant schemes from the Royal Society of Chemistry")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Royal Society of Chemistry grants",
+      source: "rsc",
+      funderSlug: "royal-society-of-chemistry",
+      fetch: () => fetchRscGrants().then(r => r.map(normaliseRsc)),
+    });
   });
 
 program
