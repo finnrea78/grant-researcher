@@ -27,69 +27,72 @@ export function parseNatgeoListingPage(html: string): RawNatgeoGrant[] {
   const $ = cheerio.load(html);
   const grants: RawNatgeoGrant[] = [];
 
-  // Each grant occupies a block: h3 title, optional h5 deadline, p description, a Apply link.
-  // We walk h3 elements and collect sibling content until the next h3.
-  $("h3").each((_i, h3El) => {
-    const title = $(h3El).text().trim();
-    if (!title) return;
+  // Elementor WordPress layout: each grant lives in a div.elementor-widget-wrap that contains an h3.
+  // Within it: h3 (title), h5 (deadline), .elementor-text-editor p (description), a.elementor-button-link (URL).
+  // Fallback: iterate h3 elements in plain HTML context (fixture tests).
+  const containers = $("div.elementor-widget-wrap").filter((_i, el) => $(el).find("h3").length > 0);
 
-    let deadlineRaw: string | null = null;
-    let description: string | null = null;
-    let url: string | null = null;
+  if (containers.length > 0) {
+    containers.each((_i, container) => {
+      const $c = $(container);
 
-    let el = $(h3El).next();
-    const descParts: string[] = [];
+      const title = $c.find("h3").first().text().trim();
+      if (!title) return;
 
-    while (el.length && !el.is("h3")) {
-      const tag = el.get(0)?.tagName?.toLowerCase();
-
-      if (tag === "h5") {
-        const h5Text = el.text().trim();
-        // "Submission Deadline: May 25, 2026 at 11:59 PM EDT"
+      const h5Text = $c.find("h5").first().text().trim();
+      let deadlineRaw: string | null = null;
+      if (h5Text) {
         const m = h5Text.match(/(?:submission\s+)?deadline[:\s]+(.+)/i);
-        if (m) deadlineRaw = m[1].trim();
-        else if (h5Text) deadlineRaw = h5Text;
-      } else if (tag === "p") {
-        const text = el.text().trim();
+        deadlineRaw = m ? m[1].trim() : h5Text;
+      }
+
+      const descParts: string[] = [];
+      $c.find(".elementor-text-editor p, .elementor-widget-text-editor p").each((_j, p) => {
+        const text = $(p).text().trim();
         if (text.length > 30) descParts.push(text);
-      } else if (tag === "a") {
-        const href = el.attr("href");
-        if (href && /apply|rfp|grants/i.test(href)) {
-          url = href.startsWith("http") ? href : `https://www.nationalgeographic.org${href}`;
-        }
-      }
+      });
+      const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
 
-      // Also look for Apply Now links inside the current element's subtree
-      if (!url) {
-        const link = el.find("a").filter((_j, a) => {
-          const href = $(a).attr("href") ?? "";
-          return /rfp|grants-and-investments/i.test(href);
-        }).first();
-        if (link.length) {
-          const href = link.attr("href") ?? "";
-          url = href.startsWith("http") ? href : `https://www.nationalgeographic.org${href}`;
-        }
-      }
+      const applyLink = $c.find("a.elementor-button-link, a[href*='rfp'], a[href*='grants-and-investments']").first();
+      const href = applyLink.attr("href") ?? null;
+      const url = href ? (href.startsWith("http") ? href : `https://www.nationalgeographic.org${href}`) : null;
 
-      el = el.next();
-    }
+      if (!url) return;
 
-    if (descParts.length > 0) description = descParts.join("\n\n").slice(0, 2000);
-
-    if (!title) return;
-
-    grants.push({
-      title,
-      url,
-      deadlineRaw,
-      description,
-      eligibility: null,
-      amountRaw: null,
-      fundingType: "grant",
+      grants.push({ title, url, deadlineRaw, description, eligibility: null, amountRaw: null, fundingType: "grant" });
     });
-  });
+  } else {
+    // Plain HTML fallback (used by unit test fixtures)
+    $("h3").each((_i, h3El) => {
+      const title = $(h3El).text().trim();
+      if (!title) return;
 
-  return grants.filter(g => g.url !== null);
+      const $parent = $(h3El).parent();
+      const h5Text = $parent.find("h5").first().text().trim() || $(h3El).nextAll("h5").first().text().trim();
+      let deadlineRaw: string | null = null;
+      if (h5Text) {
+        const m = h5Text.match(/(?:submission\s+)?deadline[:\s]+(.+)/i);
+        deadlineRaw = m ? m[1].trim() : h5Text;
+      }
+
+      const descParts: string[] = [];
+      $(h3El).nextUntil("h3", "p").each((_j, p) => {
+        const text = $(p).text().trim();
+        if (text.length > 30) descParts.push(text);
+      });
+      const description = descParts.length > 0 ? descParts.join("\n\n").slice(0, 2000) : null;
+
+      const applyLink = $(h3El).nextAll("a").first();
+      const href = applyLink.attr("href") ?? null;
+      const url = href ? (href.startsWith("http") ? href : `https://www.nationalgeographic.org${href}`) : null;
+
+      if (!url) return;
+
+      grants.push({ title, url, deadlineRaw, description, eligibility: null, amountRaw: null, fundingType: "grant" });
+    });
+  }
+
+  return grants;
 }
 
 export function parseNatgeoDetailPage(html: string): {
