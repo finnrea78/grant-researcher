@@ -90,6 +90,8 @@ import { fetchRaengGrants } from "./sources/raeng.js";
 import { normaliseRaeng } from "./transforms/normalise-raeng.js";
 import { fetchRscGrants } from "./sources/rsc.js";
 import { normaliseRsc } from "./transforms/normalise-rsc.js";
+import { fetchIolantheAwards } from "./sources/iolanthe.js";
+import { normaliseIolanthe } from "./transforms/normalise-iolanthe.js";
 import { normaliseGtrProject } from "./transforms/normalise-gtr.js";
 import { normaliseUkriOpportunity } from "./transforms/normalise-ukri.js";
 import { normaliseFindAGrant } from "./transforms/normalise-find-a-grant.js";
@@ -498,6 +500,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     source: "rsc",
     funderSlug: "royal-society-of-chemistry",
     fetch: () => fetchRscGrants().then(r => r.map(normaliseRsc)),
+  },
+  {
+    displayName: "Iolanthe Midwifery Trust awards",
+    source: "iolanthe",
+    funderSlug: "iolanthe-midwifery-trust",
+    fetch: () => fetchIolantheAwards().then(r => r.map(normaliseIolanthe)),
   },
 ];
 
@@ -1132,6 +1140,18 @@ program
       console.error(`  Error: ${msg}`);
       process.exit(1);
     }
+  });
+
+program
+  .command("iolanthe")
+  .description("Ingest award schemes from the Iolanthe Midwifery Trust")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Iolanthe Midwifery Trust awards",
+      source: "iolanthe",
+      funderSlug: "iolanthe-midwifery-trust",
+      fetch: () => fetchIolantheAwards().then(r => r.map(normaliseIolanthe)),
+    });
   });
 
 program
