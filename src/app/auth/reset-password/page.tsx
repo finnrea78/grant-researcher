@@ -23,14 +23,20 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    // The /auth/callback route already exchanged the code server-side.
-    // Check for an active session and listen for PASSWORD_RECOVERY.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
-    });
+    const code = params.get("code");
+
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          setError("Invalid or expired reset link. Please request a new one.");
+        } else {
+          setReady(true);
+        }
+      });
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+      if (event === "PASSWORD_RECOVERY") {
         setReady(true);
       }
     });
