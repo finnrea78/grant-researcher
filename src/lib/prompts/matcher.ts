@@ -1,16 +1,16 @@
 /**
- * MATCHER_SCORE_PROMPT — single-pass, Write-tool-based scoring.
- * Agent writes one JSON score file per opportunity. Route formats the markdown.
+ * MATCHER_SCORE_PROMPT — compact single-pass scoring prompt.
+ * Agent outputs a JSON array (no tools). Route parses and persists scores.
  */
 export const MATCHER_SCORE_PROMPT = `
-Score each funding opportunity against the researcher's profile. Write one JSON file per opportunity. All context is provided inline.
+Score each funding opportunity against the researcher's profile. Output ONLY a JSON array (no markdown fences, no prose). All context is provided inline — do NOT use any tools.
 
 ## Scoring dimensions (0-10 each)
 
-**Eligibility (gate):** Check career stage, institution type, nationality, prior grant restrictions, deadline. If ineligible, set eligible=false and fill ineligible_reason. Set all scores to 0.
+**Eligibility (gate):** Check career stage, institution type, nationality, prior grant restrictions, deadline. If ineligible, set eligible=false. Set all scores to 0.
 
 **Thematic Alignment (weight 3x):** Match researcher themes/keywords/geographic focus vs funder scope/description.
-9-10: Direct match on primary themes. 7-8: Strong overlap. 5-6: Moderate. 3-4: Tangential. 1-2: Minimal. 0: None.
+9-10: Direct match. 7-8: Strong overlap. 5-6: Moderate. 3-4: Tangential. 1-2: Minimal. 0: None.
 
 **Track Record Fit (weight 2x):** Publications and prior grants vs scheme expectations.
 9-10: Top-tier pubs + prior grant from this/peer funder. 7-8: Good. 5-6: Adequate. 3-4: Thin. 1-2: Weak. 0: Insufficient.
@@ -21,42 +21,40 @@ Score each funding opportunity against the researcher's profile. Write one JSON 
 **Practical Factors (weight 1x):** Deadline timing, complexity, amount.
 9-10: Rolling/imminent, straightforward. 7-8: Within 6 months. 5-6: 6-12 months. 3-4: Complex. 0: Unclear/inactive.
 
-Formula: overall = round((thematic×3 + track_record×2 + strategic + practical) / 7, 1)
+Formula: score_overall = round((score_thematic×3 + score_track_record×2 + score_strategic + score_practical) / 7, 1)
 
-## Instructions
+If a <proposal-intent> block is provided, use it to sharpen Thematic Alignment and Strategic Fit scoring.
 
-For EACH opportunity in the <opportunities> list:
-1. Score it using the framework above.
-2. Write a JSON file to the path shown in the prompt.
+## Output schema
 
-The JSON must match this exact schema:
+Each element of the JSON array must have exactly these fields:
 {
   "opportunity_id": "string — use the id field from the opportunity exactly",
-  "name": "string — scheme name (use the name field from the opportunity)",
-  "funder": "string — use the funder_name field from the opportunity exactly as written",
-  "url": "string or null",
-  "amount": "string or null — use amount_raw",
-  "deadline": "string or null — use deadline_date, fall back to deadline_raw",
+  "funder_slug": "string — slugified funder name, e.g. ahrc",
+  "scheme_slug": "string — slugified scheme name, e.g. responsive-mode",
+  "score_overall": 0.0-10.0,
+  "score_thematic": 0-10,
+  "score_track_record": 0-10,
+  "score_strategic": 0-10,
+  "score_practical": 0-10,
   "eligible": true | false,
-  "ineligible_reason": "string or null",
-  "thematic": 0-10,
-  "track_record": 0-10,
-  "strategic": 0-10,
-  "practical": 0-10,
-  "overall": 0.0-10.0,
+  "tier": "strong" | "exploring" | "longshot" | "ineligible",
   "why": "2-3 sentences explaining fit or lack of fit",
-  "strengths": "one line — what makes this researcher competitive",
-  "weaknesses": "one line — honest gaps",
+  "strengths": string[],
+  "weaknesses": string[],
   "action": "apply now | prepare for next round | monitor | not applicable",
-  "urgent": true | false
+  "urgent": true | false,
+  "amount_raw": "string or null",
+  "deadline_raw": "string or null",
+  "url": "string or null"
 }
 
+tier rules: score_overall >= 7 → "strong"; >= 4 → "exploring"; >= 1 → "longshot"; ineligible → "ineligible".
 Set urgent=true if deadline is within 30 days of today.
 
 ## Constraints
-- Write ONLY the JSON files. No other output.
-- Use the Write tool once per opportunity.
-- Do NOT read any files — all context is in the prompt.
+- Output ONLY the JSON array. No other text.
+- Do NOT use any tools or read any files — all context is in the prompt.
 `.trim();
 
 /**
