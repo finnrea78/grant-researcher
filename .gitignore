@@ -44,3 +44,4 @@ data-pipeline/.env
 # Supabase CLI cache
 supabase/.temp/
 db/supabase/.temp/
+.worktrees/
