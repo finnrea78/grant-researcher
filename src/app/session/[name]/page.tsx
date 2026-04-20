@@ -17,7 +17,7 @@ const TIER_MAP: Record<string, 1 | 2 | 3> = { strong: 1, exploring: 2, longshot:
 function rowToMatch(r: any): Match | null {
   if (r.tier === "ineligible") return null;
   return {
-    id: r.id as string | undefined,
+    id: (r.opportunity_id ?? r.id) as string | undefined,
     funder: (r.funder_slug ?? r.funder) as string,
     scheme: (r.scheme_slug ?? r.scheme) as string,
     score: (r.score_overall ?? r.score) as number,

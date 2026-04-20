@@ -2,7 +2,7 @@
 const nextConfig = {
   experimental: {
     serverActions: { bodySizeLimit: "10mb" },
-    serverComponentsExternalPackages: ["pdfjs-dist", "mammoth"],
+    serverComponentsExternalPackages: ["pdfjs-dist", "mammoth", "@anthropic-ai/claude-agent-sdk"],
   },
 };
 

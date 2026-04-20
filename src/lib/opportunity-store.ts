@@ -252,12 +252,26 @@ export async function getOpportunityByFunderAndName(
     .limit(1)
     .maybeSingle();
 
+  // Fallback: slug suffix match (e.g. "responsive-mode-curiosity-award" matches
+  // "ahrc-responsive-mode-curiosity-award") — the match agent sometimes strips
+  // the funder prefix from opportunity slugs.
   if (!opp) {
     const { data } = await supabase
       .from("opportunities")
       .select("name, description, scope, eligibility, url, funding_type, deadline_date, deadline_raw, amount_raw, status")
       .eq("funder_id", funderRow.id)
-      .ilike("name", opportunityName)
+      .ilike("slug", `%${opportunityName}`)
+      .limit(1)
+      .maybeSingle();
+    opp = data;
+  }
+
+  if (!opp) {
+    const { data } = await supabase
+      .from("opportunities")
+      .select("name, description, scope, eligibility, url, funding_type, deadline_date, deadline_raw, amount_raw, status")
+      .eq("funder_id", funderRow.id)
+      .ilike("name", `%${opportunityName}%`)
       .limit(1)
       .maybeSingle();
     opp = data;
