@@ -1,6 +1,6 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { AgentSemaphore } from "@/lib/concurrency";
-import { formatSSEEvent } from "@/lib/sse";
+import { formatSSEEvent, safeEnqueue } from "@/lib/sse";
 import { SCAN_EXTRACTOR_PROMPT } from "@/lib/prompts/scan-extractor";
 
 export interface ScanPlanEntry {
@@ -52,7 +52,7 @@ export async function extractAll(
     urls.map(async ({ slug, url }) => {
       await semaphore.acquire();
       try {
-        controller.enqueue(
+        safeEnqueue(controller,
           formatSSEEvent({ type: "progress", current: completed, total, slug, status: "extracting" })
         );
 
@@ -63,14 +63,14 @@ export async function extractAll(
         } catch (err) {
           console.warn(`[scan-extract] Extraction failed for ${slug}:`, err);
           completed++;
-          controller.enqueue(
+          safeEnqueue(controller,
             formatSSEEvent({ type: "progress", current: completed, total, slug, status: "failed" })
           );
           return { slug, url, entry: undefined, agentResult };
         }
 
         completed++;
-        controller.enqueue(
+        safeEnqueue(controller,
           formatSSEEvent({ type: "progress", current: completed, total, slug, status: "done" })
         );
 
@@ -98,7 +98,7 @@ export async function extractAll(
     }
   }
 
-  controller.enqueue(
+  safeEnqueue(controller,
     formatSSEEvent({ type: "result", turns: totalTurns, cost: totalCost, duration: Date.now() - startMs })
   );
 
@@ -127,7 +127,7 @@ async function extractSingle(
     if (message.type === "assistant") {
       for (const block of message.message.content) {
         if (block.type === "tool_use") {
-          controller.enqueue(formatSSEEvent({ type: "tool", name: `${block.name} [${slug}]` }));
+          safeEnqueue(controller, formatSSEEvent({ type: "tool", name: `${block.name} [${slug}]` }));
         } else if (block.type === "text") {
           rawText += block.text;
         }

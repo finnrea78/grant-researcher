@@ -1,8 +1,8 @@
 /**
- * Phase 5: Tests for scan POST/PATCH route DB-first rewrite.
- * POST: reads researcher profile from DB (replaces readFileSync(profile.json)),
- *       marks scan complete via updatePipelineState (replaces writeFileSync(_scan-complete))
- * PATCH: marks scan complete via updatePipelineState (replaces writeFileSync(_scan-complete))
+ * Tests for scan POST/PATCH route (DB-first, no filesystem).
+ * POST: reads URLs from DB via getScanUrlList, reads researcher profile from DB,
+ *       marks scan complete via updatePipelineState
+ * PATCH: marks scan complete via updatePipelineState
  */
 
 jest.mock("@/lib/auth", () => ({
@@ -20,14 +20,18 @@ jest.mock("@/lib/concurrency", () => ({
 
 jest.mock("@/lib/scan-db-context", () => ({
   buildScanDbContext: jest.fn().mockResolvedValue(""),
+  getScanUrlList: jest.fn().mockResolvedValue([
+    { slug: "ahrc", url: "https://ahrc.ukri.org" },
+  ]),
 }));
 
 jest.mock("@/lib/scan-persistence", () => ({
-  persistDiscoveredManifest: jest.fn().mockResolvedValue(undefined),
+  persistDiscoveredResults: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("@/lib/scan-extract", () => ({
   extractAll: jest.fn().mockResolvedValue({ results: [], failed: [] }),
+  extractJsonBlock: jest.fn().mockReturnValue({ discovered: [] }),
 }));
 
 jest.mock("@anthropic-ai/claude-agent-sdk", () => ({
@@ -35,26 +39,22 @@ jest.mock("@anthropic-ai/claude-agent-sdk", () => ({
     [Symbol.asyncIterator]: async function* () {
       yield {
         type: "assistant",
-        message: { content: [{ type: "text", text: "Scan plan complete." }] },
+        message: { content: [{ type: "text", text: '{"discovered": []}' }] },
       };
-      yield { type: "result", is_error: false, total_cost_usd: 0.005, num_turns: 3 };
+      yield { type: "result", is_error: false, total_cost_usd: 0.005, num_turns: 3, duration_ms: 1000 };
     },
   }),
 }));
 
-jest.mock("fs", () => ({
-  existsSync: jest.fn().mockReturnValue(false),
-  readFileSync: jest.fn().mockReturnValue("[]"),
-  writeFileSync: jest.fn(),
-}));
-
 import { POST, PATCH } from "@/app/api/session/[name]/scan/route";
 import { getResearcherFull, updatePipelineState } from "@/lib/researcher-store";
-import * as fs from "fs";
+import { persistDiscoveredResults } from "@/lib/scan-persistence";
+import { getScanUrlList } from "@/lib/scan-db-context";
 
 const mockGetResearcherFull = getResearcherFull as jest.Mock;
 const mockUpdatePipelineState = updatePipelineState as jest.Mock;
-const mockWriteFileSync = fs.writeFileSync as jest.Mock;
+const mockGetScanUrlList = getScanUrlList as jest.Mock;
+const mockPersistDiscoveredResults = persistDiscoveredResults as jest.Mock;
 
 const RESEARCHER = {
   id: "uuid-123",
@@ -97,12 +97,19 @@ describe("POST /api/session/[name]/scan (DB-first)", () => {
     expect(mockGetResearcherFull).toHaveBeenCalledWith("jane-smith", "user-123");
   });
 
+  it("gets URL list from DB via getScanUrlList", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    const stream = await POST(makePostRequest(), { params: { name: "jane-smith" } });
+    const reader = stream.body!.getReader();
+    let done = false;
+    while (!done) done = (await reader.read()).done;
+
+    expect(mockGetScanUrlList).toHaveBeenCalled();
+  });
+
   it("sets pipeline_state.scan = true after completion", async () => {
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
-    // Mock readFileSync to return a scan plan with one URL so Phase 2 runs
-    (fs.readFileSync as jest.Mock).mockReturnValue(
-      JSON.stringify({ urls: [{ slug: "ahrc", url: "https://ahrc.ukri.org" }] })
-    );
 
     const stream = await POST(makePostRequest(), { params: { name: "jane-smith" } });
     const reader = stream.body!.getReader();
@@ -116,22 +123,19 @@ describe("POST /api/session/[name]/scan (DB-first)", () => {
     );
   });
 
-  it("does not write _scan-complete file", async () => {
+  it("persists results in-memory without filesystem", async () => {
     mockGetResearcherFull.mockResolvedValue(RESEARCHER);
-    (fs.readFileSync as jest.Mock).mockReturnValue(
-      JSON.stringify({ urls: [{ slug: "ahrc", url: "https://ahrc.ukri.org" }] })
-    );
 
     const stream = await POST(makePostRequest(), { params: { name: "jane-smith" } });
     const reader = stream.body!.getReader();
     let done = false;
     while (!done) done = (await reader.read()).done;
 
-    // Should not write researcher-specific _scan-complete file
-    const scanCompleteWrites = (mockWriteFileSync as jest.Mock).mock.calls.filter(
-      ([path]: [string]) => typeof path === "string" && path.includes("_scan-complete")
+    // persistDiscoveredResults called with in-memory array, not a file path
+    expect(mockPersistDiscoveredResults).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ researcher: "jane-smith" })
     );
-    expect(scanCompleteWrites).toHaveLength(0);
   });
 });
 
@@ -149,14 +153,5 @@ describe("PATCH /api/session/[name]/scan (DB-first)", () => {
       "user-123",
       expect.objectContaining({ scan: true })
     );
-  });
-
-  it("does not write _scan-complete file", async () => {
-    await PATCH(makePatchRequest(), { params: { name: "jane-smith" } });
-
-    const scanCompleteWrites = (mockWriteFileSync as jest.Mock).mock.calls.filter(
-      ([path]: [string]) => typeof path === "string" && path.includes("_scan-complete")
-    );
-    expect(scanCompleteWrites).toHaveLength(0);
   });
 });

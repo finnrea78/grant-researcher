@@ -65,6 +65,37 @@ export async function getFunderSourceUrls(staleDays = 7): Promise<{
   return { toHarvest, fresh };
 }
 
+/**
+ * Return funders that need re-scraping:
+ * - Never harvested, OR
+ * - Last harvested more than `staleDays` ago
+ *
+ * Only returns funders with a `source_url`.
+ */
+export async function getStaleFunders(staleDays = 30): Promise<
+  Array<{ slug: string; url: string }>
+> {
+  const { data: funders, error: fErr } = await supabase
+    .from("funders")
+    .select("slug, source_url, last_harvested_at")
+    .not("source_url", "is", null);
+
+  if (fErr) throw new Error(fErr.message);
+  if (!funders || funders.length === 0) return [];
+
+  const cutoff = new Date(Date.now() - staleDays * 24 * 60 * 60 * 1000);
+  const stale: Array<{ slug: string; url: string }> = [];
+
+  for (const f of funders) {
+    const harvested = f.last_harvested_at ? new Date(f.last_harvested_at) : null;
+    if (!harvested || harvested < cutoff) {
+      stale.push({ slug: f.slug, url: f.source_url as string });
+    }
+  }
+
+  return stale;
+}
+
 // ─── Writing ──────────────────────────────────────────────────────────────────
 
 /**

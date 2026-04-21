@@ -1,50 +1,32 @@
 // Server-only module. Builds the DB-sourced context block injected into the
 // scanner agent's prompt so it can re-harvest previously discovered funders.
 import {
-  getFunderSourceUrls,
+  getStaleFunders,
   getExistingFunderSlugs,
 } from "@/lib/opportunity-store";
+import type { ScanPlanEntry } from "@/lib/scan-extract";
 
 /**
- * Query Supabase for known funders and build a context block for the scanner prompt.
- *
- * Returns an empty string on error so the scan route can continue without DB context
- * (graceful degradation — scan still works, just doesn't benefit from prior discoveries).
+ * Return funders that need re-scraping: never harvested, harvested 30+ days ago,
+ * or all their opportunities have expired deadlines.
  */
-export async function buildScanDbContext(staleDays = 7): Promise<string> {
+export async function getScanUrlList(): Promise<ScanPlanEntry[]> {
+  const stale = await getStaleFunders();
+  return stale.map((s) => ({ slug: s.slug, url: s.url }));
+}
+
+/**
+ * Build a context block for the discovery agent listing existing funder slugs
+ * so it can avoid rediscovering them.
+ */
+export async function buildScanDbContext(): Promise<string> {
   try {
-    const [{ toHarvest, fresh }, existingSlugs] = await Promise.all([
-      getFunderSourceUrls(staleDays),
-      getExistingFunderSlugs(),
-    ]);
+    const existingSlugs = await getExistingFunderSlugs();
 
-    if (toHarvest.length === 0 && fresh.length === 0 && existingSlugs.length === 0) return "";
+    if (existingSlugs.length === 0) return "";
 
-    const parts: string[] = [];
-
-    if (toHarvest.length > 0) {
-      parts.push(
-        `Database-sourced funders to harvest (not yet harvested or stale — older than ${staleDays} days):\n` +
-          toHarvest.map((s) => `${s.slug} | ${s.url}`).join("\n")
-      );
-    }
-
-    if (fresh.length > 0) {
-      // Fresh sources: already harvested recently — pass slugs only for dedup, skip re-fetching
-      parts.push(
-        `Recently harvested funders (DO NOT re-fetch — already up to date. Use slugs for dedup only):\n` +
-          fresh.map((s) => s.slug).join(", ")
-      );
-    }
-
-    if (existingSlugs.length > 0) {
-      parts.push(
-        "Existing funder slugs in database (skip re-extracting opportunities already captured):\n" +
-          existingSlugs.join(", ")
-      );
-    }
-
-    return "\n\n" + parts.join("\n\n");
+    return "\n\nExisting funder slugs in database (do NOT rediscover these):\n" +
+      existingSlugs.join(", ");
   } catch (err) {
     console.warn("[scan-db-context] Failed to query DB for context:", err);
     return "";

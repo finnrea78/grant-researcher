@@ -1,12 +1,11 @@
 // Server-only module. Called after each scan agent run to persist discoveries to Supabase.
-import { existsSync, readFileSync } from "fs";
 import {
   upsertFunderFromDiscovery,
   upsertOpportunityFromDiscovery,
   updateHarvestStatus,
 } from "@/lib/opportunity-store";
 
-interface DiscoveredManifestEntry {
+export interface DiscoveredManifestEntry {
   funder_slug: string;
   funder_name: string;
   source_url: string;
@@ -29,26 +28,15 @@ interface DiscoveredManifestEntry {
 }
 
 /**
- * Read `_discovered.json` written by the scanner agent and upsert all
- * discovered funders and opportunities to Supabase.
+ * Persist in-memory discovered manifest entries to Supabase.
  *
  * Per-funder errors are caught so a single bad entry doesn't abort the rest.
- * The manifest file is not deleted — it's overwritten on the next scan.
  */
-export async function persistDiscoveredManifest(
-  manifestPath: string,
+export async function persistDiscoveredResults(
+  entries: DiscoveredManifestEntry[],
   discoveryContext: Record<string, unknown>
 ): Promise<void> {
-  if (!existsSync(manifestPath)) return;
-
-  let entries: DiscoveredManifestEntry[];
-  try {
-    entries = JSON.parse(readFileSync(manifestPath, "utf-8"));
-  } catch {
-    // Malformed JSON — log and bail without throwing
-    console.warn(`[scan-persistence] Failed to parse ${manifestPath} — skipping DB persist`);
-    return;
-  }
+  if (entries.length === 0) return;
 
   for (const entry of entries) {
     try {

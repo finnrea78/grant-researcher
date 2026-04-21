@@ -1,24 +1,81 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { resolve } from "path";
-import { SCAN_PLANNER_PROMPT } from "@/lib/prompts/scan-planner";
-import { extractAll, ScanPlanEntry } from "@/lib/scan-extract";
-import { formatSSEEvent, pipeQueryToSSE, sseResponse, startHeartbeat } from "@/lib/sse";
-import { persistDiscoveredManifest } from "@/lib/scan-persistence";
-import { buildScanDbContext } from "@/lib/scan-db-context";
+import { SCAN_DISCOVERY_PROMPT } from "@/lib/prompts/scan-planner";
+import { extractAll, extractJsonBlock, ScanPlanEntry } from "@/lib/scan-extract";
+import { formatSSEEvent, safeEnqueue, sseResponse, startHeartbeat } from "@/lib/sse";
+import { persistDiscoveredResults } from "@/lib/scan-persistence";
+import { buildScanDbContext, getScanUrlList } from "@/lib/scan-db-context";
 import { getResearcherFull, updatePipelineState } from "@/lib/researcher-store";
 import { requireUser } from "@/lib/auth";
 import { agentQueue } from "@/lib/concurrency";
 
-function parseUrlsMd(content: string): ScanPlanEntry[] {
-  return content
-    .split("\n")
-    .filter(line => line.trim() && !line.trim().startsWith("#") && line.includes("|"))
-    .map(line => {
-      const [slug, url] = line.split("|").map(s => s.trim());
-      return { slug, url };
-    })
-    .filter(e => e.slug && e.url);
+/**
+ * Run the Tavily discovery agent and parse its JSON output.
+ * Returns discovered URLs or an empty array on failure.
+ */
+async function runDiscoveryAgent(
+  baseUrls: ScanPlanEntry[],
+  profileContext: string,
+  dbContext: string,
+  controller: ReadableStreamDefaultController<string>,
+): Promise<ScanPlanEntry[]> {
+  const mcpServers = {
+    tavily: {
+      command: "npx",
+      args: ["-y", "tavily-mcp"],
+      env: { TAVILY_API_KEY: process.env.TAVILY_API_KEY! },
+    },
+  };
+
+  const existingJson = JSON.stringify(baseUrls);
+  const prompt = `Discover new grant funding URLs.
+
+Existing funders already in the database (for dedup — do NOT include these):
+${existingJson}
+${profileContext}${dbContext}`;
+
+  let rawText = "";
+  for await (const message of query({
+    prompt,
+    options: {
+      systemPrompt: SCAN_DISCOVERY_PROMPT,
+      allowedTools: ["mcp__tavily__tavily_search"],
+      maxTurns: 8,
+      mcpServers,
+    },
+  })) {
+    if (message.type === "assistant") {
+      for (const block of message.message.content) {
+        if (block.type === "tool_use") {
+          safeEnqueue(controller, formatSSEEvent({ type: "tool", name: block.name }));
+        } else if (block.type === "text") {
+          rawText += block.text;
+          if (block.text.trim()) {
+            safeEnqueue(controller, formatSSEEvent({ type: "text", text: block.text.trim() }));
+          }
+        }
+      }
+    } else if (message.type === "result") {
+      if (message.is_error) {
+        const msg = "errors" in message ? message.errors.join("; ") : "Unknown error";
+        safeEnqueue(controller, formatSSEEvent({ type: "error", message: msg }));
+      } else if ("result" in message) {
+        safeEnqueue(controller, formatSSEEvent({
+          type: "result",
+          turns: message.num_turns,
+          cost: message.total_cost_usd,
+          duration: message.duration_ms,
+        }));
+      }
+    }
+  }
+
+  try {
+    const parsed = extractJsonBlock(rawText) as { discovered?: ScanPlanEntry[] };
+    return parsed.discovered ?? [];
+  } catch {
+    console.warn("[scan] Failed to parse discovery agent output — proceeding without discoveries");
+    return [];
+  }
 }
 
 export async function POST(
@@ -35,33 +92,13 @@ export async function POST(
   }
 
   const { name } = params;
-  const dataDir = resolve(process.cwd(), "data");
-
-  // Fetch DB-sourced funders to feed back into the agent (closes the loop)
-  const dbContext = await buildScanDbContext();
-
-  // Read researcher profile from DB for smart scan context injection
-  const researcher = await getResearcherFull(name, userId);
-  const profile = researcher?.enriched_profile as Record<string, unknown> | null ?? null;
-
-  let profileContext = "";
-  if (profile) {
-    profileContext = `
-
-Researcher profile for smart scan:
-- Disciplinary fields: ${((profile.disciplinary_fields as string[]) ?? []).join(", ")}
-- Research themes: ${((profile.research_themes as string[]) ?? []).join(", ")}
-- Geographic focus: ${((profile.geographic_focus as string[]) ?? []).join(", ")}`;
-  }
-
-  const manifestPath = resolve(dataDir, "funding-sources/_discovered.json");
 
   const stream = new ReadableStream<string>({
     async start(controller) {
       try {
         await agentQueue.acquire();
       } catch {
-        controller.enqueue(formatSSEEvent({ type: "error", message: "Server busy — too many concurrent requests. Please retry." }));
+        safeEnqueue(controller, formatSSEEvent({ type: "error", message: "Server busy — too many concurrent requests. Please retry." }));
         controller.close();
         return;
       }
@@ -70,136 +107,89 @@ Researcher profile for smart scan:
       const heartbeat = startHeartbeat(controller);
 
       try {
-        // Phase 1 — Sonnet URL discovery / planning
-        const mcpServers: Record<string, { command: string; args: string[]; env: Record<string, string> }> = {};
+        // Build URL list from DB (replaces _urls.md file)
+        const baseUrls = await getScanUrlList();
+
+        // Read researcher profile from DB for discovery mode
+        const researcher = await getResearcherFull(name, userId);
+        const profile = researcher?.enriched_profile as Record<string, unknown> | null ?? null;
+
+        let profileContext = "";
+        if (profile) {
+          profileContext = `
+
+Researcher profile for smart scan:
+- Disciplinary fields: ${((profile.disciplinary_fields as string[]) ?? []).join(", ")}
+- Research themes: ${((profile.research_themes as string[]) ?? []).join(", ")}
+- Geographic focus: ${((profile.geographic_focus as string[]) ?? []).join(", ")}`;
+        }
+
+        let urls = [...baseUrls];
+
+        // Discovery mode: use Tavily agent to find new URLs
         if (profile && process.env.TAVILY_API_KEY) {
-          mcpServers["tavily"] = {
-            command: "npx",
-            args: ["-y", "tavily-mcp"],
-            env: { TAVILY_API_KEY: process.env.TAVILY_API_KEY },
-          };
-        }
-
-        const phase1Prompt = `Plan the grant scan.
-
-URL list: ${dataDir}/funding-sources/_urls.md
-Plan output: ${dataDir}/funding-sources/_scan-plan.json${profileContext}${dbContext}`;
-
-        const phase1Tools = ["Read", "Write", "Glob"];
-        if (Object.keys(mcpServers).length > 0) {
-          // Allow the Tavily MCP search tool (exposed by tavily-mcp as "tavily_search")
-          phase1Tools.push("mcp__tavily__tavily_search");
-        }
-
-        await pipeQueryToSSE(
-          () => query({
-            prompt: phase1Prompt,
-            options: {
-              cwd: dataDir,
-              systemPrompt: SCAN_PLANNER_PROMPT,
-              allowedTools: phase1Tools,
-              permissionMode: "acceptEdits",
-              maxTurns: 10,
-              ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
-            },
-          }),
-          controller
-        );
-
-        // Handoff — read the plan written by Phase 1
-        const planPath = resolve(dataDir, "funding-sources/_scan-plan.json");
-        let urls: ScanPlanEntry[];
-        try {
-          const plan = JSON.parse(readFileSync(planPath, "utf-8"));
-          urls = plan.urls ?? [];
-        } catch {
-          // Fallback: parse _urls.md directly
-          try {
-            const raw = readFileSync(resolve(dataDir, "funding-sources/_urls.md"), "utf-8");
-            urls = parseUrlsMd(raw);
-          } catch {
-            controller.enqueue(formatSSEEvent({ type: "error", message: "Scan plan unavailable and _urls.md not found — cannot run Phase 2." }));
-            urls = [];
+          const dbContext = await buildScanDbContext();
+          safeEnqueue(controller, formatSSEEvent({ type: "text", text: "Phase 1: Discovering new funding sources via Tavily..." }));
+          const discovered = await runDiscoveryAgent(baseUrls, profileContext, dbContext, controller);
+          if (discovered.length > 0) {
+            safeEnqueue(controller, formatSSEEvent({ type: "text", text: `Discovered ${discovered.length} new funding source(s).` }));
+            urls.push(...discovered);
           }
         }
+
         if (urls.length === 0) {
-          controller.enqueue(formatSSEEvent({ type: "text", text: "Warning: no URLs found to scan." }));
+          safeEnqueue(controller, formatSSEEvent({ type: "text", text: "Warning: no URLs found to scan." }));
         } else {
-          controller.enqueue(formatSSEEvent({ type: "text", text: `Phase 2: Extracting ${urls.length} funding sources...` }));
+          safeEnqueue(controller, formatSSEEvent({ type: "text", text: `Phase 2: Extracting ${urls.length} funding sources...` }));
           const { results, failed } = await extractAll(urls, controller);
 
-          // Report blocked sites and attempt Tavily recovery
+          // Recovery: attempt Tavily discovery for failed URLs
           if (failed.length > 0) {
             const failedList = failed.map(f => f.slug).join(", ");
-            controller.enqueue(formatSSEEvent({
+            safeEnqueue(controller, formatSSEEvent({
               type: "text",
-              text: `${failed.length} funder(s) blocked or unreachable: ${failedList}.${profile && process.env.TAVILY_API_KEY ? " Searching for alternative opportunities..." : ""}`,
+              text: `${failed.length} funder(s) blocked or unreachable: ${failedList}.${profile && process.env.TAVILY_API_KEY ? " Searching for alternatives..." : ""}`,
             }));
 
-            if (profile && process.env.TAVILY_API_KEY && Object.keys(mcpServers).length > 0) {
-              const recoveryPrompt = `Recovery: ${failed.length} funder URL(s) were blocked and could not be scraped: ${failedList}.
+            if (profile && process.env.TAVILY_API_KEY) {
+              const dbContext = await buildScanDbContext();
+              const recoveryPrompt = `Recovery: ${failed.length} funder(s) were blocked: ${failedList}.`;
+              const recoveryContext = `${profileContext}${dbContext}
 
-URL list: ${dataDir}/funding-sources/_urls.md
-Plan output: ${dataDir}/funding-sources/_scan-plan.json${profileContext}${dbContext}
+Find ${failed.length * 2} alternative grant funding URLs to replace the blocked ones.`;
 
-Use Tavily to find ${failed.length * 2} alternative grant funding URLs relevant to the researcher profile above.
-Prefer funders not already in _urls.md. Append new discoveries to _urls.md and write a fresh _scan-plan.json containing ONLY the newly discovered URLs (not the blocked ones).`;
-
-              await pipeQueryToSSE(
-                () => query({
-                  prompt: recoveryPrompt,
-                  options: {
-                    cwd: dataDir,
-                    systemPrompt: SCAN_PLANNER_PROMPT,
-                    allowedTools: ["Read", "Write", "mcp__tavily__tavily_search"],
-                    permissionMode: "acceptEdits",
-                    maxTurns: 8,
-                    mcpServers,
-                  },
-                }),
-                controller
+              const recovered = await runDiscoveryAgent(
+                [...baseUrls, ...urls],
+                recoveryContext,
+                "",
+                controller,
               );
 
-              // Extract the newly discovered URLs
-              try {
-                const recoveryPlan = JSON.parse(readFileSync(planPath, "utf-8"));
-                const recoveryUrls: ScanPlanEntry[] = recoveryPlan.urls ?? [];
-                if (recoveryUrls.length > 0) {
-                  controller.enqueue(formatSSEEvent({ type: "text", text: `Extracting ${recoveryUrls.length} replacement sources...` }));
-                  const { results: recoveryResults } = await extractAll(recoveryUrls, controller);
-                  results.push(...recoveryResults);
-                }
-              } catch {
-                // Recovery plan unreadable — proceed with what we have
+              if (recovered.length > 0) {
+                safeEnqueue(controller, formatSSEEvent({ type: "text", text: `Extracting ${recovered.length} replacement sources...` }));
+                const { results: recoveryResults } = await extractAll(recovered, controller);
+                results.push(...recoveryResults);
               }
             }
           }
 
-          writeFileSync(manifestPath, JSON.stringify(results, null, 2));
           ranPhase2 = true;
-        }
-      } catch (err) {
-        controller.enqueue(formatSSEEvent({ type: "error", message: String(err) }));
-      } finally {
-        clearInterval(heartbeat);
-      }
 
-      // Only persist if this run wrote the manifest — guards against overwriting
-      // Supabase with stale data from a previous scan when Phase 1 errored.
-      if (ranPhase2) {
-        try {
+          // Persist directly from memory — no intermediate file
           const discoveryContext: Record<string, unknown> = { researcher: name };
           if (profile) {
             discoveryContext.disciplines = profile.disciplinary_fields;
             discoveryContext.research_themes = profile.research_themes;
           }
-          await persistDiscoveredManifest(manifestPath, discoveryContext);
-
-          // Mark scan complete in DB (replaces _scan-complete file marker)
-          await updatePipelineState(name, userId, { scan: true });
-        } catch (persistErr) {
-          console.error(`[scan] persistDiscoveredManifest failed:`, persistErr);
+          await persistDiscoveredResults(results, discoveryContext);
         }
+
+        // Mark scan complete in DB
+        await updatePipelineState(name, userId, { scan: true });
+      } catch (err) {
+        safeEnqueue(controller, formatSSEEvent({ type: "error", message: String(err) }));
+      } finally {
+        clearInterval(heartbeat);
       }
 
       agentQueue.release();
