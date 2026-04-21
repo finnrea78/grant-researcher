@@ -82,7 +82,7 @@ const GRANT_PAGE_WITH_DEADLINE = `
     <div class="icon"><i class="fa fa-clock"></i></div>
     <figcaption>
       <h3>Deadline</h3>
-      <p>Apply by 20 April 2026.</p>
+      <p>Apply by 20 April 2030.</p>
     </figcaption>
   </figure>
 </main>
@@ -177,7 +177,7 @@ describe("parsePhysocGrantPage (single deadline)", () => {
 
   it("extracts deadline from Apply by text", () => {
     const result = parsePhysocGrantPage(GRANT_PAGE_WITH_DEADLINE, "url");
-    expect(result.deadlineRaw).toContain("20 April 2026");
+    expect(result.deadlineRaw).toContain("20 April 2030");
   });
 
   it("sets status to open for future deadline", () => {
@@ -225,7 +225,7 @@ describe("normalisePhysoc", () => {
     description: "Support for educational resources.",
     eligibility: null,
     amountRaw: "£10,000",
-    deadlineRaw: "20 April 2026",
+    deadlineRaw: "20 April 2030",
   };
 
   it("sets source to physoc", () => {
@@ -241,7 +241,7 @@ describe("normalisePhysoc", () => {
   });
 
   it("parses deadline_date from DD Month YYYY", () => {
-    expect(normalisePhysoc(raw).deadline_date).toBe("2026-04-20");
+    expect(normalisePhysoc(raw).deadline_date).toBe("2030-04-20");
   });
 
   it("sets funding_type to grant", () => {
