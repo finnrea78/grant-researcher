@@ -1,7 +1,3 @@
-import { mkdtempSync, writeFileSync, rmSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
-
 // ─── Mock opportunity-store ───────────────────────────────────────────────────
 
 const mockUpsertFunder = jest.fn();
@@ -14,38 +10,30 @@ jest.mock("@/lib/opportunity-store", () => ({
   updateHarvestStatus: mockUpdateHarvest,
 }));
 
-import { persistDiscoveredManifest } from "@/lib/scan-persistence";
+import { persistDiscoveredResults } from "@/lib/scan-persistence";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-let tmpDir: string;
-
 beforeEach(() => {
   jest.clearAllMocks();
-  tmpDir = mkdtempSync(join(tmpdir(), "grant-scan-test-"));
   mockUpsertFunder.mockResolvedValue("funder-uuid-abc");
   mockUpsertOpportunity.mockResolvedValue(undefined);
   mockUpdateHarvest.mockResolvedValue(undefined);
 });
 
-afterEach(() => {
-  rmSync(tmpDir, { recursive: true, force: true });
-});
-
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe("persistDiscoveredManifest", () => {
-  it("is a no-op when manifest file does not exist", async () => {
-    const nonExistentPath = join(tmpDir, "_discovered.json");
-    await persistDiscoveredManifest(nonExistentPath, {});
+describe("persistDiscoveredResults", () => {
+  it("is a no-op when entries array is empty", async () => {
+    await persistDiscoveredResults([], {});
 
     expect(mockUpsertFunder).not.toHaveBeenCalled();
     expect(mockUpsertOpportunity).not.toHaveBeenCalled();
     expect(mockUpdateHarvest).not.toHaveBeenCalled();
   });
 
-  it("upserts each funder from the manifest", async () => {
-    const manifest = [
+  it("upserts each funder from the entries", async () => {
+    const entries = [
       {
         funder_slug: "leverhulme",
         funder_name: "Leverhulme Trust",
@@ -61,11 +49,8 @@ describe("persistDiscoveredManifest", () => {
         opportunities: [],
       },
     ];
-    writeFileSync(join(tmpDir, "_discovered.json"), JSON.stringify(manifest));
 
-    await persistDiscoveredManifest(join(tmpDir, "_discovered.json"), {
-      researcher: "jane-smith",
-    });
+    await persistDiscoveredResults(entries, { researcher: "jane-smith" });
 
     expect(mockUpsertFunder).toHaveBeenCalledTimes(2);
     expect(mockUpsertFunder).toHaveBeenCalledWith(
@@ -81,7 +66,7 @@ describe("persistDiscoveredManifest", () => {
   });
 
   it("upserts each opportunity under its funder", async () => {
-    const manifest = [
+    const entries = [
       {
         funder_slug: "wellcome",
         funder_name: "Wellcome Trust",
@@ -121,9 +106,8 @@ describe("persistDiscoveredManifest", () => {
         ],
       },
     ];
-    writeFileSync(join(tmpDir, "_discovered.json"), JSON.stringify(manifest));
 
-    await persistDiscoveredManifest(join(tmpDir, "_discovered.json"), {});
+    await persistDiscoveredResults(entries, {});
 
     expect(mockUpsertOpportunity).toHaveBeenCalledTimes(2);
     expect(mockUpsertOpportunity).toHaveBeenCalledWith(
@@ -137,7 +121,7 @@ describe("persistDiscoveredManifest", () => {
   });
 
   it("calls updateHarvestStatus with success after processing each funder", async () => {
-    const manifest = [
+    const entries = [
       {
         funder_slug: "esrc",
         funder_name: "ESRC",
@@ -146,9 +130,8 @@ describe("persistDiscoveredManifest", () => {
         opportunities: [],
       },
     ];
-    writeFileSync(join(tmpDir, "_discovered.json"), JSON.stringify(manifest));
 
-    await persistDiscoveredManifest(join(tmpDir, "_discovered.json"), {});
+    await persistDiscoveredResults(entries, {});
 
     expect(mockUpdateHarvest).toHaveBeenCalledWith("esrc", "success");
   });
@@ -156,7 +139,7 @@ describe("persistDiscoveredManifest", () => {
   it("calls updateHarvestStatus with failed if upsertFunder throws", async () => {
     mockUpsertFunder.mockRejectedValueOnce(new Error("DB unavailable"));
 
-    const manifest = [
+    const entries = [
       {
         funder_slug: "bbsrc",
         funder_name: "BBSRC",
@@ -165,21 +148,10 @@ describe("persistDiscoveredManifest", () => {
         opportunities: [],
       },
     ];
-    writeFileSync(join(tmpDir, "_discovered.json"), JSON.stringify(manifest));
 
     // Should not throw — errors per funder are caught and harvest status updated
-    await persistDiscoveredManifest(join(tmpDir, "_discovered.json"), {});
+    await persistDiscoveredResults(entries, {});
 
     expect(mockUpdateHarvest).toHaveBeenCalledWith("bbsrc", "failed");
-  });
-
-  it("handles malformed JSON gracefully without throwing", async () => {
-    writeFileSync(join(tmpDir, "_discovered.json"), "not valid json {{");
-
-    await expect(
-      persistDiscoveredManifest(join(tmpDir, "_discovered.json"), {})
-    ).resolves.not.toThrow();
-
-    expect(mockUpsertFunder).not.toHaveBeenCalled();
   });
 });

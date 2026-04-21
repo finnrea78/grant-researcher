@@ -1,5 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { MATCHER_PROMPT } from "@/lib/prompts/matcher";
+import { MATCHER_SCORE_PROMPT } from "@/lib/prompts/matcher";
 import { formatSSEEvent, sseResponse, startHeartbeat } from "@/lib/sse";
 import { getResearcherFull, updateMatchResultsMd, updatePipelineState } from "@/lib/researcher-store";
 import { upsertMatchBatch } from "@/lib/match-store";
@@ -81,10 +81,10 @@ export async function POST(
           for await (const message of query({
             prompt,
             options: {
-              systemPrompt: MATCHER_PROMPT,
+              systemPrompt: MATCHER_SCORE_PROMPT,
               allowedTools: [],
-              model: "claude-sonnet-4-6",
-              maxTurns: 5,
+              model: "claude-haiku-4-5-20251001",
+              maxTurns: 1,
             },
           })) {
             if (message.type === "assistant") {

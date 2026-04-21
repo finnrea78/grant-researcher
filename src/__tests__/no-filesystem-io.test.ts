@@ -51,15 +51,8 @@ describe("No researcher-state filesystem I/O in API routes", () => {
     expect(routeFiles.length).toBeGreaterThan(0);
   });
 
-  const exemptRoutes = [
-    // scan uses transient scan infrastructure files (_urls.md, _scan-plan.json, _discovered.json)
-    path.join("scan", "route.ts"),
-  ];
-
   for (const filePath of routeFiles) {
     const relativePath = path.relative(SESSION_API_DIR, filePath);
-
-    if (exemptRoutes.some((exempt) => relativePath.includes(exempt))) continue;
 
     it(`${relativePath} has no researcher-state fs reads/writes`, () => {
       const source = fs.readFileSync(filePath, "utf-8");

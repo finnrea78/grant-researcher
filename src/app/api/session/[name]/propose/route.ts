@@ -98,7 +98,7 @@ export async function POST(
               // Read is allowed for profile context; Write is NOT — content is captured from text output
               allowedTools: ["Read"],
               model: "claude-sonnet-4-6",
-              maxTurns: 20,
+              maxTurns: 5,
             },
           })) {
             if (message.type === "assistant") {

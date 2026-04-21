@@ -13,6 +13,22 @@ export function formatSSEEvent(event: SSEEvent): string {
 }
 
 /**
+ * Enqueue data to an SSE controller, swallowing errors if the client
+ * has disconnected. This ensures server-side work (DB persistence,
+ * pipeline state updates) always completes even when the SSE stream dies.
+ */
+export function safeEnqueue(
+  controller: ReadableStreamDefaultController<string>,
+  data: string
+): void {
+  try {
+    controller.enqueue(data);
+  } catch {
+    // Client disconnected — controller is closed/errored. Swallow silently.
+  }
+}
+
+/**
  * Pipe a Claude Agent SDK query stream to an SSE controller.
  *
  * Accepts a factory function so retries can recreate the stream.

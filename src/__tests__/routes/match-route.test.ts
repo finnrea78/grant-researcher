@@ -76,6 +76,7 @@ import { POST } from "@/app/api/session/[name]/match/route";
 import { getResearcherFull, updateMatchResultsMd, updatePipelineState } from "@/lib/researcher-store";
 import { upsertMatchBatch } from "@/lib/match-store";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { MATCHER_SCORE_PROMPT } from "@/lib/prompts/matcher";
 import * as fs from "fs";
 
 const mockGetResearcherFull = getResearcherFull as jest.Mock;
@@ -184,6 +185,36 @@ describe("POST /api/session/[name]/match (DB-first)", () => {
     const queryCall = mockQuery.mock.calls[0][0];
     expect(queryCall.options.allowedTools).not.toContain("Read");
     expect(queryCall.options.allowedTools).not.toContain("Write");
+  });
+
+  it("uses Haiku model for cost reduction", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    const res = await POST(makeRequest(), { params: { name: "jane-smith" } });
+    await drainStream(res);
+
+    const queryCall = mockQuery.mock.calls[0][0];
+    expect(queryCall.options.model).toBe("claude-haiku-4-5-20251001");
+  });
+
+  it("uses maxTurns: 1 for single-pass scoring", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    const res = await POST(makeRequest(), { params: { name: "jane-smith" } });
+    await drainStream(res);
+
+    const queryCall = mockQuery.mock.calls[0][0];
+    expect(queryCall.options.maxTurns).toBe(1);
+  });
+
+  it("uses MATCHER_SCORE_PROMPT as system prompt", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    const res = await POST(makeRequest(), { params: { name: "jane-smith" } });
+    await drainStream(res);
+
+    const queryCall = mockQuery.mock.calls[0][0];
+    expect(queryCall.options.systemPrompt).toBe(MATCHER_SCORE_PROMPT);
   });
 
   it("does not use mkdirSync", async () => {

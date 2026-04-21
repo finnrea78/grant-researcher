@@ -297,6 +297,16 @@ describe("POST /api/session/[name]/enrich (DB-first)", () => {
       expect.objectContaining({ retrieval_summary: DEFAULT_HAIKU_SUMMARY })
     );
   });
+
+  it("uses maxTurns: 4 for the Sonnet enrichment query", async () => {
+    mockGetResearcherFull.mockResolvedValue(RESEARCHER);
+
+    const stream = await POST(makePostRequest(), { params: { name: "jane-smith" } });
+    await drainStream(stream);
+
+    const firstQueryCall = mockQuery.mock.calls[0][0];
+    expect(firstQueryCall.options.maxTurns).toBe(4);
+  });
 });
 
 describe("PATCH /api/session/[name]/enrich (DB-first)", () => {
