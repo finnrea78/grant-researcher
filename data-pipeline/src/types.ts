@@ -24,6 +24,7 @@ export type OpportunitySource =
   | "hfsp"
   | "biochemical_society"
   | "humboldt_foundation"
+  | "gerda_henkel_foundation"
   | "geolsoc"
   | "acmedsci"
   | "rgs"

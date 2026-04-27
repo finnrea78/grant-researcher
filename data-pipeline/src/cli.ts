@@ -36,6 +36,8 @@ import { fetchBiochemGrants } from "./sources/biochemical-society.js";
 import { normaliseBiochem } from "./transforms/normalise-biochemical-society.js";
 import { fetchHumboldtGrants } from "./sources/humboldt.js";
 import { normaliseHumboldt } from "./transforms/normalise-humboldt.js";
+import { fetchGerdaHenkelGrants } from "./sources/gerda-henkel.js";
+import { normaliseGerdaHenkel } from "./transforms/normalise-gerda-henkel.js";
 import { fetchGeolsocGrants } from "./sources/geolsoc.js";
 import { normaliseGeolsoc } from "./transforms/normalise-geolsoc.js";
 import { fetchAcMedSciGrants } from "./sources/acmedsci.js";
@@ -350,6 +352,12 @@ const OPPORTUNITY_SOURCES: SourceConfig[] = [
     source: "humboldt_foundation",
     funderSlug: "humboldt-foundation",
     fetch: () => fetchHumboldtGrants().then(r => r.map(normaliseHumboldt)),
+  },
+  {
+    displayName: "Gerda Henkel Foundation programmes",
+    source: "gerda_henkel_foundation",
+    funderSlug: "gerda-henkel-foundation",
+    fetch: () => fetchGerdaHenkelGrants().then(r => r.map(normaliseGerdaHenkel)),
   },
   {
     displayName: "Geological Society of London grants",
@@ -794,6 +802,18 @@ program
       source: "humboldt_foundation",
       funderSlug: "humboldt-foundation",
       fetch: () => fetchHumboldtGrants().then(r => r.map(normaliseHumboldt)),
+    });
+  });
+
+program
+  .command("gerda-henkel")
+  .description("Ingest funding programmes from the Gerda Henkel Foundation (historical humanities)")
+  .action(async () => {
+    await runOpportunitySource({
+      displayName: "Gerda Henkel Foundation programmes",
+      source: "gerda_henkel_foundation",
+      funderSlug: "gerda-henkel-foundation",
+      fetch: () => fetchGerdaHenkelGrants().then(r => r.map(normaliseGerdaHenkel)),
     });
   });
 
