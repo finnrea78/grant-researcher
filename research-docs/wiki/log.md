@@ -15,3 +15,4 @@
 | 2026-04-17 | Lint   | Full restructure to Karpathy three-layer pattern — raw/, wiki/ subfolders (codebase, grants, feedback, strategy, applications, people); added frontmatter schema |
 | 2026-04-17 | Lint   | Simplified skill file to generic Karpathy pattern — removed domain-specific workflows                                                                            |
 | 2026-04-17 | Lint   | Split personal KG (contacts, applications, raw emails) out to separate private repo `finn-kg`; this vault is now project-only                                      |
+| 2026-05-17 | Ingest | Architecture review captured — new `wiki/architecture/` section (8 notes): assessment, security, data model, cost, deployment, AI pipeline, refactor plan ([[Architecture Review Index]]) |
