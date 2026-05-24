@@ -1,7 +1,7 @@
 # index.md
 
 > Master content catalog. One-line summary per note, organized by category.
-> Last updated: 2026-04-17
+> Last updated: 2026-05-17
 
 ## Codebase (`wiki/codebase/`)
 
@@ -12,6 +12,17 @@
 - [[Database Schema]] — Supabase tables, RLS, pgvector embeddings
 - [[Retrieval Strategy]] — Hybrid pgvector + tsvector retrieval, 150 candidate pre-filter
 - [[Pipeline Status]] — What's built, what's working, what's broken
+
+## Architecture Review (`wiki/architecture/`)
+
+- [[Architecture Review Index]] — May 2026 review: the headline decisions and how the notes connect (start here)
+- [[Codebase Assessment]] — Vibe-coded but good bones; decision: strangler refactor, not a v2 rewrite
+- [[Security Findings]] — Prioritised P0/P1/P2 with file:line (incl. a real cross-tenant IDOR)
+- [[Data Model & Typed DB Spine]] — No ORM, types already drifting; the three-partition data model
+- [[Cost Architecture]] — Decouple expensive shared-data production from cheap per-user consumption
+- [[Deployment & Observability]] — Railway stays; the gap is in-app observability, not the platform
+- [[AI Pipeline Design]] — It's a typed pipeline, not "agents"; eval harness; taint boundary
+- [[Refactor Plan — Steel Thread]] — Target structure + the shippable thread sequence
 
 ## Grants Landscape (`wiki/grants/`)
 
