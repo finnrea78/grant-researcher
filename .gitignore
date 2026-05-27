@@ -41,6 +41,9 @@ data-pipeline/.env
 # Git worktrees
 .worktrees/
 
+# MSc academic vault — lives in its own private repo at ~/Developer/grant-researcher-msc
+research-msc/
+
 # Supabase CLI cache
 supabase/.temp/
 db/supabase/.temp/

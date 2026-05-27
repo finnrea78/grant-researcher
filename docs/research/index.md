@@ -17,6 +17,7 @@ Notes from research sessions on grant data sources, APIs, strategy, and the tech
 - [[Paid Grant Databases]] — Institutional/licensed options (Pivot-RP, Research Professional, etc.)
 - [[OpenAlex]] — Deep dive on the most important free API for awarded grants + researcher data
 - [[Pipeline Status]] — What's built, what's working, what's broken
+- [[Features and benefits]] — Product brainstorm for the Exeter pitch: what's built, what's worth adding, how to frame value by audience
 
 ---
 
@@ -53,3 +54,4 @@ Researcher data     →  OpenAlex authors (ORCID linkable, publications, topics)
 |------|-------|
 | 2026-04-02 | Initial grant database catalogue ([[Grant Databases — Full Catalogue]]) |
 | 2026-04-06 | Landscape deep-dive: free APIs, paid DBs, OpenAlex, UK strategy |
+| 2026-05-27 | Features and benefits brainstorm for Exeter pitch ([[Features and benefits]]) |

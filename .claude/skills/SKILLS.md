@@ -1,12 +1,12 @@
 # Skills
 
-Invoke these skills before acting — not after.
+Skills available in this project. Invoke when useful; not enforced.
 
 ## Planning & design
 - `grill-me` — stress-test a plan or design before committing to it
-- `superpowers:brainstorming` — before adding any feature, component, or new behaviour
-- `superpowers:writing-plans` — before touching code on a multi-step task
-- `problem-deep-dive` — when exploring a technical problem before deciding on an approach
+- `superpowers:brainstorming` — for scoping a feature, component, or new behaviour
+- `superpowers:writing-plans` — for planning a multi-step coding task before execution
+- `problem-deep-dive` — for exploring a technical problem before deciding on an approach
 
 ## Execution
 - `superpowers:executing-plans` — when running a written implementation plan with review checkpoints
@@ -26,5 +26,6 @@ Invoke these skills before acting — not after.
 - `dashboard` — weekly dev progress report
 
 ## Context & knowledge
-- `obsidian-vault` — when updating or searching project context notes (product vision, decisions, research)
+- `obsidian-vault` — when updating or searching project context notes (product vision, decisions, research) in `research-docs/`
+- `msc-vault` — when reading or updating the MSc project wiki at `~/Developer/grant-researcher-msc/` (deadlines, supervisor, proposal, plan, lit review, RPP)
 - `claude-api` — when touching Anthropic SDK / Claude agent code (prompt caching, streaming, tool use)
