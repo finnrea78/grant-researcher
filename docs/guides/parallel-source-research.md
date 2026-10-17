@@ -31,8 +31,8 @@ for installation and configuration help.
 
 ## Find pages, then verify them
 
-First check the existing [source connectors](../../../data-pipeline/src/sources)
-and [CLI commands](../../../data-pipeline/src/cli.ts) to avoid adding a duplicate.
+First check the existing [source connectors](../../data-pipeline/src/sources)
+and [CLI commands](../../data-pipeline/src/cli.ts) to avoid adding a duplicate.
 The Royal Society is already supported; use it as a verification exercise, or
 replace it in this prompt with a funder that needs a connector:
 
@@ -73,10 +73,10 @@ field against its source. A useful record includes:
 |---|---|---|---|---|---|
 | … | … | YYYY-MM-DD | Include year and timezone if stated | Preserve source wording | Include the URL for each quote |
 
-Use an existing connector such as [Royal Society](../../../data-pipeline/src/sources/royal-society.ts),
-its [normaliser](../../../data-pipeline/src/transforms/normalise-royal-society.ts)
-and [tests](../../../data-pipeline/tests/sources/royal-society.test.ts) as references.
-New connectors also need registration in the [CLI](../../../data-pipeline/src/cli.ts).
+Use an existing connector such as [Royal Society](../../data-pipeline/src/sources/royal-society.ts),
+its [normaliser](../../data-pipeline/src/transforms/normalise-royal-society.ts)
+and [tests](../../data-pipeline/tests/sources/royal-society.test.ts) as references.
+New connectors also need registration in the [CLI](../../data-pipeline/src/cli.ts).
 The MCP research result is evidence for that work; a connector and its normaliser
 still control what gets ingested.
 
