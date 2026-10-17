@@ -182,6 +182,10 @@ npm run db:diff -w db
 
 ## Adding grant sources
 
+For a manual workflow to discover official funder pages and verify deadlines and
+eligibility before writing a scraper, see [Research funding sources with Parallel
+Search MCP](docs/guides/parallel-source-research.md).
+
 To add a new funding source, add a line to `data/funding-sources/_urls.md`:
 
 ```
